@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block body %}
+<h3>后台页面</h3>
+<form action="/auth/logout" method="post">
+	{% module xsrf_form_html() %}
+	<button type="submit">退出</button>
+</form>
+<div>{{ username }}</div>
+{% end %}
