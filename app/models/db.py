@@ -90,8 +90,8 @@ def _init_default_data(conn):
 		# 二级菜单
 		(1, '系统首页', 'base_index', 'layui-icon-home', '/admin', 1, 1),
 		(1, '用户管理', 'base_users', 'layui-icon-username', '/admin/users', 2, 1),
-		(1, '功能管理', 'base_functions', 'layui-icon-menu-fill', '/admin/functions', 3, 1),
-		(1, '角色管理', 'base_roles', 'layui-icon-group', '/admin/roles', 4, 1),
+		(1, '角色管理', 'base_roles', 'layui-icon-group', '/admin/roles', 3, 1),
+		(1, '功能管理', 'base_functions', 'layui-icon-menu-fill', '/admin/functions', 4, 1),
 		(1, '权限管理', 'base_permissions', 'layui-icon-auz', '/admin/permissions', 5, 1),
 		(2, '模型引擎', 'biz_models', 'layui-icon-engine', '/admin/models', 1, 1),
 		(2, '数字员工', 'biz_employees', 'layui-icon-user', '/admin/employees', 2, 1),
@@ -109,8 +109,8 @@ def _init_default_data(conn):
 
 	# 插入默认角色
 	roles = [
-		('超级管理员', 'super_admin', '系统最高权限，不可修改和删除', 1, 1),
-		('管理员', 'admin', '系统管理员权限', 0, 1),
+		('超级管理员', 'admin', '系统最高权限，不可修改和删除', 1, 1),
+		('管理员', 'manager', '系统管理员权限', 0, 1),
 		('普通用户', 'user', '普通用户权限', 0, 1),
 	]
 	for r in roles:
@@ -122,7 +122,7 @@ def _init_default_data(conn):
 	# 为超级管理员分配所有权限
 	cursor = conn.execute("SELECT id FROM functions")
 	func_ids = [row["id"] for row in cursor.fetchall()]
-	cursor = conn.execute("SELECT id FROM roles WHERE code='super_admin'")
+	cursor = conn.execute("SELECT id FROM roles WHERE code='admin'")
 	super_admin_id = cursor.fetchone()["id"]
 	for fid in func_ids:
 		conn.execute(

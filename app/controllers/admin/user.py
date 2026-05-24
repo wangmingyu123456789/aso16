@@ -56,6 +56,17 @@ class AdminUserEditHandler(AdminBaseHandler):
 		status = int(self.get_body_argument("status","1"))
 		if not user_id:
 			return self.write({"code":1,"msg":"用户ID不能为空"})
+		# 检查是否为超级管理员用户
+		from app.models.db import get_connection
+		with get_connection() as conn:
+			user = conn.execute("SELECT username FROM users WHERE id=?", (user_id,)).fetchone()
+		if user and user["username"] == "admin":
+			# 超级管理员只能修改密码
+			if not password:
+				return self.write({"code":1,"msg":"超级管理员必须设置密码"})
+			if UserRepository.update_user(user_id, password=password):
+				return self.write({"code":0,"msg":"密码修改成功"})
+			return self.write({"code":1,"msg":"密码修改失败"})
 		if not username:
 			return self.write({"code":1,"msg":"用户名不能为空"})
 		update_params = {"username":username,"role":role,"status":status}
@@ -71,6 +82,12 @@ class AdminUserDeleteHandler(AdminBaseHandler):
 		user_id = int(self.get_body_argument("id","0"))
 		if not user_id:
 			return self.write({"code":1,"msg":"用户ID不能为空"})
+		# 检查是否为超级管理员用户
+		from app.models.db import get_connection
+		with get_connection() as conn:
+			user = conn.execute("SELECT username FROM users WHERE id=?", (user_id,)).fetchone()
+		if user and user["username"] == "admin":
+			return self.write({"code":1,"msg":"超级管理员用户不能删除"})
 		if UserRepository.delete_user(user_id):
 			return self.write({"code":0,"msg":"删除成功"})
 		return self.write({"code":1,"msg":"删除失败"})
@@ -85,6 +102,16 @@ class AdminUserBatchDeleteHandler(AdminBaseHandler):
 			return self.write({"code":1,"msg":"参数错误"})
 		if not user_ids:
 			return self.write({"code":1,"msg":"请先选择要删除的用户"})
+		# 检查是否包含超级管理员用户
+		from app.models.db import get_connection
+		with get_connection() as conn:
+			rows = conn.execute(
+				"SELECT username FROM users WHERE id IN ({})".format(','.join(['?']*len(user_ids))),
+				user_ids
+			).fetchall()
+		for row in rows:
+			if row["username"] == "admin":
+				return self.write({"code":1,"msg":"超级管理员用户不能删除"})
 		if UserRepository.delete_users(user_ids):
 			return self.write({"code":0,"msg":"批量删除成功"})
 		return self.write({"code":1,"msg":"批量删除失败"})

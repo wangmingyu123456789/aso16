@@ -7,7 +7,8 @@ class AdminPermissionListHandler(AdminBaseHandler):
 	@tornado.web.authenticated
 	def get(self):
 		roles = RoleRepository.get_all_roles()
-		self.render("admin/permission_list.html", title="权限管理", username=self.current_user, current_page='permissions', roles=roles)
+		default_role_id = self.get_argument("role_id", "")
+		self.render("admin/permission_list.html", title="权限管理", username=self.current_user, current_page='permissions', roles=roles, default_role_id=default_role_id)
 
 class AdminPermissionTreeHandler(AdminBaseHandler):
 	"""获取指定角色的权限树（用于二级联动展示）"""
@@ -29,6 +30,12 @@ class AdminPermissionSaveHandler(AdminBaseHandler):
 		
 		if role_id <= 0:
 			self.write({'code': 1, 'msg': '请选择角色'})
+			return
+
+		# 检查是否为超级管理员角色
+		role = RoleRepository.get_role_by_id(role_id)
+		if role and role["code"] == RoleRepository.SUPER_ADMIN_CODE:
+			self.write({'code': 1, 'msg': '超级管理员拥有所有权限，不可修改'})
 			return
 
 		# 解析功能ID列表

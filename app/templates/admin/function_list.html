@@ -109,6 +109,7 @@ layui.use(['table', 'layer', 'form'], function(){
             success: function(layero, index){
                 form.render();
                 form.on('submit(saveForm)', function(data){
+                    data.field._xsrf = getCookie('_xsrf');
                     $.post('/admin/functions/add', data.field, function(res){
                         if(res.code === 0){
                             layer.msg('添加成功');
@@ -134,6 +135,7 @@ layui.use(['table', 'layer', 'form'], function(){
                 form.render();
                 form.on('submit(saveForm)', function(formData){
                     formData.field.id = data.id;
+                    formData.field._xsrf = getCookie('_xsrf');
                     $.post('/admin/functions/edit', formData.field, function(res){
                         if(res.code === 0){
                             layer.msg('修改成功');

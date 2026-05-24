@@ -12,7 +12,7 @@
             <select name="role_id" id="roleSelect" lay-filter="roleSelect">
                 <option value="">请选择角色</option>
                 {% for role in roles %}
-                <option value="{{ role['id'] }}">{{ role['name'] }} ({{ role['code'] }})</option>
+                <option value="{{ role['id'] }}" {% if str(role['id']) == default_role_id %}selected{% end %}>{{ role['name'] }} ({{ role['code'] }})</option>
                 {% end %}
             </select>
         </div>

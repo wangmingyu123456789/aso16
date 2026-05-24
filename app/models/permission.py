@@ -113,7 +113,7 @@ class FunctionRepository:
 
 
 class RoleRepository:
-	SUPER_ADMIN_CODE = 'super_admin'
+	SUPER_ADMIN_CODE = 'admin'
 
 	@staticmethod
 	def get_all_roles():
@@ -189,6 +189,9 @@ class RoleRepository:
 			with get_connection() as conn:
 				conn.execute("DELETE FROM role_functions WHERE role_id=?", (role_id,))
 				conn.execute("DELETE FROM roles WHERE id=?", (role_id,))
+				# 更新自增序列为当前最大ID，保持ID连续
+				max_id = conn.execute("SELECT COALESCE(MAX(id),0) FROM roles").fetchone()[0]
+				conn.execute("UPDATE sqlite_sequence SET seq=? WHERE name='roles'", (max_id,))
 				return True
 		except Exception:
 			return False

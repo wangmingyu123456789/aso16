@@ -37,6 +37,8 @@ var currentKeyword = '';
 
 var roleTpl = function(d){
     if(d.role === 'admin'){
+        return '<span class="layui-badge layui-bg-red">超级管理员</span>';
+    } else if(d.role === 'manager'){
         return '<span class="layui-badge layui-bg-blue">管理员</span>';
     }
     return '<span class="layui-badge layui-bg-green">普通用户</span>';
@@ -50,6 +52,10 @@ var statusTpl = function(d){
 };
 
 var actionTpl = function(d){
+    if(d.username === 'admin'){
+        return '<a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i> 修改密码</a>' +
+               '<span style="color:#999;font-size:12px;margin-left:8px;">超级管理员</span>';
+    }
     return '<a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i> 编辑</a>' +
            '<a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete"><i class="layui-icon layui-icon-delete"></i> 删除</a>';
 };
@@ -201,7 +207,8 @@ layui.use(['table','form','layer','laypage'], function(){
                 '<div class="layui-input-block">' +
                     '<select name="role">' +
                         '<option value="user">普通用户</option>' +
-                        '<option value="admin">管理员</option>' +
+                        '<option value="manager">管理员</option>' +
+                        '<option value="admin">超级管理员</option>' +
                     '</select>' +
                 '</div>' +
             '</div>' +
@@ -245,8 +252,10 @@ layui.use(['table','form','layer','laypage'], function(){
 
     function showEditForm(data){
         var statusChecked = data.status === 1 ? 'checked' : '';
-        var roleUserSelected = data.role === 'user' ? 'selected' : '';
         var roleAdminSelected = data.role === 'admin' ? 'selected' : '';
+        var roleManagerSelected = data.role === 'manager' ? 'selected' : '';
+        var roleUserSelected = data.role === 'user' ? 'selected' : '';
+        var isSuperAdmin = (data.username === 'admin');
 
         var html = '<form class="layui-form" id="editForm" style="padding:20px;" lay-filter="editForm">' +
             '<input type="hidden" name="_xsrf" value=\'' + getCsrfToken() + '\'>' +
@@ -254,21 +263,24 @@ layui.use(['table','form','layer','laypage'], function(){
             '<div class="layui-form-item">' +
                 '<label class="layui-form-label">用户名</label>' +
                 '<div class="layui-input-block">' +
-                    '<input type="text" name="username" required lay-verify="required" value="' + escapeHtml(data.username) + '" class="layui-input">' +
+                    '<input type="text" name="username" value="' + escapeHtml(data.username) + '" class="layui-input"' + (isSuperAdmin ? ' disabled' : ' required lay-verify="required"') + '>' +
                 '</div>' +
             '</div>' +
             '<div class="layui-form-item">' +
-                '<label class="layui-form-label">新密码</label>' +
+                '<label class="layui-form-label">' + (isSuperAdmin ? '新密码' : '密码') + '</label>' +
                 '<div class="layui-input-block">' +
-                    '<input type="password" name="password" placeholder="留空则不修改密码" class="layui-input">' +
+                    '<input type="password" name="password" placeholder="' + (isSuperAdmin ? '请输入新密码' : '留空则不修改密码') + '" class="layui-input"' + (isSuperAdmin ? ' required lay-verify="required"' : '') + '>' +
                 '</div>' +
-            '</div>' +
-            '<div class="layui-form-item">' +
+            '</div>';
+
+        if(!isSuperAdmin){
+            html += '<div class="layui-form-item">' +
                 '<label class="layui-form-label">角色</label>' +
                 '<div class="layui-input-block">' +
                     '<select name="role">' +
                         '<option value="user" ' + roleUserSelected + '>普通用户</option>' +
-                        '<option value="admin" ' + roleAdminSelected + '>管理员</option>' +
+                        '<option value="manager" ' + roleManagerSelected + '>管理员</option>' +
+                        '<option value="admin" ' + roleAdminSelected + '>超级管理员</option>' +
                     '</select>' +
                 '</div>' +
             '</div>' +
@@ -277,8 +289,10 @@ layui.use(['table','form','layer','laypage'], function(){
                 '<div class="layui-input-block">' +
                     '<input type="checkbox" name="status" lay-skin="switch" lay-text="正常|禁用" value="1" ' + statusChecked + '>' +
                 '</div>' +
-            '</div>' +
-            '<div class="layui-form-item" style="text-align:right;margin-bottom:0;">' +
+            '</div>';
+        }
+
+        html += '<div class="layui-form-item" style="text-align:right;margin-bottom:0;">' +
                 '<button type="button" class="layui-btn layui-btn-normal" id="submitEditBtn">确定</button>' +
                 '<button type="button" class="layui-btn layui-btn-primary" id="cancelEditBtn">取消</button>' +
             '</div>' +
