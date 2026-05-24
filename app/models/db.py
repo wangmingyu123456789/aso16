@@ -243,8 +243,35 @@ def upgrade_db():
 			conn.execute("ALTER TABLE users ADD COLUMN create_at TEXT NOT NULL DEFAULT(datetime('now'))")
 		if 'can_login_admin' not in columns:
 			conn.execute("ALTER TABLE users ADD COLUMN can_login_admin INTEGER NOT NULL DEFAULT 0")
-			# 将现有的admin用户设置为允许登录
 			conn.execute("UPDATE users SET can_login_admin=1 WHERE username='admin'")
+
+		# 创建 outlook_tasks 表
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='outlook_tasks'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE outlook_tasks(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					keyword TEXT NOT NULL,
+					source_ids TEXT NOT NULL DEFAULT '',
+					source_names TEXT NOT NULL DEFAULT '',
+					pages INTEGER NOT NULL DEFAULT 1,
+					page_size_step INTEGER NOT NULL DEFAULT 10,
+					ai_expand INTEGER NOT NULL DEFAULT 0,
+					ai_clean INTEGER NOT NULL DEFAULT 0,
+					total_count INTEGER NOT NULL DEFAULT 0,
+					status TEXT NOT NULL DEFAULT 'completed',
+					error_msg TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# outlook_data 添加 task_id 字段
+		cursor = conn.execute("PRAGMA table_info(outlook_data)")
+		data_cols = [row[1] for row in cursor.fetchall()]
+		if len(data_cols) > 0 and 'task_id' not in data_cols:
+			conn.execute("ALTER TABLE outlook_data ADD COLUMN task_id INTEGER NOT NULL DEFAULT 0")
 
 		# 创建 functions 表（如果不存在）
 		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='functions'")

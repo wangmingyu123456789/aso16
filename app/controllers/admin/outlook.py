@@ -1,7 +1,8 @@
 import json
 import tornado.web
 from app.controllers.admin.base import AdminBaseHandler
-from app.models.outlook import OutlookSourceRepository, OutlookDataRepository, OutlookCollector
+from app.models.outlook import OutlookSourceRepository, OutlookDataRepository, OutlookTaskRepository, OutlookCollector
+from app.models.db import get_connection
 
 class AdminOutlookRedirectHandler(AdminBaseHandler):
     @tornado.web.authenticated
@@ -124,6 +125,13 @@ class AdminOutlookCollectHandler(AdminBaseHandler):
 
         all_sources = OutlookSourceRepository.get_all_sources()
         selected_sources = [s for s in all_sources if s['id'] in source_ids]
+        source_ids_str = ",".join(str(s['id']) for s in selected_sources)
+        source_names_str = ",".join(s['name'] for s in selected_sources)
+
+        task_id = OutlookTaskRepository.create_task(
+            keyword, source_ids_str, source_names_str,
+            pages, page_size_step, ai_expand, ai_clean
+        )
 
         total_results = 0
         for source in selected_sources:
@@ -132,21 +140,96 @@ class AdminOutlookCollectHandler(AdminBaseHandler):
             count = OutlookCollector.collect(
                 source, keyword, pages, step,
                 use_ai_expand=ai_expand,
-                use_ai_clean=ai_clean
+                use_ai_clean=ai_clean,
+                task_id=task_id
             )
             total_results += count
             print(f"[Collect] source={source['name']}, saved={count}")
 
+        OutlookTaskRepository.update_task(task_id, total_results)
+
         return self.write({
             "code": 0,
             "msg": f"采集完成，共获取 {total_results} 条数据",
-            "data": {"count": total_results}
+            "count": total_results
         })
 
 class AdminOutlookDataListHandler(AdminBaseHandler):
     @tornado.web.authenticated
     def get(self):
         self.render("admin/outlook_data_list.html", title="数据仓库", username=self.current_user, current_page='outlook_data')
+
+class AdminOutlookTaskApiHandler(AdminBaseHandler):
+    @tornado.web.authenticated
+    def get(self):
+        page = int(self.get_argument("page", "1"))
+        page_size = int(self.get_argument("limit", "20"))
+        keyword = self.get_argument("keyword", "")
+        result = OutlookTaskRepository.get_task_list(page=page, page_size=page_size, keyword=keyword if keyword else None)
+        self.set_header("Content-Type", "application/json")
+        self.write({
+            "code": 0,
+            "msg": "",
+            "count": result["total"],
+            "data": result["data"]
+        })
+
+class AdminOutlookTaskDeleteHandler(AdminBaseHandler):
+    @tornado.web.authenticated
+    def post(self):
+        task_id_str = self.get_body_argument("task_id", "")
+        if not task_id_str:
+            return self.write({"code": 1, "msg": "请选择要删除的任务"})
+        try:
+            task_id = int(task_id_str)
+        except Exception:
+            return self.write({"code": 1, "msg": "任务ID格式错误"})
+        OutlookTaskRepository.delete_task(task_id)
+        return self.write({"code": 0, "msg": "删除成功"})
+
+class AdminOutlookTaskDataHandler(AdminBaseHandler):
+    @tornado.web.authenticated
+    def get(self):
+        task_id = int(self.get_argument("task_id", "0"))
+        task = OutlookTaskRepository.get_task(task_id)
+        self.render("admin/outlook_task_data.html", title="任务数据", username=self.current_user, current_page='outlook_data', task=task)
+
+class AdminOutlookTaskDataApiHandler(AdminBaseHandler):
+    @tornado.web.authenticated
+    def get(self):
+        task_id = int(self.get_argument("task_id", "0"))
+        page = int(self.get_argument("page", "1"))
+        page_size = int(self.get_argument("limit", "20"))
+        keyword = self.get_argument("keyword", "")
+        offset = (page - 1) * page_size
+        with get_connection() as conn:
+            if keyword:
+                count_row = conn.execute(
+                    "SELECT COUNT(*) as total FROM outlook_data WHERE task_id=? AND title LIKE ?",
+                    (task_id, f'%{keyword}%')
+                ).fetchone()
+                total = count_row["total"]
+                rows = conn.execute(
+                    "SELECT * FROM outlook_data WHERE task_id=? AND title LIKE ? ORDER BY id DESC LIMIT ? OFFSET ?",
+                    (task_id, f'%{keyword}%', page_size, offset)
+                ).fetchall()
+            else:
+                count_row = conn.execute(
+                    "SELECT COUNT(*) as total FROM outlook_data WHERE task_id=?",
+                    (task_id,)
+                ).fetchone()
+                total = count_row["total"]
+                rows = conn.execute(
+                    "SELECT * FROM outlook_data WHERE task_id=? ORDER BY id DESC LIMIT ? OFFSET ?",
+                    (task_id, page_size, offset)
+                ).fetchall()
+        self.set_header("Content-Type", "application/json")
+        self.write({
+            "code": 0,
+            "msg": "",
+            "count": total,
+            "data": [dict(r) for r in rows]
+        })
 
 class AdminOutlookDataApiHandler(AdminBaseHandler):
     @tornado.web.authenticated

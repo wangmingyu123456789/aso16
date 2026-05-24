@@ -108,6 +108,65 @@ class OutlookSourceRepository:
             return False
 
 
+class OutlookTaskRepository:
+    @staticmethod
+    def create_task(keyword, source_ids, source_names, pages, page_size_step, ai_expand, ai_clean):
+        with get_connection() as conn:
+            cursor = conn.execute(
+                "INSERT INTO outlook_tasks(keyword,source_ids,source_names,pages,page_size_step,ai_expand,ai_clean) VALUES(?,?,?,?,?,?,?)",
+                (keyword, source_ids, source_names, pages, page_size_step, 1 if ai_expand else 0, 1 if ai_clean else 0)
+            )
+            return cursor.lastrowid
+
+    @staticmethod
+    def update_task(task_id, total_count, status='completed', error_msg=None):
+        with get_connection() as conn:
+            conn.execute(
+                "UPDATE outlook_tasks SET total_count=?, status=?, error_msg=? WHERE id=?",
+                (total_count, status, error_msg, task_id)
+            )
+
+    @staticmethod
+    def get_task_list(page=1, page_size=20, keyword=None):
+        offset = (page - 1) * page_size
+        with get_connection() as conn:
+            if keyword:
+                count_row = conn.execute(
+                    "SELECT COUNT(*) as total FROM outlook_tasks WHERE keyword LIKE ?",
+                    (f'%{keyword}%',)
+                ).fetchone()
+                total = count_row["total"]
+                rows = conn.execute(
+                    "SELECT * FROM outlook_tasks WHERE keyword LIKE ? ORDER BY id DESC LIMIT ? OFFSET ?",
+                    (f'%{keyword}%', page_size, offset)
+                ).fetchall()
+            else:
+                count_row = conn.execute("SELECT COUNT(*) as total FROM outlook_tasks").fetchone()
+                total = count_row["total"]
+                rows = conn.execute(
+                    "SELECT * FROM outlook_tasks ORDER BY id DESC LIMIT ? OFFSET ?",
+                    (page_size, offset)
+                ).fetchall()
+        return {
+            'total': total,
+            'data': [dict(r) for r in rows],
+            'page': page,
+            'page_size': page_size
+        }
+
+    @staticmethod
+    def get_task(task_id):
+        with get_connection() as conn:
+            row = conn.execute("SELECT * FROM outlook_tasks WHERE id=?", (task_id,)).fetchone()
+            return dict(row) if row else None
+
+    @staticmethod
+    def delete_task(task_id):
+        with get_connection() as conn:
+            conn.execute("DELETE FROM outlook_data WHERE task_id=?", (task_id,))
+            conn.execute("DELETE FROM outlook_tasks WHERE id=?", (task_id,))
+
+
 class OutlookDataRepository:
     @staticmethod
     def get_data_list(page=1, page_size=20, keyword=None):
@@ -138,13 +197,13 @@ class OutlookDataRepository:
         }
 
     @staticmethod
-    def save_data(source_id, source_name, title, url='', content='', author='', publish_date='', raw_html='', ai_processed=0):
+    def save_data(source_id, source_name, title, url='', content='', author='', publish_date='', raw_html='', ai_processed=0, task_id=0):
         try:
             with get_connection() as conn:
                 conn.execute(
-                    """INSERT INTO outlook_data(source_id,source_name,title,url,content,author,publish_date,raw_html,ai_processed) 
-                       VALUES(?,?,?,?,?,?,?,?,?)""",
-                    (source_id, source_name, title, url, content, author, publish_date, raw_html, ai_processed)
+                    """INSERT INTO outlook_data(source_id,source_name,title,url,content,author,publish_date,raw_html,ai_processed,task_id) 
+                       VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                    (source_id, source_name, title, url, content, author, publish_date, raw_html, ai_processed, task_id)
                 )
                 return True
         except Exception:
@@ -399,7 +458,11 @@ class OutlookCollector:
             if author_selector:
                 author_nodes = node.xpath(author_selector)
                 if author_nodes:
-                    item['author'] = author_nodes[0].text_content().strip()
+                    an = author_nodes[0]
+                    if hasattr(an, 'text_content'):
+                        item['author'] = an.text_content().strip()
+                    elif hasattr(an, 'text') and an.text:
+                        item['author'] = an.text.strip()
 
             if item.get('title'):
                 items.append(item)
@@ -407,7 +470,7 @@ class OutlookCollector:
         return items
 
     @staticmethod
-    def collect(source, keyword, pages=1, page_size_step=10, use_ai_expand=False, use_ai_clean=False):
+    def collect(source, keyword, pages=1, page_size_step=10, use_ai_expand=False, use_ai_clean=False, task_id=0):
         t_start = time.time()
         print(f"\n{'='*60}")
         print(f"[Collect] START: source={source['name']} ({source['code']}), keyword={keyword}")
@@ -482,7 +545,9 @@ class OutlookCollector:
 
                 # Show first 2 items as preview
                 for idx, item in enumerate(items[:2]):
-                    print(f"[Collect]     Item {idx+1}: title='{item.get('title', '')[:60]}', date='{item.get('publish_date', '')}'")
+                    t = item.get('title', '')[:60].encode('gbk', errors='ignore').decode('gbk')
+                    d = item.get('publish_date', '').encode('gbk', errors='ignore').decode('gbk')
+                    print(f"[Collect]     Item {idx+1}: title='{t}', date='{d}'")
                 if len(items) > 2:
                     print(f"[Collect]     ... and {len(items) - 2} more items")
 
@@ -514,7 +579,8 @@ class OutlookCollector:
                     author=item.get('author', ''),
                     publish_date=item.get('publish_date', ''),
                     raw_html='',
-                    ai_processed=ai_processed
+                    ai_processed=ai_processed,
+                    task_id=task_id
                 )
                 if saved:
                     saved_count += 1

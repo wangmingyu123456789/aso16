@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务数据详情</title>
+    <link rel="stylesheet" href="/static/dist/layui-v2.13.6/layui-v2.13.6/layui/css/layui.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:#0a0e1a;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
+        .task-info{background:linear-gradient(180deg,#111827,#0f1525);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:20px 24px;margin:16px;position:relative}
+        .task-info::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#00d4ff,#7b2ff7,transparent)}
+        .task-info h3{color:#fff;font-size:18px;margin-bottom:12px}
+        .task-info .info-row{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:8px}
+        .task-info .info-item{font-size:13px;color:rgba(255,255,255,.5)}
+        .task-info .info-item strong{color:#fff;font-weight:500}
+    </style>
+</head>
+<body>
+    <div class="task-info">
+        <h3>{{ task.get('keyword', '') }}</h3>
+        <div class="info-row">
+            <span class="info-item">采集源：<strong>{{ task.get('source_names', '') }}</strong></span>
+            <span class="info-item">页数：<strong>{{ task.get('pages', 1) }}</strong></span>
+            <span class="info-item">步长：<strong>{{ task.get('page_size_step', 10) }}</strong></span>
+            <span class="info-item">数据量：<strong>{{ task.get('total_count', 0) }} 条</strong></span>
+            <span class="info-item">时间：<strong>{{ task.get('create_at', '') }}</strong></span>
+        </div>
+    </div>
+    <table id="dataTable" lay-filter="dataTable"></table>
+
+    <script src="/static/dist/layui-v2.13.6/layui-v2.13.6/layui/layui.js"></script>
+    <script>
+    var taskId = {{ task.get('id', 0) }};
+    layui.use(['table','layer'], function(){
+        var table = layui.table;
+        var layer = layui.layer;
+        var $ = layui.$;
+
+        table.render({
+            elem: '#dataTable',
+            url: '/admin/outlook/task/data/api',
+            where: {task_id: taskId},
+            page: {
+                curr: 1,
+                prevText: '上一页',
+                nextText: '下一页',
+                layout: ['prev', 'page', 'next', 'skip', 'count', 'limit'],
+                limits: [20, 50, 100],
+                limit: 20
+            },
+            cols: [[
+                {field:'id',title:'ID',width:70,align:'center',sort:true},
+                {field:'source_name',title:'来源',width:110,align:'center'},
+                {field:'title',title:'标题',align:'left'},
+                {field:'author',title:'作者',width:100,align:'center'},
+                {field:'publish_date',title:'发布日期',width:120,align:'center'},
+                {field:'ai_processed',title:'AI',width:60,align:'center',templet:function(d){
+                    return d.ai_processed == 1 ? '<span style="color:#52c41a;">是</span>' : '<span style="color:#999;">否</span>';
+                }},
+                {field:'url',title:'链接',width:80,align:'center',templet:function(d){
+                    return d.url ? '<a href="'+d.url+'" target="_blank" style="color:#00d4ff;">查看</a>' : '-';
+                }},
+                {field:'create_at',title:'采集时间',width:160,align:'center'}
+            ]],
+            skin: 'line'
+        });
+
+        table.on('tool(dataTable)', function(obj){
+            if(obj.event === 'del'){
+                layer.confirm('确定要删除该数据吗？', function(index){
+                    $.post('/admin/outlook/data/delete', {ids: obj.data.id, _xsrf: getCsrfToken()}, function(res){
+                        if(res.code === 0){ layer.msg('删除成功', {icon:1}); obj.del(); }
+                        else { layer.msg(res.msg, {icon:2}); }
+                    });
+                    layer.close(index);
+                });
+            }
+        });
+    });
+
+    function getCsrfToken(){
+        var cookies = document.cookie.split(';');
+        for(var i=0;i<cookies.length;i++){
+            var c = cookies[i].trim();
+            if(c.indexOf('_xsrf=') === 0) return decodeURIComponent(c.substring(6));
+        }
+        return '';
+    }
+    </script>
+</body>
+</html>
