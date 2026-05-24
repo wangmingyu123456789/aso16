@@ -97,6 +97,8 @@ layui.use(['table','form','layer'], function(){
             url: '/admin/users/api',
             page: {
                 curr: 1,
+                prevText: '&#x4E0A;&#x4E00;&#x9875;',
+                nextText: '&#x4E0B;&#x4E00;&#x9875;',
                 layout: ['prev', 'page', 'next', 'skip', 'count', 'limit'],
                 limits: [4, 10, 20, 50],
                 limit: pageSize
@@ -113,6 +115,20 @@ layui.use(['table','form','layer'], function(){
             skin: 'line',
             done: function(res, page, count){
                 currentPage = page;
+                // 将分页箭头替换为文字
+                setTimeout(function(){
+                    var $ = layui.$;
+                    $('.layui-laypage .layui-laypage-prev').each(function(){
+                        if($(this).text().trim() === '' || /[\u2039\u203A‹›\u00ab\u00bb]/.test($(this).text())){
+                            $(this).html('上一页');
+                        }
+                    });
+                    $('.layui-laypage .layui-laypage-next').each(function(){
+                        if($(this).text().trim() === '' || /[\u2039\u203A‹›\u00ab\u00bb]/.test($(this).text())){
+                            $(this).html('下一页');
+                        }
+                    });
+                }, 100);
             }
         });
     }

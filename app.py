@@ -13,6 +13,7 @@ from app.controllers.admin.user import AdminUserListHandler,AdminUserApiHandler,
 from app.controllers.admin.function import AdminFunctionListHandler,AdminFunctionApiHandler,AdminFunctionAddHandler,AdminFunctionEditHandler,AdminFunctionDeleteHandler,AdminFunctionTreeHandler
 from app.controllers.admin.role import AdminRoleListHandler,AdminRoleApiHandler,AdminRoleAddHandler,AdminRoleEditHandler,AdminRoleDeleteHandler
 from app.controllers.admin.permission import AdminPermissionListHandler,AdminPermissionTreeHandler,AdminPermissionSaveHandler
+from app.controllers.admin.model import AdminModelListHandler,AdminModelApiHandler,AdminModelAddHandler,AdminModelEditHandler,AdminModelDeleteHandler,AdminModelSetDefaultHandler,AdminModelChatTestHandler,AdminModelChatStreamHandler
 from app.models.db import init_db,upgrade_db
 
 class ViteClientHandler(tornado.web.RequestHandler):
@@ -97,6 +98,16 @@ def make_app():
 			(r"/admin/permissions",AdminPermissionListHandler),
 			(r"/admin/permissions/tree",AdminPermissionTreeHandler),
 			(r"/admin/permissions/save",AdminPermissionSaveHandler),
+
+			# 模型引擎
+			(r"/admin/models",AdminModelListHandler),
+			(r"/admin/models/api",AdminModelApiHandler),
+			(r"/admin/models/add",AdminModelAddHandler),
+			(r"/admin/models/edit",AdminModelEditHandler),
+			(r"/admin/models/delete",AdminModelDeleteHandler),
+			(r"/admin/models/set_default",AdminModelSetDefaultHandler),
+			(r"/admin/models/chat_test",AdminModelChatTestHandler),
+			(r"/admin/models/chat_stream",AdminModelChatStreamHandler),
 
 			(r"/@vite/client",ViteClientHandler),
 			(r"/@vite/env",ViteEnvHandler),

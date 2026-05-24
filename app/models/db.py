@@ -197,6 +197,68 @@ def upgrade_db():
 				"""
 			)
 
+		# 创建 models 表（如果不存在）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='models'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE models(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					name TEXT NOT NULL,
+					code TEXT NOT NULL UNIQUE,
+					api_url TEXT NOT NULL DEFAULT 'https://aigc-api.aitoolcore.com/api/v1/chat/completions',
+					api_key TEXT NOT NULL DEFAULT '',
+					status INTEGER NOT NULL DEFAULT 1,
+					is_system_default INTEGER NOT NULL DEFAULT 0,
+					total_requests INTEGER NOT NULL DEFAULT 0,
+					total_tokens INTEGER NOT NULL DEFAULT 0,
+					prompt_tokens INTEGER NOT NULL DEFAULT 0,
+					completion_tokens INTEGER NOT NULL DEFAULT 0,
+					last_used_at TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# 升级 models 表字段
+		cursor = conn.execute("PRAGMA table_info(models)")
+		columns = [row[1] for row in cursor.fetchall()]
+		if len(columns) > 0:
+			# 添加缺少的字段
+			if 'api_url' not in columns:
+				conn.execute("ALTER TABLE models ADD COLUMN api_url TEXT NOT NULL DEFAULT 'https://aigc-api.aitoolcore.com/api/v1/chat/completions'")
+			if 'api_key' not in columns:
+				conn.execute("ALTER TABLE models ADD COLUMN api_key TEXT NOT NULL DEFAULT ''")
+			if 'is_system_default' not in columns:
+				conn.execute("ALTER TABLE models ADD COLUMN is_system_default INTEGER NOT NULL DEFAULT 0")
+			if 'total_requests' not in columns:
+				conn.execute("ALTER TABLE models ADD COLUMN total_requests INTEGER NOT NULL DEFAULT 0")
+			if 'total_tokens' not in columns:
+				conn.execute("ALTER TABLE models ADD COLUMN total_tokens INTEGER NOT NULL DEFAULT 0")
+			if 'prompt_tokens' not in columns:
+				conn.execute("ALTER TABLE models ADD COLUMN prompt_tokens INTEGER NOT NULL DEFAULT 0")
+			if 'completion_tokens' not in columns:
+				conn.execute("ALTER TABLE models ADD COLUMN completion_tokens INTEGER NOT NULL DEFAULT 0")
+			if 'last_used_at' not in columns:
+				conn.execute("ALTER TABLE models ADD COLUMN last_used_at TEXT")
+
+		# 检查是否需要初始化模型数据
+		cursor = conn.execute("SELECT COUNT(*) as cnt FROM models").fetchone()
+		if cursor["cnt"] == 0:
+			try:
+				from config.models_config import MODELS_CONFIG
+				for mc in MODELS_CONFIG:
+					conn.execute(
+						"INSERT INTO models(name,code,api_url,api_key,status,is_system_default) VALUES(?,?,?,?,?,?)",
+						(mc['name'], mc['code'], mc['api_url'], mc['api_key'], mc['status'], mc['is_system_default'])
+					)
+			except ImportError:
+				# 如果配置文件不存在，使用默认配置
+				conn.execute(
+					"INSERT INTO models(name,code,api_url,api_key,status,is_system_default) VALUES(?,?,?,?,?,?)",
+					('DeepSeek V3', 'deepseek-v3', 'https://aigc-api.aitoolcore.com/api/v1/chat/completions', 'sk-aigc-c0725a1b8a1b205154867945a3c667ce9d232fa7', 1, 1)
+				)
+
 		# 初始化默认数据
 		_init_default_data(conn)
 		conn.commit()

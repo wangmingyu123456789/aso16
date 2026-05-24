@@ -28,7 +28,8 @@
 --实现动态新增/修改/删除模型服务，
 --支持可视化配置满足openai-api范式的模型接入及接口调用服务
 --支持模型token统计（可视化），支持分页，一行3列，6条数据为一列，由于设计到AI大模型，风格可以炫酷、高级感强,
-支持对新增的模型进行对话测试功能，
+--支持对新增的模型进行对话测试功能，
+--模型响应SSE(流式响应)
 --支持设置模型为系统模式（如果为默认，则全局优先调用该模型)
 以下为模型服务代码示例:
 '''
@@ -46,3 +47,39 @@ curl https://aigc-api.aitoolcore.com/api/v1/chat/completions \
 以下为APIkey:
 API_KEY = "sk-aigc-c0725a1b8a1b205154867945a3c667ce9d232fa7"
 
+任务五：
+继续后端-管理测功能模块的开发
+-瞭望管理：这是一个通过大模型+AI实现的智能数据采集模块，支持新增瞭望数据源管理和采集功能，以下为具体功能需求或要求：
+--瞭望数据源管理：改功能是一个动态可视化规则配置功能，支持新增/删除/修改采集源的规则，我这里给你提供一个采集源，你通过分析实现动态管理，如下：
+```
+百度新闻采集源：
+1.采集入口URL：
+https://www.baidu.com/s?tn=news&word={关键字}
+https://www.baidu.com/s?tn=news&word={关键字}&pn={分页步进，默认0=第一页，10=第二页，20=第三页...}
+2.采集requestheader:
+GET /s?tn=news&word=%E5%9B%9B%E5%B7%9D%E5%86%9C%E4%B8%9A%E5%A4%A7%E5%AD%A6 HTTP/1.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6
+Connection: keep-alive
+Cookie: BAIDUID=7D040A0375AC5C5FC9A8629972B20BBB:FG=1; BAIDUID_BFESS=7D040A0375AC5C5FC9A8629972B20BBB:FG=1; BDUSS=RrZ0d0OWNGVXp1fmkxbElCc2JpWnhXMTg3YTVpeDkwQlFvS3lmOFNGT3VYUzlxSVFBQUFBJCQAAAAAAQAAAAEAAAALpsEiAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK7QB2qu0AdqTE; BDUSS_BFESS=RrZ0d0OWNGVXp1fmkxbElCc2JpWnhXMTg3YTVpeDkwQlFvS3lmOFNGT3VYUzlxSVFBQUFBJCQAAAAAAQAAAAEAAAALpsEiAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK7QB2qu0AdqTE; PSTM=1779582680; BDRCVFR[xxJIjd-9mMY]=9xWipS8B-FspA7EnHc1QhPEUf; H_PS_PSSID=63142_67861_68166_68464_69205_69296_69592_69764_69798_69782_69846_69908_69949_69962_70005_70007_70048_70090_70117_70131_70156_70169_70222_70252_70199_70196_70288_70285_68736_70321_70142_69921_70358_70416_70441_70477_70476_70472; BD_UPN=12314753; BIDUPSID=AF970139E2195A6F4B11A9C960F71109; BA_HECTOR=8l2g818g0g802l25ag81a50l01800h1l14hmp29; ZFY=LHvroeutiKiiTbvzk7W:Boj9l8a0ANl1powqxNeAgN3Y:C; BD_CK_SAM=1; delPer=0; BDORZ=FFFB88E999055A3F8A630C64834BD6D0; shifen[1385136922137_65594]=1779582706; BCLID=11255501927937916900; BCLID_BFESS=11255501927937916900; BDSFRCVID=vNPOJeC62ZWuHpc8L4pUU99sWCuEGM7TH6aorVxuAZ4sKOFklb8XEG0n-U8g0KAMvsHJogKKXgOTH9uF_2uxOjjg8UtVJeC6EG0Ptf8g0U5; BDSFRCVID_BFESS=vNPOJeC62ZWuHpc8L4pUU99sWCuEGM7TH6aorVxuAZ4sKOFklb8XEG0n-U8g0KAMvsHJogKKXgOTH9uF_2uxOjjg8UtVJeC6EG0Ptf8g0U5; H_BDCLCKID_SF=JnutoI-KfI_3DJ7g-tP_-PJM54TTWMT-0bFHhf3aWPJjbh4mKholejFy3Pbt0xbuJan7_JjO-fQWfqjLjbbvXUKfhMKOXUQxtI_L-CnjtpvN8tQRyM6obUPUWMJ9LUk8bmcdot5yBbc8eIna5hjkbfJBQttjQn3hfIkj-CKLK-oj-D8Cj6K53j; H_BDCLCKID_SF_BFESS=JnutoI-KfI_3DJ7g-tP_-PJM54TTWMT-0bFHhf3aWPJjbh4mKholejFy3Pbt0xbuJan7_JjO-fQWfqjLjbbvXUKfhMKOXUQxtI_L-CnjtpvN8tQRyM6obUPUWMJ9LUk8bmcdot5yBbc8eIna5hjkbfJBQttjQn3hfIkj-CKLK-oj-D8Cj6K53j; COOKIE_SESSION=21233444_3_8_9_2_25_0_1_7_6_1_11_39_21233481_0_6_1758349308_1779582707_1779582701%7C9%2321233478_14_1779582701%7C4; H_WISE_SIDS=63142_67861_68166_68464_69205_69296_69592_69764_69798_69782_69846_69908_69949_69962_70005_70007_70048_70090_70117_70131_70156_70169_70222_70252_70199_70196_70288_70285_68736_70321_70142_69921_70358_70416_70441_70477_70476_70472; PSINO=7; H_PS_645EC=da77%2FWLTn2u87bDDJeoGs%2B91y%2BfMM%2Bj3XWoq8TPM6LWYOyo3Jz07EmaAWiXxutZoBp4QExhbLuOv; BDSVRTM=420
+Host: www.baidu.com
+Referer: https://news.baidu.com/
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: same-site
+Sec-Fetch-User: ?1
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0
+sec-ch-ua: "Microsoft Edge";v="
+
+```
+根据以上采集源，你需要开发一套可动态接收参数的功能模块，以提供后续批量采集功能
+--瞭望采集：开发一个类似搜索引擎的页面，输入框下方提供采集源的动态选择功能（开关样式），该界面要求独立设计风格，不与layui风格同步，炫酷，好看，用户交互体验简单，另外采集源的选择面板下方，提供参数配置：一次有效采集数量和页数（与URL中的参数同步）
+--瞭望采集到的数据保存到sqlite数据库中
+-数据仓库：以列表显示通过瞭望采集到的数据，一页20条，功能：
+--删除/批量删除
+--AI深度采集（后续单独任务完成）
+	*瞭望源-动态管理/请求伪造技术应用
+	*csrf ssrf
+	*采集数据-批量采集
