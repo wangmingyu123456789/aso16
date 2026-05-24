@@ -52,7 +52,7 @@ class UserRepository:
 	def verify_admin_user(username:str,password:str)->bool:
 		with get_connection() as conn:
 			row = conn.execute(
-				"select id,username,password_hash,salt,role,status from users where username = ? and role = 'admin'",
+				"select id,username,password_hash,salt,role,status from users where username = ? and role in ('admin','manager')",
 				(username,)
 			).fetchone()
 		if not row:

@@ -27,7 +27,9 @@
     </div>
     <div id="functionTree" class="layui-tree"></div>
 </div>
+{% end %}
 
+{% block extra_script %}
 <script>
 layui.use(['tree', 'layer', 'form'], function(){
     var tree = layui.tree;
@@ -87,12 +89,31 @@ layui.use(['tree', 'layer', 'form'], function(){
         return result;
     }
 
+    // 收集所有节点ID
+    var allIds = [];
+    function collectAllIds(nodes){
+        nodes.forEach(function(n){
+            allIds.push(n.id);
+            if(n.children) collectAllIds(n.children);
+        });
+    }
+
     $('#btnSelectAll').on('click', function(){
-        tree.setChecked('permTree', function(node){ return true; });
+        collectAllIds(treeIns.config.data);
+        tree.setChecked('permTree', allIds);
     });
 
     $('#btnUnselectAll').on('click', function(){
-        tree.setChecked('permTree', function(node){ return false; });
+        var checkedData = tree.getChecked('permTree');
+        var checkedIds = [];
+        function collectCheckedIds(nodes){
+            nodes.forEach(function(n){
+                checkedIds.push(n.id);
+                if(n.children) collectCheckedIds(n.children);
+            });
+        }
+        collectCheckedIds(checkedData);
+        tree.setChecked('permTree', checkedIds, false);
     });
 
     $('#btnSave').on('click', function(){

@@ -6,7 +6,22 @@ from app.models.user import UserRepository
 class AdminUserListHandler(AdminBaseHandler):
 	@tornado.web.authenticated
 	def get(self):
-		self.render("admin/user_list.html",title="用户管理",username=self.current_user,current_page='users')
+		# 获取所有角色供前端使用
+		from app.models.permission import RoleRepository
+		roles = RoleRepository.get_all_roles()
+		self.render("admin/user_list.html",title="用户管理",username=self.current_user,current_page='users',roles=roles,roles_json=json.dumps(roles))
+
+class AdminUserRolesApiHandler(AdminBaseHandler):
+	"""获取角色列表API"""
+	@tornado.web.authenticated
+	def get(self):
+		from app.models.permission import RoleRepository
+		roles = RoleRepository.get_all_roles()
+		self.set_header("Content-Type","application/json")
+		self.write(json.dumps({
+			"code":0,
+			"data":roles
+		}))
 
 class AdminUserApiHandler(AdminBaseHandler):
 	@tornado.web.authenticated
@@ -33,6 +48,8 @@ class AdminUserAddHandler(AdminBaseHandler):
 		status = int(self.get_body_argument("status","1"))
 		if not username or not password:
 			return self.write({"code":1,"msg":"用户名和密码不能为空"})
+		if username.lower() == "admin":
+			return self.write({"code":1,"msg":"不能创建用户名为admin的用户"})
 		salt = __import__("secrets").token_bytes(16)
 		password_hash = __import__("hashlib").pbkdf2_hmac("sha256",password.encode("utf-8"),salt,100_000).hex()
 		try:
@@ -69,6 +86,8 @@ class AdminUserEditHandler(AdminBaseHandler):
 			return self.write({"code":1,"msg":"密码修改失败"})
 		if not username:
 			return self.write({"code":1,"msg":"用户名不能为空"})
+		if username.lower() == "admin":
+			return self.write({"code":1,"msg":"不能使用admin作为用户名"})
 		update_params = {"username":username,"role":role,"status":status}
 		if password:
 			update_params["password"] = password

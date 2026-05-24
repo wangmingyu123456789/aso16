@@ -34,14 +34,25 @@
 var currentPage = 1;
 var checkedIds = [];
 var currentKeyword = '';
+var allRoles = []; // 存储所有角色
+
+function escapeHtml(text){
+    if(!text) return '';
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(text));
+    return div.innerHTML;
+}
 
 var roleTpl = function(d){
+    var role = allRoles.find(function(r){ return r.code === d.role; });
+    var roleName = role ? role.name : d.role;
+    var badgeClass = 'layui-bg-green';
     if(d.role === 'admin'){
-        return '<span class="layui-badge layui-bg-red">超级管理员</span>';
+        badgeClass = 'layui-bg-red';
     } else if(d.role === 'manager'){
-        return '<span class="layui-badge layui-bg-blue">管理员</span>';
+        badgeClass = 'layui-bg-blue';
     }
-    return '<span class="layui-badge layui-bg-green">普通用户</span>';
+    return '<span class="layui-badge ' + badgeClass + '">' + roleName + '</span>';
 };
 
 var statusTpl = function(d){
@@ -54,10 +65,10 @@ var statusTpl = function(d){
 var actionTpl = function(d){
     if(d.username === 'admin'){
         return '<a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i> 修改密码</a>' +
-               '<span style="color:#999;font-size:12px;margin-left:8px;">超级管理员</span>';
+            '<span style="color:#999;font-size:12px;margin-left:8px;">超级管理员</span>';
     }
     return '<a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i> 编辑</a>' +
-           '<a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete"><i class="layui-icon layui-icon-delete"></i> 删除</a>';
+        '<a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete"><i class="layui-icon layui-icon-delete"></i> 删除</a>';
 };
 
 layui.use(['table','form','layer','laypage'], function(){
@@ -77,19 +88,29 @@ layui.use(['table','form','layer','laypage'], function(){
         });
     }
 
+    // 加载角色列表
+    function loadRoles(){
+        $.get('/admin/users/roles_api',function(res){
+            if(res.code === 0){
+                allRoles = res.data;
+                loadData(1,'');
+            }
+        });
+    }
+
     function renderTable(data,total,page){
         table.render({
             elem: '#userTable',
             data: data,
             page: false,
             cols: [[
-                {type:'checkbox',fixed:'left'},
-                {field:'id',title:'ID',width:80},
-                {field:'username',title:'用户名'},
-                {field:'role',title:'角色',width:100,templet:roleTpl},
-                {field:'status',title:'状态',width:100,templet:statusTpl},
-                {field:'create_at',title:'创建时间',width:180},
-                {fixed:'right',title:'操作',width:180,templet:actionTpl}
+                {type:'checkbox',width:50,align:'center'},
+                {field:'id',title:'ID',width:80,align:'center'},
+                {field:'username',title:'用户名',align:'center'},
+                {field:'role',title:'角色',width:160,align:'center',templet:roleTpl},
+                {field:'status',title:'状态',width:160,align:'center',templet:statusTpl},
+                {field:'create_at',title:'创建时间',width:400,align:'center'},
+                {title:'操作',width:180,align:'center',templet:actionTpl}
             ]],
             limit: 20
         });
@@ -127,7 +148,7 @@ layui.use(['table','form','layer','laypage'], function(){
         }
     });
 
-    loadData(1,'');
+    loadRoles();
 
     $('#btnSearch').on('click',function(){
         currentKeyword = $('#searchKeyword').val();
@@ -188,6 +209,13 @@ layui.use(['table','form','layer','laypage'], function(){
     });
 
     function showAddForm(){
+        // 生成角色选项（排除超级管理员）
+        var roleOptions = '';
+        allRoles.forEach(function(r){
+            if(r.code === 'admin') return; // 超级管理员不能分配给其他用户
+            roleOptions += '<option value="' + r.code + '">' + r.name + ' (' + r.code + ')</option>';
+        });
+
         var html = '<form class="layui-form" id="addForm" style="padding:20px;" lay-filter="addForm">' +
             '<input type="hidden" name="_xsrf" value=\'' + getCsrfToken() + '\'>' +
             '<div class="layui-form-item">' +
@@ -205,11 +233,7 @@ layui.use(['table','form','layer','laypage'], function(){
             '<div class="layui-form-item">' +
                 '<label class="layui-form-label">角色</label>' +
                 '<div class="layui-input-block">' +
-                    '<select name="role">' +
-                        '<option value="user">普通用户</option>' +
-                        '<option value="manager">管理员</option>' +
-                        '<option value="admin">超级管理员</option>' +
-                    '</select>' +
+                    '<select name="role">' + roleOptions + '</select>' +
                 '</div>' +
             '</div>' +
             '<div class="layui-form-item">' +
@@ -232,6 +256,11 @@ layui.use(['table','form','layer','laypage'], function(){
             success: function(){
                 form.render();
                 $('#submitAddBtn').on('click',function(){
+                    var usernameVal = $('input[name="username"]').val().trim();
+                    if(usernameVal.toLowerCase() === 'admin'){
+                        layer.msg('不能创建用户名为admin的用户',{icon:2});
+                        return;
+                    }
                     var formData = $('#addForm').serialize();
                     $.post('/admin/users/add',formData,function(res){
                         if(res.code === 0){
@@ -252,10 +281,15 @@ layui.use(['table','form','layer','laypage'], function(){
 
     function showEditForm(data){
         var statusChecked = data.status === 1 ? 'checked' : '';
-        var roleAdminSelected = data.role === 'admin' ? 'selected' : '';
-        var roleManagerSelected = data.role === 'manager' ? 'selected' : '';
-        var roleUserSelected = data.role === 'user' ? 'selected' : '';
         var isSuperAdmin = (data.username === 'admin');
+
+        // 生成角色选项（排除超级管理员）
+        var roleOptions = '';
+        allRoles.forEach(function(r){
+            if(r.code === 'admin') return; // 超级管理员不能分配给其他用户
+            var selected = (r.code === data.role) ? 'selected' : '';
+            roleOptions += '<option value="' + r.code + '" ' + selected + '>' + r.name + ' (' + r.code + ')</option>';
+        });
 
         var html = '<form class="layui-form" id="editForm" style="padding:20px;" lay-filter="editForm">' +
             '<input type="hidden" name="_xsrf" value=\'' + getCsrfToken() + '\'>' +
@@ -277,11 +311,7 @@ layui.use(['table','form','layer','laypage'], function(){
             html += '<div class="layui-form-item">' +
                 '<label class="layui-form-label">角色</label>' +
                 '<div class="layui-input-block">' +
-                    '<select name="role">' +
-                        '<option value="user" ' + roleUserSelected + '>普通用户</option>' +
-                        '<option value="manager" ' + roleManagerSelected + '>管理员</option>' +
-                        '<option value="admin" ' + roleAdminSelected + '>超级管理员</option>' +
-                    '</select>' +
+                    '<select name="role">' + roleOptions + '</select>' +
                 '</div>' +
             '</div>' +
             '<div class="layui-form-item">' +
@@ -307,13 +337,21 @@ layui.use(['table','form','layer','laypage'], function(){
                 form.render();
                 $('#submitEditBtn').on('click',function(){
                     var formData = $('#editForm').serialize();
+                    // 处理checkbox未选中时不发送值的问题
+                    if(!$('input[name="status"]').is(':checked')){
+                        formData += '&status=0';
+                    }
                     $.post('/admin/users/edit',formData,function(res){
                         if(res.code === 0){
-                            layer.msg('修改成功',{icon:1});
+                            if(formData.includes('password') && $('input[name="password"]').val()){
+                                layer.msg('密码修改成功',{icon:1,time:2000});
+                            } else {
+                                layer.msg('修改成功',{icon:1,time:2000});
+                            }
                             layer.closeAll();
                             loadData(currentPage,currentKeyword);
                         } else {
-                            layer.msg(res.msg,{icon:2});
+                            layer.msg(res.msg,{icon:2,time:3000});
                         }
                     });
                 });
@@ -333,12 +371,6 @@ layui.use(['table','form','layer','laypage'], function(){
             }
         }
         return '';
-    }
-
-    function escapeHtml(text){
-        var div = document.createElement('div');
-        div.appendChild(document.createTextNode(text));
-        return div.innerHTML;
     }
 });
 </script>

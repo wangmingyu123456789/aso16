@@ -9,7 +9,7 @@ from app.controllers.auth import LoginHandler,LogoutHandler
 from app.controllers.home import IndexHandler
 from app.controllers.admin.auth import AdminLoginHandler,AdminLogoutHandler
 from app.controllers.admin.index import AdminIndexHandler
-from app.controllers.admin.user import AdminUserListHandler,AdminUserApiHandler,AdminUserAddHandler,AdminUserEditHandler,AdminUserDeleteHandler,AdminUserBatchDeleteHandler
+from app.controllers.admin.user import AdminUserListHandler,AdminUserApiHandler,AdminUserRolesApiHandler,AdminUserAddHandler,AdminUserEditHandler,AdminUserDeleteHandler,AdminUserBatchDeleteHandler
 from app.controllers.admin.function import AdminFunctionListHandler,AdminFunctionApiHandler,AdminFunctionAddHandler,AdminFunctionEditHandler,AdminFunctionDeleteHandler,AdminFunctionTreeHandler
 from app.controllers.admin.role import AdminRoleListHandler,AdminRoleApiHandler,AdminRoleAddHandler,AdminRoleEditHandler,AdminRoleDeleteHandler
 from app.controllers.admin.permission import AdminPermissionListHandler,AdminPermissionTreeHandler,AdminPermissionSaveHandler
@@ -72,6 +72,7 @@ def make_app():
 			(r"/admin",AdminIndexHandler),
 			(r"/admin/users",AdminUserListHandler),
 			(r"/admin/users/api",AdminUserApiHandler),
+			(r"/admin/users/roles_api",AdminUserRolesApiHandler),
 			(r"/admin/users/add",AdminUserAddHandler),
 			(r"/admin/users/edit",AdminUserEditHandler),
 			(r"/admin/users/delete",AdminUserDeleteHandler),
