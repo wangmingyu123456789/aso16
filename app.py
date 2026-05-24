@@ -10,6 +10,9 @@ from app.controllers.home import IndexHandler
 from app.controllers.admin.auth import AdminLoginHandler,AdminLogoutHandler
 from app.controllers.admin.index import AdminIndexHandler
 from app.controllers.admin.user import AdminUserListHandler,AdminUserApiHandler,AdminUserAddHandler,AdminUserEditHandler,AdminUserDeleteHandler,AdminUserBatchDeleteHandler
+from app.controllers.admin.function import AdminFunctionListHandler,AdminFunctionApiHandler,AdminFunctionAddHandler,AdminFunctionEditHandler,AdminFunctionDeleteHandler,AdminFunctionTreeHandler
+from app.controllers.admin.role import AdminRoleListHandler,AdminRoleApiHandler,AdminRoleAddHandler,AdminRoleEditHandler,AdminRoleDeleteHandler
+from app.controllers.admin.permission import AdminPermissionListHandler,AdminPermissionTreeHandler,AdminPermissionSaveHandler
 from app.models.db import init_db,upgrade_db
 
 class ViteClientHandler(tornado.web.RequestHandler):
@@ -73,6 +76,26 @@ def make_app():
 			(r"/admin/users/edit",AdminUserEditHandler),
 			(r"/admin/users/delete",AdminUserDeleteHandler),
 			(r"/admin/users/batch_delete",AdminUserBatchDeleteHandler),
+
+			# 功能管理
+			(r"/admin/functions",AdminFunctionListHandler),
+			(r"/admin/functions/api",AdminFunctionApiHandler),
+			(r"/admin/functions/add",AdminFunctionAddHandler),
+			(r"/admin/functions/edit",AdminFunctionEditHandler),
+			(r"/admin/functions/delete",AdminFunctionDeleteHandler),
+			(r"/admin/functions/tree",AdminFunctionTreeHandler),
+
+			# 角色管理
+			(r"/admin/roles",AdminRoleListHandler),
+			(r"/admin/roles/api",AdminRoleApiHandler),
+			(r"/admin/roles/add",AdminRoleAddHandler),
+			(r"/admin/roles/edit",AdminRoleEditHandler),
+			(r"/admin/roles/delete",AdminRoleDeleteHandler),
+
+			# 权限管理
+			(r"/admin/permissions",AdminPermissionListHandler),
+			(r"/admin/permissions/tree",AdminPermissionTreeHandler),
+			(r"/admin/permissions/save",AdminPermissionSaveHandler),
 
 			(r"/@vite/client",ViteClientHandler),
 			(r"/@vite/env",ViteEnvHandler),

@@ -1,0 +1,136 @@
+{% extends "layout.html" %}
+{% block body %}
+<div class="page-header">
+    <h3>权限管理</h3>
+    <p>配置角色与功能的映射关系，选择角色后分配功能权限</p>
+</div>
+
+<div class="layui-form" style="margin-bottom:20px;">
+    <div class="layui-form-item">
+        <label class="layui-form-label" style="width:80px;">选择角色</label>
+        <div class="layui-input-block" style="margin-left:110px;">
+            <select name="role_id" id="roleSelect" lay-filter="roleSelect">
+                <option value="">请选择角色</option>
+                {% for role in roles %}
+                <option value="{{ role['id'] }}">{{ role['name'] }} ({{ role['code'] }})</option>
+                {% end %}
+            </select>
+        </div>
+    </div>
+</div>
+
+<div id="permissionPanel" style="display:none;">
+    <div style="margin-bottom:16px;">
+        <button class="layui-btn layui-btn-sm" id="btnSelectAll"><i class="layui-icon layui-icon-ok"></i> 全选</button>
+        <button class="layui-btn layui-btn-sm layui-btn-primary" id="btnUnselectAll"><i class="layui-icon layui-icon-close"></i> 取消全选</button>
+        <button class="layui-btn layui-btn-sm layui-btn-normal" id="btnSave"><i class="layui-icon layui-icon-ok-circle"></i> 保存权限</button>
+    </div>
+    <div id="functionTree" class="layui-tree"></div>
+</div>
+
+<script>
+layui.use(['tree', 'layer', 'form'], function(){
+    var tree = layui.tree;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.$;
+    var currentRoleId = null;
+    var treeIns = null;
+
+    form.on('select(roleSelect)', function(data){
+        currentRoleId = data.value;
+        if(!currentRoleId){
+            $('#permissionPanel').hide();
+            return;
+        }
+        loadPermissions(currentRoleId);
+    });
+
+    function loadPermissions(roleId){
+        $.get('/admin/permissions/tree', {role_id: roleId}, function(res){
+            if(res.code === 0){
+                var treeData = buildTreeData(res.data);
+                treeIns = tree.render({
+                    elem: '#functionTree',
+                    data: treeData,
+                    showCheckbox: true,
+                    id: 'permTree',
+                    click: function(obj){}
+                });
+                $('#permissionPanel').show();
+            } else {
+                layer.msg(res.msg);
+            }
+        });
+    }
+
+    function buildTreeData(tree){
+        var result = [];
+        tree.forEach(function(p){
+            var node = {
+                id: p.id,
+                title: p.name + ' (' + p.code + ')',
+                checked: p.checked || false,
+                spread: true
+            };
+            if(p.children && p.children.length > 0){
+                node.children = p.children.map(function(c){
+                    return {
+                        id: c.id,
+                        title: c.name + ' (' + c.code + ')',
+                        checked: c.checked || false
+                    };
+                });
+            }
+            result.push(node);
+        });
+        return result;
+    }
+
+    $('#btnSelectAll').on('click', function(){
+        tree.setChecked('permTree', function(node){ return true; });
+    });
+
+    $('#btnUnselectAll').on('click', function(){
+        tree.setChecked('permTree', function(node){ return false; });
+    });
+
+    $('#btnSave').on('click', function(){
+        if(!currentRoleId){
+            layer.msg('请先选择角色');
+            return;
+        }
+        // 获取所有选中的节点
+        var checkedData = tree.getChecked('permTree');
+        var ids = [];
+        function collectIds(nodes){
+            nodes.forEach(function(n){
+                ids.push(n.id);
+                if(n.children){
+                    collectIds(n.children);
+                }
+            });
+        }
+        collectIds(checkedData);
+
+        $.post('/admin/permissions/save', {
+            role_id: currentRoleId,
+            function_ids: ids.join(','),
+            _xsrf: getCookie('_xsrf')
+        }, function(res){
+            if(res.code === 0){
+                layer.msg('权限保存成功');
+                loadPermissions(currentRoleId);
+            } else {
+                layer.msg(res.msg);
+            }
+        });
+    });
+
+    function getCookie(name){
+        var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
+        return r ? r[1] : '';
+    }
+});
+</script>
+{% end %}

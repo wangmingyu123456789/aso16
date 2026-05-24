@@ -1,0 +1,195 @@
+{% extends "layout.html" %}
+{% block body %}
+<div class="page-header">
+    <h3>功能管理</h3>
+    <p>管理系统菜单和功能模块，支持二级功能结构</p>
+</div>
+
+<div style="margin-bottom:16px;">
+    <button class="layui-btn layui-btn-sm" id="btnAdd"><i class="layui-icon layui-icon-addition"></i> 新增功能</button>
+</div>
+
+<table class="layui-hide" id="functionTable" lay-filter="functionTable"></table>
+{% end %}
+
+{% block extra_script %}
+<script>
+// 使用 fromCharCode 避免 Tornado 解析 Layui 模板语法
+var LB = String.fromCharCode(123,123);
+var RB = String.fromCharCode(125,125);
+
+var statusHtml = LB+'# if(d.status == 1){ '+RB+
+    '<span class="layui-badge layui-bg-green">启用</span>'+
+    LB+'# } else { '+RB+
+    '<span class="layui-badge layui-bg-gray">禁用</span>'+
+    LB+'# } '+RB;
+var s = document.createElement('script');
+s.type = 'text/html'; s.id = 'statusTpl'; s.text = statusHtml;
+document.head.appendChild(s);
+
+var levelHtml = LB+'# if(d.level == "parent"){ '+RB+
+    '<span class="layui-badge layui-bg-blue">一级</span>'+
+    LB+'# } else { '+RB+
+    '<span class="layui-badge layui-bg-orange">二级</span>'+
+    LB+'# } '+RB;
+var l = document.createElement('script');
+l.type = 'text/html'; l.id = 'levelTpl'; l.text = levelHtml;
+document.head.appendChild(l);
+
+var iconHtml = LB+'# if(d.icon){ '+RB+
+    '<i class="layui-icon '+LB+' d.icon '+RB+'" style="font-size:16px;color:#1e9fff;"></i> '+LB+' d.icon '+RB+
+    LB+'# } else { '+RB+
+    '<span style="color:#999;">无</span>'+
+    LB+'# } '+RB;
+var ic = document.createElement('script');
+ic.type = 'text/html'; ic.id = 'iconTpl'; ic.text = iconHtml;
+document.head.appendChild(ic);
+
+var toolbarHtml = '<a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i> 编辑</a>'+
+    '<a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del"><i class="layui-icon layui-icon-delete"></i> 删除</a>';
+var t = document.createElement('script');
+t.type = 'text/html'; t.id = 'toolbar'; t.text = toolbarHtml;
+document.head.appendChild(t);
+</script>
+<script>
+layui.use(['table', 'layer', 'form'], function(){
+    var table = layui.table;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.$;
+
+    table.render({
+        elem: '#functionTable',
+        url: '/admin/functions/api',
+        page: false,
+        cols: [[
+            {field: 'id', title: 'ID', width: 80, sort: true},
+            {field: 'level', title: '层级', width: 80, templet: '#levelTpl'},
+            {field: 'name', title: '功能名称', minWidth: 150},
+            {field: 'code', title: '功能编码', width: 150},
+            {field: 'icon', title: '图标', width: 180, templet: '#iconTpl'},
+            {field: 'url', title: '访问地址', width: 150},
+            {field: 'sort_order', title: '排序', width: 80, sort: true},
+            {field: 'status', title: '状态', width: 80, templet: '#statusTpl'},
+            {field: 'create_at', title: '创建时间', width: 180},
+            {title: '操作', width: 180, toolbar: '#toolbar', fixed: 'right'}
+        ]],
+        skin: 'line'
+    });
+
+    table.on('tool(functionTable)', function(obj){
+        var data = obj.data;
+        if(obj.event === 'edit'){
+            openEdit(data);
+        } else if(obj.event === 'del'){
+            layer.confirm('确定删除该功能及其子功能吗？', function(index){
+                $.post('/admin/functions/delete', {id: data.id, _xsrf: getCookie('_xsrf')}, function(res){
+                    if(res.code === 0){
+                        layer.msg('删除成功');
+                        table.reload('functionTable');
+                    } else {
+                        layer.msg(res.msg);
+                    }
+                });
+                layer.close(index);
+            });
+        }
+    });
+
+    $('#btnAdd').on('click', function(){
+        openAdd();
+    });
+
+    function openAdd(){
+        layer.open({
+            type: 1,
+            title: '新增功能',
+            area: ['500px', '480px'],
+            content: getFormHtml(),
+            success: function(layero, index){
+                form.render();
+                form.on('submit(saveForm)', function(data){
+                    $.post('/admin/functions/add', data.field, function(res){
+                        if(res.code === 0){
+                            layer.msg('添加成功');
+                            layer.close(index);
+                            table.reload('functionTable');
+                        } else {
+                            layer.msg(res.msg);
+                        }
+                    });
+                    return false;
+                });
+            }
+        });
+    }
+
+    function openEdit(data){
+        layer.open({
+            type: 1,
+            title: '编辑功能',
+            area: ['500px', '480px'],
+            content: getFormHtml(data),
+            success: function(layero, index){
+                form.render();
+                form.on('submit(saveForm)', function(formData){
+                    formData.field.id = data.id;
+                    $.post('/admin/functions/edit', formData.field, function(res){
+                        if(res.code === 0){
+                            layer.msg('修改成功');
+                            layer.close(index);
+                            table.reload('functionTable');
+                        } else {
+                            layer.msg(res.msg);
+                        }
+                    });
+                    return false;
+                });
+            }
+        });
+    }
+
+    function getFormHtml(d){
+        d = d || {};
+        var parentOptions = '<option value="0">作为一级功能</option>';
+        $.get('/admin/functions/tree', function(res){
+            if(res.code === 0){
+                res.data.forEach(function(p){
+                    parentOptions += '<option value="'+p.id+'" '+(d.parent_id==p.id?'selected':'')+'>'+p.name+'</option>';
+                });
+                $('select[name="parent_id"]').html(parentOptions);
+                form.render('select');
+            }
+        });
+        return '<form class="layui-form" style="padding:20px;">' +
+            '<input type="hidden" name="id" value="'+(d.id||'')+'">' +
+            '<div class="layui-form-item"><label class="layui-form-label">上级功能</label>' +
+            '<div class="layui-input-block"><select name="parent_id">' + parentOptions + '</select></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">功能名称</label>' +
+            '<div class="layui-input-block"><input type="text" name="name" value="'+(d.name||'')+'" class="layui-input" required></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">功能编码</label>' +
+            '<div class="layui-input-block"><input type="text" name="code" value="'+(d.code||'')+'" class="layui-input" required></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">图标</label>' +
+            '<div class="layui-input-block"><input type="text" name="icon" value="'+(d.icon||'')+'" class="layui-input" placeholder="layui-icon-xxx"></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">访问地址</label>' +
+            '<div class="layui-input-block"><input type="text" name="url" value="'+(d.url||'')+'" class="layui-input"></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">排序</label>' +
+            '<div class="layui-input-block"><input type="number" name="sort_order" value="'+(d.sort_order!=null?d.sort_order:0)+'" class="layui-input"></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">状态</label>' +
+            '<div class="layui-input-block">' +
+            '<input type="radio" name="status" value="1" title="启用" '+(d.status!=0?'checked':'')+'>' +
+            '<input type="radio" name="status" value="0" title="禁用" '+(d.status==0?'checked':'')+'>' +
+            '</div></div>' +
+            '<div class="layui-form-item"><div class="layui-input-block">' +
+            '<button class="layui-btn" lay-submit lay-filter="saveForm">保存</button>' +
+            '<button type="reset" class="layui-btn layui-btn-primary">重置</button>' +
+            '</div></div></form>';
+    }
+
+    function getCookie(name){
+        var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
+        return r ? r[1] : '';
+    }
+});
+</script>
+{% end %}

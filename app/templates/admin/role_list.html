@@ -1,0 +1,171 @@
+{% extends "layout.html" %}
+{% block body %}
+<div class="page-header">
+    <h3>角色管理</h3>
+    <p>管理系统角色，超级管理员角色不可修改和删除</p>
+</div>
+
+<div style="margin-bottom:16px;">
+    <button class="layui-btn layui-btn-sm" id="btnAdd"><i class="layui-icon layui-icon-addition"></i> 新增角色</button>
+</div>
+
+<table class="layui-hide" id="roleTable" lay-filter="roleTable"></table>
+{% end %}
+
+{% block extra_script %}
+<script>
+var LB = String.fromCharCode(123,123);
+var RB = String.fromCharCode(125,125);
+
+var statusHtml = LB+'# if(d.status == 1){ '+RB+
+    '<span class="layui-badge layui-bg-green">启用</span>'+
+    LB+'# } else { '+RB+
+    '<span class="layui-badge layui-bg-gray">禁用</span>'+
+    LB+'# } '+RB;
+var s = document.createElement('script');
+s.type = 'text/html'; s.id = 'statusTpl'; s.text = statusHtml;
+document.head.appendChild(s);
+
+var systemHtml = LB+'# if(d.is_system == 1){ '+RB+
+    '<span class="layui-badge layui-bg-red">系统</span>'+
+    LB+'# } else { '+RB+
+    '<span class="layui-badge layui-bg-gray">自定义</span>'+
+    LB+'# } '+RB;
+var sy = document.createElement('script');
+sy.type = 'text/html'; sy.id = 'systemTpl'; sy.text = systemHtml;
+document.head.appendChild(sy);
+
+var toolbarHtml = LB+'# if(d.is_system != 1){ '+RB+
+    '<a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i> 编辑</a>'+
+    '<a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del"><i class="layui-icon layui-icon-delete"></i> 删除</a>'+
+    LB+'# } else { '+RB+
+    '<span style="color:#999;font-size:12px;">系统角色</span>'+
+    LB+'# } '+RB;
+var tb = document.createElement('script');
+tb.type = 'text/html'; tb.id = 'toolbar'; tb.text = toolbarHtml;
+document.head.appendChild(tb);
+</script>
+<script>
+layui.use(['table', 'layer', 'form'], function(){
+    var table = layui.table;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.$;
+
+    table.render({
+        elem: '#roleTable',
+        url: '/admin/roles/api',
+        page: false,
+        cols: [[
+            {field: 'id', title: 'ID', width: 80, sort: true},
+            {field: 'name', title: '角色名称', width: 150},
+            {field: 'code', title: '角色编码', width: 150},
+            {field: 'description', title: '描述', minWidth: 200},
+            {field: 'is_system', title: '类型', width: 100, templet: '#systemTpl'},
+            {field: 'status', title: '状态', width: 80, templet: '#statusTpl'},
+            {field: 'create_at', title: '创建时间', width: 180},
+            {title: '操作', width: 180, toolbar: '#toolbar', fixed: 'right'}
+        ]],
+        skin: 'line'
+    });
+
+    table.on('tool(roleTable)', function(obj){
+        var data = obj.data;
+        if(obj.event === 'edit'){
+            openEdit(data);
+        } else if(obj.event === 'del'){
+            layer.confirm('确定删除该角色吗？', function(index){
+                $.post('/admin/roles/delete', {id: data.id, _xsrf: getCookie('_xsrf')}, function(res){
+                    if(res.code === 0){
+                        layer.msg('删除成功');
+                        table.reload('roleTable');
+                    } else {
+                        layer.msg(res.msg);
+                    }
+                });
+                layer.close(index);
+            });
+        }
+    });
+
+    $('#btnAdd').on('click', function(){
+        openAdd();
+    });
+
+    function openAdd(){
+        layer.open({
+            type: 1,
+            title: '新增角色',
+            area: ['500px', '380px'],
+            content: getFormHtml(),
+            success: function(layero, index){
+                form.render();
+                form.on('submit(saveForm)', function(data){
+                    $.post('/admin/roles/add', data.field, function(res){
+                        if(res.code === 0){
+                            layer.msg('添加成功');
+                            layer.close(index);
+                            table.reload('roleTable');
+                        } else {
+                            layer.msg(res.msg);
+                        }
+                    });
+                    return false;
+                });
+            }
+        });
+    }
+
+    function openEdit(data){
+        layer.open({
+            type: 1,
+            title: '编辑角色',
+            area: ['500px', '380px'],
+            content: getFormHtml(data),
+            success: function(layero, index){
+                form.render();
+                form.on('submit(saveForm)', function(formData){
+                    formData.field.id = data.id;
+                    $.post('/admin/roles/edit', formData.field, function(res){
+                        if(res.code === 0){
+                            layer.msg('修改成功');
+                            layer.close(index);
+                            table.reload('roleTable');
+                        } else {
+                            layer.msg(res.msg);
+                        }
+                    });
+                    return false;
+                });
+            }
+        });
+    }
+
+    function getFormHtml(d){
+        d = d || {};
+        return '<form class="layui-form" style="padding:20px;">' +
+            '<input type="hidden" name="id" value="'+(d.id||'')+'">' +
+            '<div class="layui-form-item"><label class="layui-form-label">角色名称</label>' +
+            '<div class="layui-input-block"><input type="text" name="name" value="'+(d.name||'')+'" class="layui-input" required></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">角色编码</label>' +
+            '<div class="layui-input-block"><input type="text" name="code" value="'+(d.code||'')+'" class="layui-input" required></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">描述</label>' +
+            '<div class="layui-input-block"><input type="text" name="description" value="'+(d.description||'')+'" class="layui-input"></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">状态</label>' +
+            '<div class="layui-input-block">' +
+            '<input type="radio" name="status" value="1" title="启用" '+(d.status!=0?'checked':'')+'>' +
+            '<input type="radio" name="status" value="0" title="禁用" '+(d.status==0?'checked':'')+'>' +
+            '</div></div>' +
+            '<div class="layui-form-item"><div class="layui-input-block">' +
+            '<button class="layui-btn" lay-submit lay-filter="saveForm">保存</button>' +
+            '<button type="reset" class="layui-btn layui-btn-primary">重置</button>' +
+            '</div></div></form>';
+    }
+
+    function getCookie(name){
+        var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
+        return r ? r[1] : '';
+    }
+});
+</script>
+{% end %}
