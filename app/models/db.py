@@ -120,7 +120,30 @@ def init_db():
 					publish_date TEXT,
 					raw_html TEXT,
 					ai_processed INTEGER NOT NULL DEFAULT 0,
+					task_id INTEGER NOT NULL DEFAULT 0,
 					collect_status TEXT NOT NULL DEFAULT 'success',
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# 创建 outlook_tasks 表（瞭望采集任务）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='outlook_tasks'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE outlook_tasks(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					keyword TEXT NOT NULL,
+					source_ids TEXT NOT NULL DEFAULT '',
+					source_names TEXT NOT NULL DEFAULT '',
+					pages INTEGER NOT NULL DEFAULT 1,
+					page_size_step INTEGER NOT NULL DEFAULT 10,
+					ai_expand INTEGER NOT NULL DEFAULT 0,
+					ai_clean INTEGER NOT NULL DEFAULT 0,
+					total_count INTEGER NOT NULL DEFAULT 0,
+					status TEXT NOT NULL DEFAULT 'completed',
+					error_msg TEXT,
 					create_at TEXT NOT NULL DEFAULT(datetime('now'))
 				)
 				"""

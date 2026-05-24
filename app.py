@@ -119,6 +119,7 @@ def make_app():
 			(r"/admin/outlook/sources/delete",AdminOutlookSourceDeleteHandler),
 			(r"/admin/outlook/collect/do",AdminOutlookCollectHandler),
 			(r"/admin/outlook/data",AdminOutlookDataListHandler),
+			(r"/admin/warehouse",AdminOutlookDataListHandler),
 			(r"/admin/outlook/data/api",AdminOutlookDataApiHandler),
 			(r"/admin/outlook/data/delete",AdminOutlookDataDeleteHandler),
 			(r"/admin/outlook/tasks/api",AdminOutlookTaskApiHandler),

@@ -111,15 +111,25 @@ class OutlookSourceRepository:
 class OutlookTaskRepository:
     @staticmethod
     def create_task(keyword, source_ids, source_names, pages, page_size_step, ai_expand, ai_clean):
+        """
+        创建新的采集任务
+        """
         with get_connection() as conn:
             cursor = conn.execute(
-                "INSERT INTO outlook_tasks(keyword,source_ids,source_names,pages,page_size_step,ai_expand,ai_clean) VALUES(?,?,?,?,?,?,?)",
-                (keyword, source_ids, source_names, pages, page_size_step, 1 if ai_expand else 0, 1 if ai_clean else 0)
+                """INSERT INTO outlook_tasks(
+                    keyword, source_ids, source_names, pages, page_size_step, 
+                    ai_expand, ai_clean, total_count, status
+                ) VALUES(?,?,?,?,?,?,?,?,?)""",
+                (keyword, source_ids, source_names, pages, page_size_step, 
+                 1 if ai_expand else 0, 1 if ai_clean else 0, 0, 'running')
             )
             return cursor.lastrowid
 
     @staticmethod
     def update_task(task_id, total_count, status='completed', error_msg=None):
+        """
+        更新任务状态和数据量
+        """
         with get_connection() as conn:
             conn.execute(
                 "UPDATE outlook_tasks SET total_count=?, status=?, error_msg=? WHERE id=?",
@@ -128,6 +138,9 @@ class OutlookTaskRepository:
 
     @staticmethod
     def get_task_list(page=1, page_size=20, keyword=None):
+        """
+        获取任务列表（支持分页和关键词搜索）
+        """
         offset = (page - 1) * page_size
         with get_connection() as conn:
             if keyword:
@@ -156,15 +169,39 @@ class OutlookTaskRepository:
 
     @staticmethod
     def get_task(task_id):
+        """
+        根据ID获取单个任务
+        """
         with get_connection() as conn:
             row = conn.execute("SELECT * FROM outlook_tasks WHERE id=?", (task_id,)).fetchone()
             return dict(row) if row else None
 
     @staticmethod
     def delete_task(task_id):
+        """
+        删除任务及其关联的所有数据
+        """
         with get_connection() as conn:
             conn.execute("DELETE FROM outlook_data WHERE task_id=?", (task_id,))
             conn.execute("DELETE FROM outlook_tasks WHERE id=?", (task_id,))
+
+    @staticmethod
+    def get_task_count():
+        """
+        获取任务总数
+        """
+        with get_connection() as conn:
+            count_row = conn.execute("SELECT COUNT(*) as total FROM outlook_tasks").fetchone()
+            return count_row["total"]
+
+    @staticmethod
+    def get_total_data_count():
+        """
+        获取所有任务的数据总量
+        """
+        with get_connection() as conn:
+            count_row = conn.execute("SELECT SUM(total_count) as total FROM outlook_tasks").fetchone()
+            return count_row["total"] or 0
 
 
 class OutlookDataRepository:

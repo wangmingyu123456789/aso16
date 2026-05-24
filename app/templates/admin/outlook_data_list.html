@@ -1,121 +1,330 @@
-{% extends "layout.html" %}
-{% block body %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据仓库 - AI智能瞭望系统</title>
+    <link rel="stylesheet" href="/static/dist/layui-v2.13.6/layui-v2.13.6/layui/css/layui.css">
 <style>
-.outlook-page{background:#0a0e1a;min-height:100vh;padding:32px 24px 60px;position:relative}
-.outlook-page::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 20% 20%,rgba(0,212,255,.06) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(123,47,247,.06) 0%,transparent 50%);pointer-events:none;z-index:0}
-.outlook-inner{max-width:1200px;margin:0 auto;position:relative;z-index:1}
-.page-title-bar{display:flex;align-items:center;gap:16px;margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,.06)}
-.page-title-icon{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#00d4ff,#7b2ff7);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,212,255,.3)}
-.page-title-icon i{font-size:22px;color:#fff}
-.page-title-text h1{font-size:24px;font-weight:700;color:#fff;margin:0;letter-spacing:2px}
-.page-title-text p{font-size:12px;color:rgba(255,255,255,.35);margin:4px 0 0}
-.dark-card{background:linear-gradient(180deg,#111827,#0f1525);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:28px 24px;position:relative;overflow:hidden}
-.dark-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#00d4ff,#7b2ff7,transparent)}
-.card-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
-.card-heading h2{font-size:16px;font-weight:600;color:#fff;margin:0;display:flex;align-items:center;gap:10px}
-.accent-dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#00d4ff,#7b2ff7);box-shadow:0 0 8px rgba(0,212,255,.4)}
-.search-bar{display:flex;gap:0;margin-bottom:20px}
-.search-bar input{flex:1;height:44px;padding:0 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-right:none;border-radius:8px 0 0 8px;color:#fff;font-size:14px;outline:none}
-.search-bar input:focus{background:rgba(255,255,255,.06);border-color:rgba(0,212,255,.35)}
-.search-bar input::placeholder{color:rgba(255,255,255,.25)}
-.search-bar button{height:44px;padding:0 18px;background:linear-gradient(135deg,#00d4ff,#7b2ff7);border:none;border-radius:0 8px 8px 0;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
-.task-list{display:flex;flex-direction:column;gap:10px}
-.task-item{display:flex;align-items:center;gap:16px;padding:18px 20px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:10px;transition:all .3s;cursor:pointer}
-.task-item:hover{border-color:rgba(0,212,255,.15);background:rgba(0,212,255,.03)}
-.task-icon{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(123,47,247,.12));border:1px solid rgba(0,212,255,.1);display:flex;align-items:center;justify-content:center;font-size:20px;color:#00d4ff;flex-shrink:0}
-.task-body{flex:1;min-width:0}
-.task-keyword{font-size:16px;font-weight:600;color:#fff;margin-bottom:4px}
-.task-meta{font-size:12px;color:rgba(255,255,255,.3);display:flex;gap:16px;flex-wrap:wrap}
-.task-meta span{display:flex;align-items:center;gap:4px}
-.task-count{text-align:center;flex-shrink:0;min-width:80px}
-.task-count .num{font-size:24px;font-weight:800;background:linear-gradient(135deg,#00d4ff,#7b2ff7);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.task-count .label{font-size:10px;color:rgba(255,255,255,.3);margin-top:2px}
-.task-status{flex-shrink:0}
-.status-badge{font-size:10px;padding:4px 12px;border-radius:6px;font-weight:500}
-.status-done{background:rgba(82,196,86,.08);color:#52c41a;border:1px solid rgba(82,196,86,.1)}
-.status-fail{background:rgba(255,77,79,.08);color:#ff4d4f;border:1px solid rgba(255,77,79,.1)}
-.task-ops{display:flex;gap:6px;flex-shrink:0}
-.op-btn{width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;color:rgba(255,255,255,.3)}
-.op-btn:hover{border-color:rgba(0,212,255,.25);background:rgba(0,212,255,.06);color:#00d4ff}
-.op-btn.danger:hover{border-color:rgba(255,77,79,.25);background:rgba(255,77,79,.06);color:#ff4d4f}
-.op-btn i{font-size:15px}
-.empty-state{text-align:center;padding:48px 20px}
-.empty-state i{font-size:40px;color:rgba(255,255,255,.08);display:block;margin-bottom:8px}
-.empty-state p{font-size:13px;color:rgba(255,255,255,.25)}
-.dark-layer{background:rgba(0,0,0,.75)!important}
+.warehouse-page{
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:#050810;overflow:hidden;
+}
+.warehouse-bg{
+    position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;
+    background:
+        radial-gradient(circle at 15% 20%, rgba(0,212,255,.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 30%, rgba(123,47,247,.08) 0%, transparent 40%),
+        radial-gradient(circle at 50% 80%, rgba(0,212,255,.05) 0%, transparent 50%);
+    animation: bgPulse 8s ease-in-out infinite alternate;
+}
+@keyframes bgPulse{
+    0%{opacity:.8;transform:scale(1)}
+    100%{opacity:1;transform:scale(1.05)}
+}
+.warehouse-grid{
+    position:absolute;top:0;left:0;right:0;bottom:0;
+    background:
+        linear-gradient(rgba(0,212,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,.03) 1px, transparent 1px);
+    background-size:50px 50px;
+    animation:gridMove 20s linear infinite;
+}
+@keyframes gridMove{
+    0%{transform:translateY(0)}
+    100%{transform:translateY(50px)}
+}
+.warehouse-particles{
+    position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;z-index:1;
+}
+.particle{
+    position:absolute;width:2px;height:2px;background:#00d4ff;border-radius:50%;
+    box-shadow:0 0 6px #00d4ff,0 0 12px #00d4ff;
+    animation: particleFloat 15s linear infinite;
+    opacity:0;
+}
+@keyframes particleFloat{
+    0%{transform:translateY(100vh) translateX(0);opacity:0}
+    10%{opacity:.6}
+    90%{opacity:.6}
+    100%{transform:translateY(-100vh) translateX(100px);opacity:0}
+}
+.warehouse-content{
+    position:relative;z-index:2;height:100vh;display:flex;flex-direction:column;padding:30px;
+}
+.warehouse-header{
+    text-align:center;margin-bottom:30px;position:relative;
+}
+.warehouse-title{
+    font-size:48px;font-weight:900;letter-spacing:8px;
+    background:linear-gradient(135deg,#00d4ff,#7b2ff7,#00d4ff);
+    background-size:200% auto;
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    animation:titleShine 3s linear infinite;
+    text-shadow:0 0 30px rgba(0,212,255,.3),0 0 60px rgba(123,47,247,.2);
+    margin:0;
+}
+@keyframes titleShine{
+    0%{background-position:0% center}
+    100%{background-position:200% center}
+}
+.warehouse-subtitle{
+    font-size:14px;color:rgba(255,255,255,.35);letter-spacing:4px;margin-top:8px;
+}
+.warehouse-stats{
+    display:flex;justify-content:center;gap:40px;margin-top:20px;
+}
+.stat-item{
+    text-align:center;padding:15px 30px;
+    background:rgba(0,212,255,.03);border:1px solid rgba(0,212,255,.1);border-radius:12px;
+    position:relative;overflow:hidden;
+}
+.stat-item::before{
+    content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+    background:conic-gradient(from 0deg,transparent,rgba(0,212,255,.1),transparent);
+    animation:statRotate 4s linear infinite;
+}
+@keyframes statRotate{
+    0%{transform:rotate(0deg)}
+    100%{transform:rotate(360deg)}
+}
+.stat-number{
+    font-size:32px;font-weight:800;
+    background:linear-gradient(135deg,#00d4ff,#7b2ff7);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    position:relative;z-index:1;
+}
+.stat-label{
+    font-size:11px;color:rgba(255,255,255,.4);margin-top:4px;letter-spacing:2px;
+    position:relative;z-index:1;
+}
+.warehouse-main{
+    flex:1;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(17,24,39,.8),rgba(10,14,26,.9));
+    border:1px solid rgba(0,212,255,.15);border-radius:20px;padding:20px;
+    position:relative;overflow:hidden;
+}
+.warehouse-main::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,transparent,#00d4ff,#7b2ff7,#00d4ff,transparent);
+    animation:borderFlow 3s linear infinite;
+}
+@keyframes borderFlow{
+    0%{background-position:-200% center}
+    100%{background-position:200% center}
+}
+.warehouse-toolbar{
+    display:flex;gap:15px;margin-bottom:20px;align-items:center;
+}
+.search-input{
+    flex:1;height:45px;padding:0 20px;
+    background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:10px;
+    color:#fff;font-size:14px;outline:none;transition:all .3s;
+}
+.search-input:focus{
+    border-color:#00d4ff;box-shadow:0 0 20px rgba(0,212,255,.2);
+    background:rgba(0,212,255,.08);
+}
+.search-input::placeholder{color:rgba(255,255,255,.25)}
+.search-btn{
+    height:45px;padding:0 25px;
+    background:linear-gradient(135deg,#00d4ff,#7b2ff7);border:none;border-radius:10px;
+    color:#fff;font-size:14px;font-weight:600;cursor:pointer;
+    transition:all .3s;position:relative;overflow:hidden;
+}
+.search-btn::before{
+    content:'';position:absolute;top:50%;left:50%;width:0;height:0;
+    background:rgba(255,255,255,.2);border-radius:50%;
+    transform:translate(-50%,-50%);transition:width .6s,height .6s;
+}
+.search-btn:hover::before{width:300px;height:300px}
+.search-btn:hover{box-shadow:0 0 25px rgba(0,212,255,.4);transform:translateY(-2px)}
+.warehouse-table{
+    flex:1;overflow-y:auto;overflow-x:hidden;
+}
+.warehouse-table::-webkit-scrollbar{width:6px}
+.warehouse-table::-webkit-scrollbar-track{background:rgba(0,212,255,.03);border-radius:3px}
+.warehouse-table::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#00d4ff,#7b2ff7);border-radius:3px}
+.data-row{
+    display:grid;grid-template-columns:80px 150px 1fr 120px 100px 120px 100px;
+    gap:15px;align-items:center;padding:15px 20px;margin-bottom:8px;
+    background:rgba(0,212,255,.02);border:1px solid rgba(0,212,255,.08);border-radius:12px;
+    transition:all .3s;cursor:pointer;position:relative;overflow:hidden;
+}
+.data-row::before{
+    content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(0,212,255,.1),transparent);
+    transition:left .5s;
+}
+.data-row:hover::before{left:100%}
+.data-row:hover{
+    border-color:rgba(0,212,255,.3);background:rgba(0,212,255,.05);
+    transform:translateX(5px);box-shadow:0 5px 20px rgba(0,212,255,.15);
+}
+.data-row.header{
+    background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.2);
+    cursor:default;font-weight:600;
+}
+.data-row.header:hover{transform:none;box-shadow:none}
+.cell{color:rgba(255,255,255,.7);font-size:13px}
+.cell-id{color:rgba(255,255,255,.3);font-family:monospace;font-size:12px}
+.cell-source{
+    color:#00d4ff;font-weight:500;padding:4px 10px;
+    background:rgba(0,212,255,.1);border-radius:6px;display:inline-block;
+}
+.cell-keyword{color:#fff;font-weight:500;font-size:14px}
+.cell-count{
+    font-weight:700;font-size:18px;
+    background:linear-gradient(135deg,#00d4ff,#7b2ff7);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.cell-time{color:rgba(255,255,255,.4);font-size:12px}
+.status-badge{
+    padding:4px 12px;border-radius:6px;font-size:11px;font-weight:500;display:inline-block;
+}
+.status-done{background:rgba(82,196,86,.1);color:#52c41a;border:1px solid rgba(82,196,86,.2)}
+.status-ai{
+    display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
+    background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(123,47,247,.1));
+    border:1px solid rgba(123,47,247,.2);border-radius:6px;font-size:11px;color:#7b2ff7;
+}
+.view-btn{
+    padding:6px 16px;background:linear-gradient(135deg,#00d4ff,#7b2ff7);
+    border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;
+    transition:all .3s;
+}
+.view-btn:hover{box-shadow:0 0 15px rgba(0,212,255,.4);transform:scale(1.05)}
+.empty-container{
+    text-align:center;padding:80px 20px;
+}
+.empty-icon{
+    font-size:60px;color:rgba(0,212,255,.2);margin-bottom:15px;
+    animation:emptyPulse 2s ease-in-out infinite;
+}
+@keyframes emptyPulse{
+    0%,100%{transform:scale(1);opacity:.3}
+    50%{transform:scale(1.1);opacity:.5}
+}
+.empty-text{color:rgba(255,255,255,.3);font-size:14px;letter-spacing:2px}
+.warehouse-pagination{
+    display:flex;justify-content:center;align-items:center;gap:10px;margin-top:20px;padding-top:20px;
+    border-top:1px solid rgba(0,212,255,.1);
+}
+.page-btn{
+    padding:8px 16px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);
+    border-radius:8px;color:rgba(255,255,255,.6);cursor:pointer;transition:all .3s;
+}
+.page-btn:hover:not(.disabled){
+    border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,.1);
+}
+.page-btn.active{
+    background:linear-gradient(135deg,#00d4ff,#7b2ff7);border-color:transparent;color:#fff;
+}
+.page-btn.disabled{opacity:.3;cursor:not-allowed}
+.page-info{color:rgba(255,255,255,.4);font-size:13px}
 </style>
-
-<div class="outlook-page">
-    <div class="outlook-inner">
-        <div class="page-title-bar">
-            <div class="page-title-icon"><i class="layui-icon layui-icon-table"></i></div>
-            <div class="page-title-text">
-                <h1>数据仓库</h1>
-                <p>所有采集任务数据汇总管理</p>
+</head>
+<body>
+    <div class="warehouse-bg"></div>
+    <div class="warehouse-grid"></div>
+    <div class="warehouse-particles" id="particles"></div>
+    <div class="warehouse-content">
+        <div class="warehouse-header">
+            <h1 class="warehouse-title">数 据 仓 库</h1>
+            <p class="warehouse-subtitle">DATA WAREHOUSE | 采集任务数据中心</p>
+            <div class="warehouse-stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="statTasks">0</div>
+                    <div class="stat-label">采集任务</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="statData">0</div>
+                    <div class="stat-label">数据总量</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="statSources">0</div>
+                    <div class="stat-label">数据源</div>
+                </div>
             </div>
         </div>
-
-        <div class="dark-card">
-            <div class="card-heading">
-                <h2><span class="accent-dot"></span>采集任务列表</h2>
+        <div class="warehouse-main">
+            <div class="warehouse-toolbar">
+                <input type="text" class="search-input" id="searchKeyword" placeholder="搜索任务关键词 / 数据源...">
+                <button class="search-btn" onclick="loadTasks()"><i class="layui-icon layui-icon-search"></i> 搜 索</button>
             </div>
-            <div class="search-bar">
-                <input type="text" id="searchKeyword" placeholder="搜索任务关键词...">
-                <button onclick="loadTasks()">搜索</button>
+            <div class="warehouse-table">
+                <div class="data-row header">
+                    <div class="cell">ID</div>
+                    <div class="cell">数据源</div>
+                    <div class="cell">关键词</div>
+                    <div class="cell">数据量</div>
+                    <div class="cell">AI处理</div>
+                    <div class="cell">采集时间</div>
+                    <div class="cell">操作</div>
+                </div>
+                <div id="taskList"></div>
             </div>
-            <div class="task-list" id="taskList"></div>
+            <div class="warehouse-pagination" id="pagination"></div>
         </div>
     </div>
 </div>
 
-<script type="text/html" id="taskItemTpl">
-    {{# if(d.data.length === 0){ }}
-    <div class="empty-state"><i class="layui-icon layui-icon-face-surprised"></i><p>暂无采集任务，请先进行一次采集</p></div>
-    {{# } else { }}
-    {{# layui.each(d.data, function(i, task){ }}
-    <div class="task-item" onclick="viewTaskData({{ task.id }})">
-        <div class="task-icon"><i class="layui-icon layui-icon-download-circle"></i></div>
-        <div class="task-body">
-            <div class="task-keyword">{{ task.keyword }}</div>
-            <div class="task-meta">
-                <span><i class="layui-icon layui-icon-source"></i> {{ task.source_names }}</span>
-                <span><i class="layui-icon layui-icon-time"></i> {{ task.pages }}页 x {{ task.page_size_step }}条</span>
-                <span><i class="layui-icon layui-icon-date"></i> {{ task.create_at }}</span>
-                {{# if(task.ai_expand){ }}<span style="color:#00d4ff"><i class="layui-icon layui-icon-star"></i> AI扩词</span>{{# } }}
-                {{# if(task.ai_clean){ }}<span style="color:#7b2ff7"><i class="layui-icon layui-icon-star-fill"></i> AI清洗</span>{{# } }}
-            </div>
-        </div>
-        <div class="task-count">
-            <div class="num">{{ task.total_count }}</div>
-            <div class="label">条数据</div>
-        </div>
-        <div class="task-status">
-            {{# if(task.status === 'completed'){ }}
-                <span class="status-badge status-done">已完成</span>
-            {{# } else { }}
-                <span class="status-badge status-fail">失败</span>
-            {{# } }}
-        </div>
-        <div class="task-ops">
-            <div class="op-btn" onclick="event.stopPropagation();viewTaskData({{ task.id }})" title="查看数据"><i class="layui-icon layui-icon-read"></i></div>
-            <div class="op-btn danger" onclick="event.stopPropagation();deleteTask({{ task.id }})" title="删除"><i class="layui-icon layui-icon-delete"></i></div>
-        </div>
-    </div>
-    {{# }); }}
-    {{# } }}
-</script>
-
-{% end %}
-
-{% block extra_script %}
 <script>
-layui.use(['layer','laytpl'], function(){
+layui.use(['layer'], function(){
     var layer = layui.layer;
-    var laytpl = layui.laytpl;
     var $ = layui.$;
 
     var currentPage = 1;
     var totalTasks = 0;
+    var totalDataCount = 0;
+    var totalSources = 0;
+
+    function createParticles(){
+        var container = document.getElementById('particles');
+        for(var i = 0; i < 30; i++){
+            var p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDelay = Math.random() * 15 + 's';
+            p.style.animationDuration = (10 + Math.random() * 10) + 's';
+            container.appendChild(p);
+        }
+    }
+
+    function loadStats(){
+        $.get('/admin/outlook/tasks/api', {page: 1, limit: 1000}, function(res){
+            if(res.code === 0){
+                totalTasks = res.count;
+                var dataCount = 0;
+                var sources = {};
+                for(var i = 0; i < res.data.length; i++){
+                    dataCount += (res.data[i].total_count || 0);
+                    var sns = res.data[i].source_names || '';
+                    sns.split(',').forEach(function(s){
+                        if(s.trim()) sources[s.trim()] = true;
+                    });
+                }
+                totalDataCount = dataCount;
+                totalSources = Object.keys(sources).length;
+                animateNumber('statTasks', totalTasks);
+                animateNumber('statData', totalDataCount);
+                animateNumber('statSources', totalSources);
+            }
+        });
+    }
+
+    function animateNumber(id, target){
+        var el = document.getElementById(id);
+        var current = 0;
+        var step = Math.ceil(target / 50);
+        var timer = setInterval(function(){
+            current += step;
+            if(current >= target){
+                current = target;
+                clearInterval(timer);
+            }
+            el.textContent = current.toLocaleString();
+        }, 30);
+    }
 
     window.loadTasks = function(page){
         if(page) currentPage = page;
@@ -123,57 +332,77 @@ layui.use(['layer','laytpl'], function(){
         $.get('/admin/outlook/tasks/api', {page: currentPage, limit: 20, keyword: keyword}, function(res){
             if(res.code === 0){
                 totalTasks = res.count;
-                var html = laytpl($('#taskItemTpl').html()).render(res);
-                $('#taskList').html(html);
-                renderPagination();
+                if(res.data.length === 0){
+                    $('#taskList').html('<div class="empty-container"><div class="empty-icon"><i class="layui-icon layui-icon-face-surprised"></i></div><div class="empty-text">暂无采集任务，请先进行数据采集</div></div>');
+                } else {
+                    var html = '';
+                    for(var i = 0; i < res.data.length; i++){
+                        html += renderTaskRow(res.data[i]);
+                    }
+                    $('#taskList').html(html);
+                    renderPagination();
+                }
             }
         });
     };
 
+    function renderTaskRow(task){
+        var aiTags = '';
+        if(task.ai_expand && task.ai_clean){
+            aiTags = '<span class="status-ai"><i class="layui-icon layui-icon-star-fill"></i> 扩词+清洗</span>';
+        } else if(task.ai_expand){
+            aiTags = '<span class="status-ai"><i class="layui-icon layui-icon-star"></i> AI扩词</span>';
+        } else if(task.ai_clean){
+            aiTags = '<span class="status-ai"><i class="layui-icon layui-icon-star-fill"></i> AI清洗</span>';
+        } else {
+            aiTags = '<span style="color:rgba(255,255,255,.2)">无</span>';
+        }
+
+        return '<div class="data-row" ondblclick="viewTaskData(' + task.id + ')">'
+            + '<div class="cell cell-id">' + task.id + '</div>'
+            + '<div class="cell"><span class="cell-source">' + task.source_names + '</span></div>'
+            + '<div class="cell cell-keyword">' + task.keyword + '</div>'
+            + '<div class="cell cell-count">' + task.total_count + '</div>'
+            + '<div class="cell">' + aiTags + '</div>'
+            + '<div class="cell cell-time">' + task.create_at + '</div>'
+            + '<div class="cell"><button class="view-btn" onclick="event.stopPropagation();viewTaskData(' + task.id + ')">查看数据 <i class="layui-icon layui-icon-right"></i></button></div>'
+        + '</div>';
+    }
+
     function renderPagination(){
         var totalPages = Math.ceil(totalTasks / 20);
-        if(totalPages <= 1) return;
-        var html = '<div style="text-align:center;margin-top:24px"><ul class="layui-laypage layui-laypage-default">';
-        html += '<li class="layui-laypage-prev'+(currentPage<=1?' layui-disabled':'')+'" onclick="'+(currentPage>1?'loadTasks('+(currentPage-1)+')':'')+'"><a>上一页</a></li>';
-        for(var i=1;i<=totalPages;i++){
-            if(Math.abs(i-currentPage)>3) continue;
-            html += '<li class="'+(i===currentPage?'layui-laypage-curr':'')+'"><a href="javascript:;" onclick="loadTasks('+i+')" style="'+(i===currentPage?'background:linear-gradient(135deg,#00d4ff,#7b2ff7);color:#fff':'')+'">'+i+'</a></li>';
+        if(totalPages <= 1){
+            $('#pagination').html('<div class="page-info">共 ' + totalTasks + ' 个任务</div>');
+            return;
         }
-        html += '<li class="layui-laypage-next'+(currentPage>=totalPages?' layui-disabled':'')+'" onclick="'+(currentPage<totalPages?'loadTasks('+(currentPage+1)+')':'')+'"><a>下一页</a></li>';
-        html += '<span class="layui-laypage-count">共 '+totalTasks+' 条</span>';
-        html += '</ul></div>';
-        $('#taskList').append(html);
+        var html = '';
+        html += '<div class="page-btn ' + (currentPage <= 1 ? 'disabled' : '') + '" onclick="' + (currentPage > 1 ? 'loadTasks(' + (currentPage - 1) + ')' : '') + '">上一页</div>';
+        for(var i = 1; i <= totalPages; i++){
+            if(i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)){
+                html += '<div class="page-btn ' + (i === currentPage ? 'active' : '') + '" onclick="loadTasks(' + i + ')">' + i + '</div>';
+            } else if(i === currentPage - 3 || i === currentPage + 3){
+                html += '<div class="page-btn disabled">...</div>';
+            }
+        }
+        html += '<div class="page-btn ' + (currentPage >= totalPages ? 'disabled' : '') + '" onclick="' + (currentPage < totalPages ? 'loadTasks(' + (currentPage + 1) + ')' : '') + '">下一页</div>';
+        html += '<div class="page-info">共 ' + totalTasks + ' 个任务</div>';
+        $('#pagination').html(html);
     }
 
     window.viewTaskData = function(taskId){
         layer.open({
             type: 2,
-            title: '任务数据详情',
-            area: ['90%', '85%'],
-            content: '/admin/outlook/task/data?task_id=' + taskId
+            title: false,
+            area: ['95%', '90%'],
+            content: '/admin/outlook/task/data?task_id=' + taskId,
+            shadeClose: true
         });
     };
 
-    window.deleteTask = function(taskId){
-        layer.confirm('确定要删除该任务及所有关联数据吗？', {skin:'dark-layer'}, function(index){
-            $.post('/admin/outlook/task/delete', {task_id: taskId, _xsrf: getCsrfToken()}, function(res){
-                if(res.code === 0){ layer.msg('删除成功', {icon:1}); loadTasks(); }
-                else { layer.msg(res.msg, {icon:2}); }
-            });
-            layer.close(index);
-        });
-    };
-
-    function getCsrfToken(){
-        var cookies = document.cookie.split(';');
-        for(var i=0;i<cookies.length;i++){
-            var c = cookies[i].trim();
-            if(c.indexOf('_xsrf=') === 0) return decodeURIComponent(c.substring(6));
-        }
-        return '';
-    }
-
+    createParticles();
+    loadStats();
     loadTasks();
 });
 </script>
-{% end %}
+</body>
+</html>
