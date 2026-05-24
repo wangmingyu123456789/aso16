@@ -27,17 +27,28 @@ class AdminUserApiHandler(AdminBaseHandler):
 	@tornado.web.authenticated
 	def get(self):
 		page = int(self.get_argument("page","1"))
+		# Layui 传递的是 limit 参数，优先使用 limit
+		limit_param = self.get_argument("limit", None)
+		if limit_param:
+			page_size = int(limit_param)
+		else:
+			page_size = int(self.get_argument("page_size","4"))
+		
 		keyword = self.get_argument("keyword","")
-		result = UserRepository.get_user_list(page=page,page_size=20,keyword=keyword if keyword else None)
+		
+		# 调试日志
+		import logging
+		logging.info(f"分页参数：page={page}, page_size={page_size}, limit={limit_param}, keyword={keyword}")
+		
+		result = UserRepository.get_user_list(page=page,page_size=page_size,keyword=keyword if keyword else None)
 		self.set_header("Content-Type","application/json")
-		self.write(json.dumps({
-			"code":0,
-			"data":result["data"],
-			"total":result["total"],
-			"page":result["page"],
-			"page_size":result["page_size"],
-			"total_pages":result["total_pages"]
-		}))
+		self.write({
+			"code": 0,
+			"msg": "",
+			"count": result["total"],
+			"data": result["data"],
+			"page": result["page"]
+		})
 
 class AdminUserAddHandler(AdminBaseHandler):
 	@tornado.web.authenticated
@@ -46,6 +57,7 @@ class AdminUserAddHandler(AdminBaseHandler):
 		password = self.get_body_argument("password","")
 		role = self.get_body_argument("role","user")
 		status = int(self.get_body_argument("status","1"))
+		can_login_admin = int(self.get_body_argument("can_login_admin","0"))
 		if not username or not password:
 			return self.write({"code":1,"msg":"用户名和密码不能为空"})
 		if username.lower() == "admin":
@@ -56,8 +68,8 @@ class AdminUserAddHandler(AdminBaseHandler):
 			from app.models.db import get_connection
 			with get_connection() as conn:
 				conn.execute(
-					"insert into users(username,password_hash,salt,role,status) values(?,?,?,?,?)",
-					(username,password_hash,salt.hex(),role,status)
+					"insert into users(username,password_hash,salt,role,status,can_login_admin) values(?,?,?,?,?,?)",
+					(username,password_hash,salt.hex(),role,status,can_login_admin)
 				)
 			return self.write({"code":0,"msg":"新增成功"})
 		except Exception as e:
@@ -71,6 +83,7 @@ class AdminUserEditHandler(AdminBaseHandler):
 		password = self.get_body_argument("password","")
 		role = self.get_body_argument("role","user")
 		status = int(self.get_body_argument("status","1"))
+		can_login_admin = int(self.get_body_argument("can_login_admin","0"))
 		if not user_id:
 			return self.write({"code":1,"msg":"用户ID不能为空"})
 		# 获取当前登录用户的角色
@@ -98,7 +111,7 @@ class AdminUserEditHandler(AdminBaseHandler):
 			return self.write({"code":1,"msg":"用户名不能为空"})
 		if username.lower() == "admin":
 			return self.write({"code":1,"msg":"不能使用admin作为用户名"})
-		update_params = {"username":username,"role":role,"status":status}
+		update_params = {"username":username,"role":role,"status":status,"can_login_admin":can_login_admin}
 		if password:
 			update_params["password"] = password
 		if UserRepository.update_user(user_id,**update_params):

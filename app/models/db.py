@@ -141,6 +141,10 @@ def upgrade_db():
 			conn.execute("ALTER TABLE users ADD COLUMN status INTEGER NOT NULL DEFAULT 1")
 		if 'create_at' not in columns:
 			conn.execute("ALTER TABLE users ADD COLUMN create_at TEXT NOT NULL DEFAULT(datetime('now'))")
+		if 'can_login_admin' not in columns:
+			conn.execute("ALTER TABLE users ADD COLUMN can_login_admin INTEGER NOT NULL DEFAULT 0")
+			# 将现有的admin用户设置为允许登录
+			conn.execute("UPDATE users SET can_login_admin=1 WHERE username='admin'")
 
 		# 创建 functions 表（如果不存在）
 		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='functions'")

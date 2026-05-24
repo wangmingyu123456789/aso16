@@ -27,9 +27,22 @@
 --实现以橱窗列表的页面风格，
 --实现动态新增/修改/删除模型服务，
 --支持可视化配置满足openai-api范式的模型接入及接口调用服务
---支持模型token统计（可视化），支持分页一行3列，6条数据为一列，由于设计到AI大模型，风格可以炫酷、高级感强,
+--支持模型token统计（可视化），支持分页，一行3列，6条数据为一列，由于设计到AI大模型，风格可以炫酷、高级感强,
 支持对新增的模型进行对话测试功能，
---
 --支持设置模型为系统模式（如果为默认，则全局优先调用该模型)
 以下为模型服务代码示例:
 '''
+curl https://aigc-api.aitoolcore.com/api/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "deepseek-v3",
+    "messages": [
+      {"role": "user", "content": "你好"}
+    ],
+    "stream": false
+  }'
+```
+以下为APIkey:
+API_KEY = "sk-aigc-c0725a1b8a1b205154867945a3c667ce9d232fa7"
+

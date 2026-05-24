@@ -52,12 +52,22 @@ class UserRepository:
 	def verify_admin_user(username:str,password:str)->bool:
 		with get_connection() as conn:
 			row = conn.execute(
-				"select id,username,password_hash,salt,role,status from users where username = ? and role in ('admin','manager')",
+				"select id,username,password_hash,salt,role,status,can_login_admin from users where username = ?",
 				(username,)
 			).fetchone()
 		if not row:
 			return False
 		if row["status"] != 1:
+			return False
+		# 超级管理员和管理员可以直接登录，普通用户需要授权
+		if row["role"] in ('admin', 'manager'):
+			pass  # 直接放行
+		elif row["role"] == 'user':
+			# 普通用户需要 can_login_admin=1 才能登录管理后台
+			if row["can_login_admin"] != 1:
+				return False
+		else:
+			# 其他角色不允许登录管理后台
 			return False
 		salt = bytes.fromhex(row["salt"])
 		return _hash_password(password,salt) == row["password_hash"]
@@ -73,14 +83,14 @@ class UserRepository:
 				).fetchone()
 				total = count_row["total"]
 				rows = conn.execute(
-					"select id,username,role,status,create_at from users where username like ? order by id desc limit ? offset ?",
+					"select id,username,role,status,can_login_admin,create_at from users where username like ? order by id desc limit ? offset ?",
 					(f'%{keyword}%', page_size, offset)
 				).fetchall()
 			else:
 				count_row = conn.execute("select count(*) as total from users").fetchone()
 				total = count_row["total"]
 				rows = conn.execute(
-					"select id,username,role,status,create_at from users order by id desc limit ? offset ?",
+					"select id,username,role,status,can_login_admin,create_at from users order by id desc limit ? offset ?",
 					(page_size, offset)
 				).fetchall()
 		return {
@@ -110,7 +120,7 @@ class UserRepository:
 			return False
 
 	@staticmethod
-	def update_user(user_id:int, username:str=None, password:str=None, role:str=None, status:int=None)->bool:
+	def update_user(user_id:int, username:str=None, password:str=None, role:str=None, status:int=None, can_login_admin:int=None)->bool:
 		updates = []
 		params = []
 		if username is not None:
@@ -129,6 +139,9 @@ class UserRepository:
 		if status is not None:
 			updates.append("status = ?")
 			params.append(status)
+		if can_login_admin is not None:
+			updates.append("can_login_admin = ?")
+			params.append(can_login_admin)
 		if not updates:
 			return False
 		params.append(user_id)

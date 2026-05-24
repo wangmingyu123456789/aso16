@@ -20,11 +20,12 @@
                 <input type="text" id="searchKeyword" placeholder="搜索用户名" class="layui-input" style="width:200px;height:32px;">
             </div>
             <button class="layui-btn layui-btn-sm" id="btnSearch"><i class="layui-icon layui-icon-search"></i> 搜索</button>
-            <button class="layui-btn layui-btn-sm layui-btn-primary" id="btnReset"><i class="layui-icon layui-icon-refresh"></i> 重置</button>
             <button class="layui-btn layui-btn-sm layui-btn-danger" id="btnBatchDelete" style="margin-left:10px;"><i class="layui-icon layui-icon-delete"></i> 批量删除</button>
         </div>
         <table class="layui-hide" id="userTable" lay-filter="userTable"></table>
-        <div id="pageContainer"></div>
+        <div id="pageWrap" style="display:flex;align-items:center;justify-content:flex-end;margin-top:16px;">
+            <div id="pageContainer"></div>
+        </div>
     </div>
 </div>
 {% end %}
@@ -35,6 +36,7 @@ var currentPage = 1;
 var checkedIds = [];
 var currentKeyword = '';
 var allRoles = []; // 存储所有角色
+var pageSize = 4; // 每页显示数量
 
 function escapeHtml(text){
     if(!text) return '';
@@ -71,59 +73,46 @@ var actionTpl = function(d){
         '<a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete"><i class="layui-icon layui-icon-delete"></i> 删除</a>';
 };
 
-layui.use(['table','form','layer','laypage'], function(){
+layui.use(['table','form','layer'], function(){
     var table = layui.table;
     var form = layui.form;
     var layer = layui.layer;
-    var laypage = layui.laypage;
     var $ = layui.$;
-
-    function loadData(page,keyword){
-        page = page || 1;
-        keyword = keyword || '';
-        $.get('/admin/users/api',{page:page,keyword:keyword},function(res){
-            if(res.code === 0){
-                renderTable(res.data, res.total, page);
-            }
-        });
-    }
 
     // 加载角色列表
     function loadRoles(){
         $.get('/admin/users/roles_api',function(res){
             if(res.code === 0){
                 allRoles = res.data;
-                loadData(1,'');
+                // 角色加载完成后初始化表格
+                initTable();
             }
         });
     }
 
-    function renderTable(data,total,page){
+    // 初始化表格
+    function initTable(){
         table.render({
             elem: '#userTable',
-            data: data,
-            page: false,
+            url: '/admin/users/api',
+            page: {
+                curr: 1,
+                layout: ['prev', 'page', 'next', 'skip', 'count', 'limit'],
+                limits: [4, 10, 20, 50],
+                limit: pageSize
+            },
             cols: [[
                 {type:'checkbox',width:50,align:'center'},
-                {field:'id',title:'ID',width:80,align:'center'},
+                {field:'id',title:'ID',width:80,align:'center',sort:true},
                 {field:'username',title:'用户名',align:'center'},
                 {field:'role',title:'角色',width:160,align:'center',templet:roleTpl},
                 {field:'status',title:'状态',width:160,align:'center',templet:statusTpl},
-                {field:'create_at',title:'创建时间',width:400,align:'center'},
-                {title:'操作',width:180,align:'center',templet:actionTpl}
+                {field:'create_at',title:'创建时间',width:200,align:'center'},
+                {title:'操作',width:180,align:'center',templet:actionTpl,fixed:'right'}
             ]],
-            limit: 20
-        });
-        laypage.render({
-            elem: 'pageContainer',
-            count: total,
-            limit: 20,
-            curr: page,
-            jump: function(obj, first){
-                if(!first){
-                    currentPage = obj.curr;
-                    loadData(obj.curr, currentKeyword);
-                }
+            skin: 'line',
+            done: function(res, page, count){
+                currentPage = page;
             }
         });
     }
@@ -152,13 +141,14 @@ layui.use(['table','form','layer','laypage'], function(){
 
     $('#btnSearch').on('click',function(){
         currentKeyword = $('#searchKeyword').val();
-        loadData(1,currentKeyword);
-    });
-
-    $('#btnReset').on('click',function(){
-        $('#searchKeyword').val('');
-        currentKeyword = '';
-        loadData(1,'');
+        table.reload('userTable', {
+            where: {
+                keyword: currentKeyword
+            },
+            page: {
+                curr: 1
+            }
+        });
     });
 
     $('#btnAdd').on('click',function(){
@@ -171,10 +161,18 @@ layui.use(['table','form','layer','laypage'], function(){
             showEditForm(data);
         } else if(obj.event === 'delete'){
             layer.confirm('确定要删除该用户吗？',function(index){
-                $.post('/admin/users/delete',{id:data.id},function(res){
+                $.post('/admin/users/delete',{id:data.id,_xsrf:getCsrfToken()},function(res){
                     if(res.code === 0){
                         layer.msg('删除成功',{icon:1});
-                        loadData(currentPage,currentKeyword);
+                        // 刷新表格
+                        table.reload('userTable', {
+                            where: {
+                                keyword: currentKeyword
+                            },
+                            page: {
+                                curr: 1
+                            }
+                        });
                     } else {
                         layer.msg(res.msg,{icon:2});
                     }
@@ -195,11 +193,19 @@ layui.use(['table','form','layer','laypage'], function(){
             return;
         }
         layer.confirm('确定要删除选中的 '+ids.length+' 个用户吗？',function(index){
-            $.post('/admin/users/batch_delete',{ids:JSON.stringify(ids)},function(res){
+            $.post('/admin/users/batch_delete',{ids:JSON.stringify(ids),_xsrf:getCsrfToken()},function(res){
                 if(res.code === 0){
                     layer.msg('批量删除成功',{icon:1});
                     checkedIds = [];
-                    loadData(currentPage,currentKeyword);
+                    // 刷新表格
+                    table.reload('userTable', {
+                        where: {
+                            keyword: currentKeyword
+                        },
+                        page: {
+                            curr: 1
+                        }
+                    });
                 } else {
                     layer.msg(res.msg,{icon:2});
                 }
@@ -242,6 +248,12 @@ layui.use(['table','form','layer','laypage'], function(){
                     '<input type="checkbox" name="status" lay-skin="switch" lay-text="正常|禁用" value="1" checked>' +
                 '</div>' +
             '</div>' +
+            '<div class="layui-form-item">' +
+                '<label class="layui-form-label">登录管理</label>' +
+                '<div class="layui-input-block">' +
+                    '<input type="checkbox" name="can_login_admin" lay-skin="switch" lay-text="允许|禁止" value="1">' +
+                '</div>' +
+            '</div>' +
             '<div class="layui-form-item" style="text-align:right;margin-bottom:0;">' +
                 '<button type="button" class="layui-btn layui-btn-normal" id="submitAddBtn">确定</button>' +
                 '<button type="button" class="layui-btn layui-btn-primary" id="cancelAddBtn">取消</button>' +
@@ -262,11 +274,28 @@ layui.use(['table','form','layer','laypage'], function(){
                         return;
                     }
                     var formData = $('#addForm').serialize();
+                    // 处理checkbox未选中时不发送值的问题
+                    if(!$('input[name="status"]').is(':checked')){
+                        formData += '&status=0';
+                    }
+                    if($('input[name="can_login_admin"]').is(':checked')){
+                        formData += '&can_login_admin=1';
+                    } else {
+                        formData += '&can_login_admin=0';
+                    }
                     $.post('/admin/users/add',formData,function(res){
                         if(res.code === 0){
                             layer.msg('新增成功',{icon:1});
                             layer.closeAll();
-                            loadData(currentPage,currentKeyword);
+                            // 刷新表格，回到第一页
+                            table.reload('userTable', {
+                                where: {
+                                    keyword: currentKeyword
+                                },
+                                page: {
+                                    curr: 1
+                                }
+                            });
                         } else {
                             layer.msg(res.msg,{icon:2});
                         }
@@ -308,6 +337,7 @@ layui.use(['table','form','layer','laypage'], function(){
             '</div>';
 
         if(!isSuperAdmin){
+            var canLoginChecked = (data.can_login_admin == 1) ? 'checked' : '';
             html += '<div class="layui-form-item">' +
                 '<label class="layui-form-label">角色</label>' +
                 '<div class="layui-input-block">' +
@@ -318,6 +348,12 @@ layui.use(['table','form','layer','laypage'], function(){
                 '<label class="layui-form-label">状态</label>' +
                 '<div class="layui-input-block">' +
                     '<input type="checkbox" name="status" lay-skin="switch" lay-text="正常|禁用" value="1" ' + statusChecked + '>' +
+                '</div>' +
+            '</div>' +
+            '<div class="layui-form-item">' +
+                '<label class="layui-form-label">登录管理</label>' +
+                '<div class="layui-input-block">' +
+                    '<input type="checkbox" name="can_login_admin" lay-skin="switch" lay-text="允许|禁止" value="1" ' + canLoginChecked + '>' +
                 '</div>' +
             '</div>';
         }
@@ -341,6 +377,9 @@ layui.use(['table','form','layer','laypage'], function(){
                     if(!$('input[name="status"]').is(':checked')){
                         formData += '&status=0';
                     }
+                    if(!$('input[name="can_login_admin"]').is(':checked')){
+                        formData += '&can_login_admin=0';
+                    }
                     $.post('/admin/users/edit',formData,function(res){
                         if(res.code === 0){
                             if(formData.includes('password') && $('input[name="password"]').val()){
@@ -349,7 +388,15 @@ layui.use(['table','form','layer','laypage'], function(){
                                 layer.msg('修改成功',{icon:1,time:2000});
                             }
                             layer.closeAll();
-                            loadData(currentPage,currentKeyword);
+                            // 刷新表格
+                            table.reload('userTable', {
+                                where: {
+                                    keyword: currentKeyword
+                                },
+                                page: {
+                                    curr: 1
+                                }
+                            });
                         } else {
                             layer.msg(res.msg,{icon:2,time:3000});
                         }
