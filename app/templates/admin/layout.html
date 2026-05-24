@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{static_url('dist/layui-v2.13.6/layui-v2.13.6/layui/css/layui.css')}}">
+    <link rel="stylesheet" href="{{static_url('dist/fontawesome-free-5.15.4-web/fontawesome-free-5.15.4-web/css/all.min.css')}}">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; }
+        .admin-layout { display: flex; flex-direction: column; height: 100vh; }
+        .admin-header { height: 60px; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 100; }
+        .admin-header .logo { font-size: 20px; font-weight: 600; color: #1e3c72; display: flex; align-items: center; gap: 10px; }
+        .admin-header .logo i { font-size: 24px; }
+        .admin-header .header-right { display: flex; align-items: center; gap: 20px; }
+        .admin-header .user-info { display: flex; align-items: center; gap: 8px; color: #333; cursor: pointer; }
+        .admin-header .user-info i { font-size: 16px; color: #666; }
+        .admin-body { display: flex; flex: 1; overflow: hidden; }
+        .admin-sidebar { width: 220px; background: #001529; color: #fff; overflow-y: auto; flex-shrink: 0; }
+        .admin-sidebar .menu-item { padding: 12px 24px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 10px; font-size: 14px; color: rgba(255,255,255,0.75); text-decoration: none; border-left: 3px solid transparent; }
+        .admin-sidebar .menu-item:hover, .admin-sidebar .menu-item.active { background: rgba(255,255,255,0.1); color: #fff; border-left-color: #1890ff; }
+        .admin-sidebar .menu-item i { width: 16px; text-align: center; }
+        .admin-sidebar .menu-title { padding: 16px 24px 8px; font-size: 12px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 1px; }
+        .admin-main { flex: 1; padding: 20px; overflow-y: auto; }
+        .admin-content { background: #fff; border-radius: 8px; padding: 24px; min-height: calc(100vh - 120px); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .page-header { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #f0f0f0; }
+        .page-header h3 { font-size: 18px; color: #333; margin-bottom: 4px; }
+        .page-header p { font-size: 14px; color: #999; }
+        .admin-footer { height: 40px; background: #fff; border-top: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #999; }
+        @media (max-width: 768px) {
+            .admin-sidebar { width: 60px; }
+            .admin-sidebar .menu-item span, .admin-sidebar .menu-title { display: none; }
+            .admin-sidebar .menu-item { justify-content: center; padding: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <div class="admin-header">
+            <div class="logo"><i class="layui-icon layui-icon-console"></i> AI智能瞭望系统</div>
+            <div class="header-right">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span>{{ username }}</span>
+                </div>
+                <form action="/admin/logout" method="post" style="display:inline;">
+                    {% module xsrf_form_html() %}
+                    <button type="submit" class="layui-btn layui-btn-sm layui-btn-primary" style="border:none;"><i class="layui-icon layui-icon-logout"></i> 退出</button>
+                </form>
+            </div>
+        </div>
+        <div class="admin-body">
+            <div class="admin-sidebar">
+                <div class="menu-title">基础管理</div>
+                <a href="/admin" class="menu-item {% if current_page == 'index' %}active{% end %}"><i class="layui-icon layui-icon-home"></i><span>系统首页</span></a>
+                <a href="/admin/users" class="menu-item {% if current_page == 'users' %}active{% end %}"><i class="layui-icon layui-icon-username"></i><span>用户管理</span></a>
+                <div class="menu-title">核心业务</div>
+                <a href="javascript:;" class="menu-item"><i class="layui-icon layui-icon-engine"></i><span>模型引擎</span></a>
+                <a href="javascript:;" class="menu-item"><i class="layui-icon layui-icon-auz"></i><span>数字员工</span></a>
+                <a href="javascript:;" class="menu-item"><i class="layui-icon layui-icon-read"></i><span>瞭望管理</span></a>
+                <div class="menu-title">数据管理</div>
+                <a href="javascript:;" class="menu-item"><i class="layui-icon layui-icon-table"></i><span>数据仓库</span></a>
+                <a href="javascript:;" class="menu-item"><i class="layui-icon layui-icon-link"></i><span>接口管理</span></a>
+                <div class="menu-title">系统</div>
+                <a href="javascript:;" class="menu-item"><i class="layui-icon layui-icon-set"></i><span>系统设置</span></a>
+                <a href="javascript:;" class="menu-item"><i class="layui-icon layui-icon-chart"></i><span>系统统计</span></a>
+            </div>
+            <div class="admin-main">
+                <div class="admin-content">
+                    {% block body %}{% end %}
+                </div>
+            </div>
+        </div>
+        <div class="admin-footer">
+            AI智能瞭望与智能问数系统 v1.0 &copy; 2026
+        </div>
+    </div>
+    <script src="{{static_url('dist/layui-v2.13.6/layui-v2.13.6/layui/layui.js')}}"></script>
+    <script src="{{static_url('dist/fontawesome-free-5.15.4-web/fontawesome-free-5.15.4-web/js/all.min.js')}}"></script>
+</body>
+</html>

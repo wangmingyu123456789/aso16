@@ -21,7 +21,21 @@ def init_db():
 				username TEXT NOT NULL UNIQUE,
 				password_hash TEXT NOT NULL,
 				salt TEXT NOT NULL,
-				create_at TXTE NOT NULL DEFAULT(datetime('now'))
+				role TEXT NOT NULL DEFAULT 'user',
+				status INTEGER NOT NULL DEFAULT 1,
+				create_at TEXT NOT NULL DEFAULT(datetime('now'))
 			)
 			"""
 		)
+
+def upgrade_db():
+	with get_connection() as conn:
+		cursor = conn.execute("PRAGMA table_info(users)")
+		columns = [row[1] for row in cursor.fetchall()]
+		if 'role' not in columns:
+			conn.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+		if 'status' not in columns:
+			conn.execute("ALTER TABLE users ADD COLUMN status INTEGER NOT NULL DEFAULT 1")
+		if 'create_at' not in columns:
+			conn.execute("ALTER TABLE users ADD COLUMN create_at TEXT NOT NULL DEFAULT(datetime('now'))")
+		conn.commit()
