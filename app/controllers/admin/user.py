@@ -73,17 +73,27 @@ class AdminUserEditHandler(AdminBaseHandler):
 		status = int(self.get_body_argument("status","1"))
 		if not user_id:
 			return self.write({"code":1,"msg":"用户ID不能为空"})
-		# 检查是否为超级管理员用户
+		# 获取当前登录用户的角色
+		current_role = self.get_current_user_role()
+		# 获取目标用户信息
 		from app.models.db import get_connection
 		with get_connection() as conn:
-			user = conn.execute("SELECT username FROM users WHERE id=?", (user_id,)).fetchone()
-		if user and user["username"] == "admin":
+			target_user = conn.execute("SELECT username,role FROM users WHERE id=?", (user_id,)).fetchone()
+		if not target_user:
+			return self.write({"code":1,"msg":"用户不存在"})
+		# 超级管理员用户（username='admin'）只能由超级管理员修改
+		if target_user["username"] == "admin" and current_role != 'admin':
+			return self.write({"code":1,"msg":"只有超级管理员可以修改admin用户"})
+		if target_user["username"] == "admin":
 			# 超级管理员只能修改密码
 			if not password:
 				return self.write({"code":1,"msg":"超级管理员必须设置密码"})
 			if UserRepository.update_user(user_id, password=password):
 				return self.write({"code":0,"msg":"密码修改成功"})
 			return self.write({"code":1,"msg":"密码修改失败"})
+		# 普通管理员不能修改超级管理员角色用户
+		if target_user["role"] == 'admin' and current_role != 'admin':
+			return self.write({"code":1,"msg":"只有超级管理员可以修改超级管理员角色用户"})
 		if not username:
 			return self.write({"code":1,"msg":"用户名不能为空"})
 		if username.lower() == "admin":
