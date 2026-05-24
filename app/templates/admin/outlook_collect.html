@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>瞭望采集 - AI智能数据采集引擎</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        @keyframes gradientMove{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+        @keyframes float{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-30px) rotate(180deg)}}
+        @keyframes pulse{0%,100%{opacity:0.3}50%{opacity:1}}
+        @keyframes scanDown{0%{top:-5px;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}
+        @keyframes orbit{0%{transform:rotate(0deg) translateX(60px) rotate(0deg)}100%{transform:rotate(360deg) translateX(60px) rotate(-360deg)}}
+        @keyframes ripple{0%{transform:scale(0.5);opacity:0.8}100%{transform:scale(3);opacity:0}}
+        @keyframes slideUp{from{opacity:0;transform:translateY(50px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+        @keyframes glow{0%,100%{box-shadow:0 0 20px rgba(0,212,255,0.3)}50%{box-shadow:0 0 40px rgba(0,212,255,0.6),0 0 60px rgba(123,47,247,0.3)}}
+        @keyframes borderGlow{0%,100%{border-color:rgba(0,212,255,0.3)}50%{border-color:rgba(123,47,247,0.5)}}
+        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+        body{
+            font-family:'SF Pro Display','Segoe UI',system-ui,-apple-system,sans-serif;
+            background:#000;
+            color:#fff;
+            min-height:100vh;
+            overflow-x:hidden;
+            position:relative;
+        }
+
+        /* === 宇宙背景 === */
+        .universe{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;}
+        .nebula{
+            position:absolute;border-radius:50%;filter:blur(120px);opacity:0.25;
+        }
+        .nebula-1{width:600px;height:600px;background:radial-gradient(circle,#00d4ff,transparent);top:-200px;left:-200px;animation:float 12s ease-in-out infinite;}
+        .nebula-2{width:800px;height:800px;background:radial-gradient(circle,#7b2ff7,transparent);bottom:-300px;right:-300px;animation:float 15s ease-in-out infinite reverse;}
+        .nebula-3{width:500px;height:500px;background:radial-gradient(circle,#ff0080,transparent);top:40%;left:30%;animation:float 10s ease-in-out infinite;}
+
+        .stars-layer{position:absolute;top:0;left:0;width:100%;height:100%;}
+        .star{position:absolute;background:#fff;border-radius:50%;animation:pulse linear infinite;}
+
+        .grid-floor{
+            position:absolute;bottom:0;left:0;width:100%;height:50%;
+            background:
+                linear-gradient(to top,rgba(0,212,255,0.1),transparent),
+                repeating-linear-gradient(90deg,rgba(0,212,255,0.05) 1px,transparent 1px),
+                repeating-linear-gradient(0deg,rgba(0,212,255,0.05) 1px,transparent 1px);
+            background-size:100% 100%,80px 80px,80px 80px;
+            transform:perspective(500px) rotateX(60deg);
+            transform-origin:bottom;
+            mask-image:linear-gradient(to top,rgba(0,0,0,0.5),transparent);
+        }
+
+        .scan-beam{
+            position:absolute;left:0;width:100%;height:3px;
+            background:linear-gradient(90deg,transparent,rgba(0,212,255,0.5),rgba(123,47,247,0.3),transparent);
+            animation:scanDown 4s linear infinite;
+            box-shadow:0 0 20px rgba(0,212,255,0.3);
+        }
+
+        /* === 主内容 === */
+        .wrapper{
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            min-height:100vh;padding:60px 20px;
+            position:relative;z-index:10;
+        }
+
+        /* === 品牌区 === */
+        .brand{text-align:center;margin-bottom:60px;animation:slideUp 1s ease-out;}
+        .brand-orb{
+            width:120px;height:120px;margin:0 auto 30px;position:relative;
+        }
+        .orb-ring{
+            position:absolute;border:2px solid;border-radius:50%;
+        }
+        .orb-ring-1{
+            top:0;left:0;width:100%;height:100%;border-color:rgba(0,212,255,0.4);
+        }
+        .orb-ring-1::before{
+            content:'';position:absolute;top:-4px;left:-4px;width:12px;height:12px;
+            background:#00d4ff;border-radius:50%;box-shadow:0 0 10px #00d4ff;
+            animation:orbit 3s linear infinite;
+        }
+        .orb-ring-2{
+            top:15px;left:15px;width:calc(100% - 30px);height:calc(100% - 30px);border-color:rgba(123,47,247,0.3);
+        }
+        .orb-ring-2::before{
+            content:'';position:absolute;top:-3px;left:-3px;width:9px;height:9px;
+            background:#7b2ff7;border-radius:50%;box-shadow:0 0 8px #7b2ff7;
+            animation:orbit 2.5s linear infinite reverse;
+        }
+        .orb-ring-3{
+            top:28px;left:28px;width:calc(100% - 56px);height:calc(100% - 56px);border-color:rgba(255,0,128,0.2);
+        }
+        .orb-core{
+            position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+            width:30px;height:30px;background:radial-gradient(circle,#00d4ff,#7b2ff7);
+            border-radius:50%;box-shadow:0 0 30px rgba(0,212,255,0.5),0 0 60px rgba(123,47,247,0.3);
+            animation:glow 2s ease-in-out infinite;
+        }
+
+        .brand-title{
+            font-size:56px;font-weight:800;letter-spacing:10px;
+            background:linear-gradient(135deg,#00d4ff 0%,#7b2ff7 25%,#ff0080 50%,#00d4ff 75%,#7b2ff7 100%);
+            background-size:400% 100%;
+            animation:gradientMove 4s ease infinite;
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            text-shadow:none;
+            margin-bottom:16px;
+        }
+        .brand-sub{
+            font-size:14px;color:rgba(255,255,255,0.35);letter-spacing:8px;text-transform:uppercase;
+        }
+
+        /* === 主搜索区 === */
+        .search-universe{
+            width:100%;max-width:800px;
+            animation:slideUp 1.2s ease-out;
+        }
+
+        .input-container{
+            position:relative;margin-bottom:36px;
+        }
+        .search-main{
+            width:100%;height:72px;padding:0 80px 0 28px;
+            background:rgba(255,255,255,0.03);
+            backdrop-filter:blur(20px);
+            border:1px solid rgba(255,255,255,0.1);
+            border-radius:20px;color:#fff;font-size:20px;
+            outline:none;transition:all 0.5s;
+            animation:borderGlow 3s ease-in-out infinite;
+        }
+        .search-main::placeholder{color:rgba(255,255,255,0.25);}
+        .search-main:focus{
+            background:rgba(255,255,255,0.06);
+            border-color:rgba(0,212,255,0.5);
+            box-shadow:0 0 40px rgba(0,212,255,0.2),inset 0 0 20px rgba(0,212,255,0.05);
+        }
+
+        .search-btn{
+            position:absolute;right:8px;top:50%;transform:translateY(-50%);
+            width:56px;height:56px;
+            background:linear-gradient(135deg,#00d4ff,#7b2ff7);
+            border:none;border-radius:16px;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;
+            transition:all 0.3s;box-shadow:0 5px 20px rgba(0,212,255,0.3);
+        }
+        .search-btn:hover{transform:translateY(-50%) scale(1.05);box-shadow:0 8px 30px rgba(0,212,255,0.5);}
+        .search-btn svg{width:24px;height:24px;stroke:#fff;stroke-width:2.5;fill:none;}
+
+        /* === 采集源选择面板 === */
+        .panel{
+            background:rgba(255,255,255,0.02);
+            backdrop-filter:blur(15px);
+            border:1px solid rgba(255,255,255,0.06);
+            border-radius:20px;padding:28px;margin-bottom:24px;
+        }
+        .panel-header{
+            display:flex;align-items:center;gap:12px;
+            font-size:13px;color:rgba(255,255,255,0.5);letter-spacing:3px;
+            text-transform:uppercase;margin-bottom:20px;
+        }
+        .panel-header::before{
+            content:'';width:24px;height:2px;
+            background:linear-gradient(90deg,#00d4ff,transparent);
+        }
+        .panel-header::after{
+            content:'';flex:1;height:1px;
+            background:linear-gradient(90deg,rgba(255,255,255,0.1),transparent);
+        }
+
+        .sources-grid{
+            display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+            gap:14px;
+        }
+        .source-card{
+            display:flex;align-items:center;justify-content:space-between;
+            padding:16px 18px;
+            background:rgba(255,255,255,0.03);
+            border:1px solid rgba(255,255,255,0.05);
+            border-radius:14px;cursor:pointer;transition:all 0.4s;
+            position:relative;overflow:hidden;
+        }
+        .source-card::before{
+            content:'';position:absolute;top:0;left:0;width:100%;height:100%;
+            background:linear-gradient(135deg,rgba(0,212,255,0.1),transparent);
+            opacity:0;transition:0.4s;
+        }
+        .source-card:hover{border-color:rgba(0,212,255,0.3);transform:translateY(-2px);}
+        .source-card:hover::before{opacity:1;}
+        .source-card.active{
+            border-color:rgba(0,212,255,0.4);
+            background:rgba(0,212,255,0.08);
+            box-shadow:0 0 25px rgba(0,212,255,0.15);
+        }
+        .source-card.active::before{opacity:1;}
+
+        .source-meta{display:flex;align-items:center;gap:14px;position:relative;z-index:1;}
+        .source-icon{
+            width:42px;height:42px;border-radius:12px;
+            background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(123,47,247,0.15));
+            display:flex;align-items:center;justify-content:center;
+            font-size:18px;font-weight:700;color:#00d4ff;
+            border:1px solid rgba(0,212,255,0.2);
+        }
+        .source-name{font-size:15px;font-weight:500;color:#fff;}
+        .source-tag{font-size:10px;color:rgba(255,255,255,0.3);margin-top:3px;letter-spacing:1px;}
+
+        /* 开关 */
+        .switch{position:relative;width:48px;height:26px;z-index:1;}
+        .switch input{opacity:0;width:0;height:0;}
+        .switch .rail{
+            position:absolute;top:0;left:0;right:0;bottom:0;
+            background:rgba(255,255,255,0.1);border-radius:26px;
+            cursor:pointer;transition:0.4s;
+        }
+        .switch .rail::before{
+            content:'';position:absolute;height:20px;width:20px;
+            left:3px;bottom:3px;background:#fff;border-radius:50%;
+            transition:0.4s;box-shadow:0 2px 6px rgba(0,0,0,0.3);
+        }
+        .switch input:checked + .rail{
+            background:linear-gradient(135deg,#00d4ff,#7b2ff7);
+            box-shadow:0 0 12px rgba(0,212,255,0.4);
+        }
+        .switch input:checked + .rail::before{transform:translateX(22px);}
+
+        /* === 参数配置 === */
+        .config-row{
+            display:grid;grid-template-columns:1fr 1fr;gap:16px;
+        }
+        .config-item{
+            background:rgba(255,255,255,0.02);
+            border:1px solid rgba(255,255,255,0.06);
+            border-radius:12px;padding:18px;
+        }
+        .config-label{font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:2px;margin-bottom:10px;}
+        .config-input{
+            width:100%;height:44px;padding:0 16px;
+            background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);
+            border-radius:10px;color:#fff;font-size:16px;outline:none;
+            transition:all 0.3s;
+        }
+        .config-input:focus{
+            border-color:rgba(0,212,255,0.4);
+            box-shadow:0 0 15px rgba(0,212,255,0.1);
+        }
+
+        /* === 采集按钮 === */
+        .launch-btn{
+            width:100%;height:64px;
+            background:linear-gradient(135deg,#00d4ff,#7b2ff7,#ff0080);
+            background-size:200% 100%;
+            animation:gradientMove 3s ease infinite;
+            color:#fff;border:none;border-radius:16px;
+            font-size:18px;font-weight:700;letter-spacing:6px;
+            cursor:pointer;transition:all 0.5s;position:relative;overflow:hidden;
+        }
+        .launch-btn:hover{
+            transform:translateY(-3px);
+            box-shadow:0 15px 50px rgba(0,212,255,0.4),0 0 80px rgba(123,47,247,0.2);
+        }
+        .launch-btn:active{transform:translateY(0);}
+        .launch-btn::after{
+            content:'';position:absolute;top:50%;left:50%;
+            width:400px;height:400px;transform:translate(-50%,-50%);
+            background:radial-gradient(circle,rgba(255,255,255,0.15),transparent);
+            border-radius:50%;animation:ripple 2.5s ease-out infinite;
+        }
+        .launch-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;box-shadow:none;}
+        .launch-btn:disabled::after{display:none;}
+
+        /* === 加载效果 === */
+        .loading-zone{
+            display:none;justify-content:center;align-items:center;gap:8px;margin-top:24px;
+        }
+        .loading-zone.active{display:flex;}
+        .loading-orb{
+            width:10px;height:10px;border-radius:50%;
+            background:#00d4ff;box-shadow:0 0 10px #00d4ff;
+            animation:float 0.8s ease-in-out infinite;
+        }
+        .loading-orb:nth-child(2){animation-delay:0.1s;background:#7b2ff7;box-shadow:0 0 10px #7b2ff7;}
+        .loading-orb:nth-child(3){animation-delay:0.2s;background:#ff0080;box-shadow:0 0 10px #ff0080;}
+        .loading-orb:nth-child(4){animation-delay:0.3s;background:#00d4ff;box-shadow:0 0 10px #00d4ff;}
+
+        /* === 结果面板 === */
+        .result-zone{
+            margin-top:28px;display:none;text-align:center;
+            animation:slideUp 0.6s ease-out;
+        }
+        .result-zone.active{display:block;}
+        .result-container{
+            background:rgba(255,255,255,0.03);
+            backdrop-filter:blur(20px);
+            border:1px solid rgba(0,212,255,0.2);
+            border-radius:24px;padding:40px;
+            position:relative;overflow:hidden;
+        }
+        .result-container::before{
+            content:'';position:absolute;top:0;left:0;right:0;height:3px;
+            background:linear-gradient(90deg,#00d4ff,#7b2ff7,#ff0080);
+            animation:gradientMove 3s ease infinite;background-size:200% 100%;
+        }
+        .result-label{font-size:13px;color:rgba(255,255,255,0.4);letter-spacing:4px;margin-bottom:20px;}
+        .result-number{
+            font-size:80px;font-weight:900;line-height:1;
+            background:linear-gradient(135deg,#00d4ff,#7b2ff7,#ff0080);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            margin-bottom:12px;
+        }
+        .result-text{font-size:15px;color:rgba(255,255,255,0.5);margin-bottom:24px;}
+        .result-action{
+            display:inline-flex;align-items:center;gap:8px;
+            padding:14px 36px;
+            background:rgba(0,212,255,0.1);color:#00d4ff;
+            border:1px solid rgba(0,212,255,0.3);border-radius:12px;
+            font-size:15px;cursor:pointer;transition:all 0.3s;text-decoration:none;
+        }
+        .result-action:hover{background:rgba(0,212,255,0.2);transform:translateY(-2px);box-shadow:0 5px 20px rgba(0,212,255,0.2);}
+
+        /* === 返回链接 === */
+        .back-link{
+            position:absolute;top:28px;left:28px;
+            display:flex;align-items:center;gap:8px;
+            color:rgba(255,255,255,0.4);text-decoration:none;font-size:13px;
+            padding:10px 18px;border:1px solid rgba(255,255,255,0.08);
+            border-radius:10px;transition:all 0.3s;z-index:20;
+        }
+        .back-link:hover{color:#00d4ff;border-color:rgba(0,212,255,0.3);background:rgba(0,212,255,0.05);}
+        .back-link svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;}
+
+        /* === AI开关 === */
+        .ai-toggles{display:flex;gap:16px;flex-wrap:wrap;}
+        .ai-toggle-item{
+            display:flex;align-items:center;gap:14px;flex:1;min-width:200px;
+            padding:16px;background:rgba(255,255,255,0.02);
+            border:1px solid rgba(255,255,255,0.06);border-radius:12px;
+            transition:all 0.3s;
+        }
+        .ai-toggle-item:hover{border-color:rgba(0,212,255,0.3);}
+        .ai-toggle-name{font-size:14px;font-weight:500;color:#fff;}
+        .ai-toggle-desc{font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;}
+
+        /* 响应式 */
+        @media(max-width:768px){
+            .brand-title{font-size:36px;letter-spacing:6px;}
+            .search-main{height:56px;font-size:16px;border-radius:14px;}
+            .search-btn{width:44px;height:44px;border-radius:12px;}
+            .sources-grid{grid-template-columns:1fr;}
+            .config-row{grid-template-columns:1fr;}
+            .result-number{font-size:56px;}
+        }
+    </style>
+</head>
+<body>
+    <!-- 宇宙背景 -->
+    <div class="universe">
+        <div class="nebula nebula-1"></div>
+        <div class="nebula nebula-2"></div>
+        <div class="nebula nebula-3"></div>
+        <div class="stars-layer" id="stars"></div>
+        <div class="grid-floor"></div>
+        <div class="scan-beam"></div>
+    </div>
+
+    <!-- 返回链接 -->
+    <a href="/admin" class="back-link">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        返回后台
+    </a>
+
+    <!-- 主内容 -->
+    <div class="wrapper">
+        <!-- 品牌 -->
+        <div class="brand">
+            <div class="brand-orb">
+                <div class="orb-ring orb-ring-1"></div>
+                <div class="orb-ring orb-ring-2"></div>
+                <div class="orb-ring orb-ring-3"></div>
+                <div class="orb-core"></div>
+            </div>
+            <div class="brand-title">瞭 望 采 集</div>
+            <div class="brand-sub">AI Intelligent Data Collection Engine</div>
+        </div>
+
+        <!-- 搜索区 -->
+        <div class="search-universe">
+            <div class="input-container">
+                <input type="text" class="search-main" id="keyword" placeholder="输入采集关键字，探索无限数据宇宙..." onkeypress="if(event.keyCode==13)startCollect()">
+                <div class="search-btn" onclick="startCollect()">
+                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                </div>
+            </div>
+
+            <!-- 采集源面板 -->
+            <div class="panel">
+                <div class="panel-header">选择采集源</div>
+                <div class="sources-grid" id="sourcesGrid">
+                    {% for s in sources %}
+                    <div class="source-card" data-id="{{ s['id'] }}" data-step="{{ s['page_size_step'] }}">
+                        <div class="source-meta">
+                            <div class="source-icon">{{ s['name'][0] }}</div>
+                            <div>
+                                <div class="source-name">{{ s['name'] }}</div>
+                                <div class="source-tag">{{ s['code'] }}</div>
+                            </div>
+                        </div>
+                        <label class="switch" onclick="event.stopPropagation()">
+                            <input type="checkbox" class="source-check" value="{{ s['id'] }}">
+                            <span class="rail"></span>
+                        </label>
+                    </div>
+                    {% end %}
+                </div>
+            </div>
+
+            <!-- 参数配置 -->
+            <div class="panel">
+                <div class="panel-header">采集参数配置</div>
+                <div class="config-row">
+                    <div class="config-item">
+                        <div class="config-label">采集页数</div>
+                        <input type="number" class="config-input" id="pages" value="1" min="1" max="100">
+                    </div>
+                    <div class="config-item">
+                        <div class="config-label">分页步长（每页递增）</div>
+                        <input type="number" class="config-input" id="pageSizeStep" value="10" min="1" max="500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI功能 -->
+            <div class="panel">
+                <div class="panel-header">AI 智能辅助</div>
+                <div class="ai-toggles">
+                    <div class="ai-toggle-item">
+                        <label class="switch" onclick="event.stopPropagation()">
+                            <input type="checkbox" id="aiExpand">
+                            <span class="rail"></span>
+                        </label>
+                        <div class="ai-toggle-info">
+                            <div class="ai-toggle-name">AI关键词扩展</div>
+                            <div class="ai-toggle-desc">利用大模型自动扩展相关搜索词</div>
+                        </div>
+                    </div>
+                    <div class="ai-toggle-item">
+                        <label class="switch" onclick="event.stopPropagation()">
+                            <input type="checkbox" id="aiClean">
+                            <span class="rail"></span>
+                        </label>
+                        <div class="ai-toggle-info">
+                            <div class="ai-toggle-name">AI数据清洗</div>
+                            <div class="ai-toggle-desc">智能过滤噪声，提取核心信息</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 采集按钮 -->
+            <button class="launch-btn" id="btnCollect" onclick="startCollect()">
+                开 启 采 集
+            </button>
+
+            <!-- 加载 -->
+            <div class="loading-zone" id="loadingWrap">
+                <div class="loading-orb"></div>
+                <div class="loading-orb"></div>
+                <div class="loading-orb"></div>
+                <div class="loading-orb"></div>
+            </div>
+
+            <!-- 结果 -->
+            <div class="result-zone" id="resultPanel">
+                <div class="result-container">
+                    <div class="result-label">采 集 完 成</div>
+                    <div class="result-number" id="resultCount">0</div>
+                    <div class="result-text">条数据已成功采集到数据库</div>
+                    <a href="/admin/outlook/data" class="result-action">
+                        查看数据仓库
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/dist/layui-v2.13.6/layui-v2.13.6/layui/layui.js"></script>
+    <script>
+        layui.use(['layer'], function(){
+            var layer = layui.layer;
+            var $ = layui.$;
+
+            // 生成星星
+            var starsEl = document.getElementById('stars');
+            for(var i=0;i<150;i++){
+                var star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random()*100 + '%';
+                star.style.top = Math.random()*100 + '%';
+                var size = Math.random()*3+1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                star.style.animationDuration = (Math.random()*4+2) + 's';
+                star.style.animationDelay = Math.random()*4 + 's';
+                star.style.opacity = Math.random()*0.5+0.3;
+                starsEl.appendChild(star);
+            }
+
+            // 采集源交互
+            $('#sourcesGrid').on('click', '.source-card', function(e){
+                if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'SPAN'){
+                    var cb = $(this).find('.source-check');
+                    cb.prop('checked', !cb.prop('checked'));
+                    $(this).toggleClass('active', cb.prop('checked'));
+                }
+            });
+
+            $('.source-check').on('change', function(){
+                $(this).closest('.source-card').toggleClass('active', $(this).prop('checked'));
+                if($(this).prop('checked')){
+                    var step = $(this).closest('.source-card').data('step');
+                    if(step) $('#pageSizeStep').val(step);
+                }
+            });
+
+            window.startCollect = function(){
+                var keyword = $('#keyword').val().trim();
+                if(!keyword){layer.msg('请输入采集关键字', {icon:2, time:2000});$('#keyword').focus();return;}
+
+                var sources = [];
+                $('.source-check:checked').each(function(){sources.push($(this).val());});
+                if(!sources.length){layer.msg('请至少选择一个采集源', {icon:2, time:2000});return;}
+
+                var pages = parseInt($('#pages').val()) || 1;
+                var step = parseInt($('#pageSizeStep').val()) || 10;
+                var aiExpand = $('#aiExpand').prop('checked') ? '1' : '0';
+                var aiClean = $('#aiClean').prop('checked') ? '1' : '0';
+
+                $('#btnCollect').prop('disabled', true).html('采 集 中...');
+                $('#loadingWrap').addClass('active');
+                $('#resultPanel').removeClass('active').hide();
+
+                $.post('/admin/outlook/collect/do', {
+                    keyword: keyword,
+                    sources: sources.join(','),
+                    pages: pages,
+                    page_size_step: step,
+                    ai_expand: aiExpand,
+                    ai_clean: aiClean,
+                    _xsrf: getCsrfToken()
+                }, function(res){
+                    $('#btnCollect').prop('disabled', false).html('开 启 采 集');
+                    $('#loadingWrap').removeClass('active');
+                    if(res.code === 0){
+                        var count = res.data ? res.data.count : 0;
+                        $('#resultCount').text(count);
+                        $('#resultPanel').addClass('active').slideDown(500);
+                        layer.msg(res.msg, {icon:1});
+                    } else {
+                        layer.msg(res.msg, {icon:2, time:3000});
+                    }
+                }).fail(function(){
+                    $('#btnCollect').prop('disabled', false).html('开 启 采 集');
+                    $('#loadingWrap').removeClass('active');
+                    layer.msg('请求失败，请检查网络连接', {icon:2, time:3000});
+                });
+            };
+
+            function getCsrfToken(){
+                var cookies = document.cookie.split(';');
+                for(var i=0;i<cookies.length;i++){
+                    var c = cookies[i].trim();
+                    if(c.indexOf('_xsrf=') === 0) return decodeURIComponent(c.substring(6));
+                }
+                return '';
+            }
+        });
+    </script>
+</body>
+</html>

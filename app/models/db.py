@@ -1,5 +1,6 @@
 # 数据库链接与建表
 import os
+import json
 import sqlite3
 def _projiect_root():
 	return os.path.abspath(os.path.join(os.path.dirname(__file__),os.pardir,os.pardir))
@@ -23,6 +24,7 @@ def init_db():
 				salt TEXT NOT NULL,
 				role TEXT NOT NULL DEFAULT 'user',
 				status INTEGER NOT NULL DEFAULT 1,
+				can_login_admin INTEGER NOT NULL DEFAULT 0,
 				create_at TEXT NOT NULL DEFAULT(datetime('now'))
 			)
 			"""
@@ -69,6 +71,104 @@ def init_db():
 			)
 			"""
 		)
+		# 创建 outlook_sources 表（瞭望数据源配置）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='outlook_sources'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE outlook_sources(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					name TEXT NOT NULL,
+					code TEXT NOT NULL UNIQUE,
+					entry_url TEXT NOT NULL,
+					method TEXT NOT NULL DEFAULT 'GET',
+					request_headers TEXT,
+					body_template TEXT,
+					parser_type TEXT NOT NULL DEFAULT 'html',
+					html_selector TEXT,
+					title_selector TEXT,
+					url_selector TEXT,
+					content_selector TEXT,
+					date_selector TEXT,
+					author_selector TEXT,
+					page_size_step INTEGER NOT NULL DEFAULT 10,
+					page_start INTEGER NOT NULL DEFAULT 0,
+					ai_expand_keyword INTEGER NOT NULL DEFAULT 0,
+					ai_expand_prompt TEXT,
+					ai_clean_data INTEGER NOT NULL DEFAULT 0,
+					ai_clean_prompt TEXT,
+					status INTEGER NOT NULL DEFAULT 1,
+					description TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# 创建 outlook_data 表（瞭望采集到的数据）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='outlook_data'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE outlook_data(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					source_id INTEGER NOT NULL,
+					source_name TEXT,
+					title TEXT NOT NULL,
+					url TEXT,
+					content TEXT,
+					author TEXT,
+					publish_date TEXT,
+					raw_html TEXT,
+					ai_processed INTEGER NOT NULL DEFAULT 0,
+					collect_status TEXT NOT NULL DEFAULT 'success',
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# 初始化默认瞭望数据源
+		cursor = conn.execute("SELECT COUNT(*) as cnt FROM outlook_sources").fetchone()
+		if cursor["cnt"] == 0:
+			default_headers = json.dumps({
+			"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+			"Accept-Encoding": "gzip, deflate, br, zstd",
+			"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+			"Connection": "keep-alive",
+			"Cookie": "BAIDUID=7D040A0375AC5C5FC9A8629972B20BBB:FG=1; BAIDUID_BFESS=7D040A0375AC5C5FC9A8629972B20BBB:FG=1; BDUSS=RrZ0d0OWNGVXp1fmkxbElCc2JpWnhXMTg3YTVpeDkwQlFvS3lmOFNGT3VYUzlxSVFBQUFBJCQAAAAAAQAAAAEAAAALpsEiAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK7QB2qu0AdqTE; BDUSS_BFESS=RrZ0d0OWNGVXp1fmkxbElCc2JpWnhXMTg3YTVpeDkwQlFvS3lmOFNGT3VYUzlxSVFBQUFBJCQAAAAAAQAAAAEAAAALpsEiAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK7QB2qu0AdqTE; PSTM=1779582680; BDRCVFR[xxJIjd-9mMY]=9xWipS8B-FspA7EnHc1QhPEUf; H_PS_PSSID=63142_67861_68166_68464_69205_69296_69592_69764_69798_69782_69846_69908_69949_69962_70005_70007_70048_70090_70117_70131_70156_70169_70222_70252_70199_70196_70288_70285_68736_70321_70142_69921_70358_70416_70441_70477_70476_70472; BD_UPN=12314753; BIDUPSID=AF970139E2195A6F4B11A9C960F71109; BA_HECTOR=8l2g818g0g802l25ag81a50l01800h1l14hmp29; ZFY=LHvroeutiKiiTbvzk7W:Boj9l8a0ANl1powqxNeAgN3Y:C; BD_CK_SAM=1; delPer=0; BDORZ=FFFB88E999055A3F8A630C64834BD6D0; BDSFRCVID=vNPOJeC62ZWuHpc8L4pUU99sWCuEGM7TH6aorVxuAZ4sKOFklb8XEG0n-U8g0KAMvsHJogKKXgOTH9uF_2uxOjjg8UtVJeC6EG0Ptf8g0U5; BDSFRCVID_BFESS=vNPOJeC62ZWuHpc8L4pUU99sWCuEGM7TH6aorVxuAZ4sKOFklb8XEG0n-U8g0KAMvsHJogKKXgOTH9uF_2uxOjjg8UtVJeC6EG0Ptf8g0U5; H_BDCLCKID_SF=JnutoI-KfI_3DJ7g-tP_-PJM54TTWMT-0bFHhf3aWPJjbh4mKholejFy3Pbt0xbuJan7_JjO-fQWfqjLjbbvXUKfhMKOXUQxtI_L-CnjtpvN8tQRyM6obUPUWMJ9LUk8bmcdot5yBbc8eIna5hjkbfJBQttjQn3hfIkj-CKLK-oj-D8Cj6K53j; H_BDCLCKID_SF_BFESS=JnutoI-KfI_3DJ7g-tP_-PJM54TTWMT-0bFHhf3aWPJjbh4mKholejFy3Pbt0xbuJan7_JjO-fQWfqjLjbbvXUKfhMKOXUQxtI_L-CnjtpvN8tQRyM6obUPUWMJ9LUk8bmcdot5yBbc8eIna5hjkbfJBQttjQn3hfIkj-CKLK-oj-D8Cj6K53j; COOKIE_SESSION=21233444_3_8_9_2_25_0_1_7_6_1_11_39_21233481_0_6_1758349308_1779582707_1779582701%7C9%2321233478_14_1779582701%7C4; H_WISE_SIDS=63142_67861_68166_68464_69205_69296_69592_69764_69798_69782_69846_69908_69949_69962_70005_70007_70048_70090_70117_70131_70156_70169_70222_70252_70199_70196_70288_70285_68736_70321_70142_69921_70358_70416_70441_70477_70476_70472; PSINO=7; H_PS_645EC=da77%2FWLTn2u87bDDJeoGs%2B91y%2BfMM%2Bj3XWoq8TPM6LWYOyo3Jz07EmaAWiXxutZoBp4QExhbLuOv; BDSVRTM=420",
+			"Host": "www.baidu.com",
+			"Referer": "https://news.baidu.com/",
+			"Sec-Fetch-Dest": "document",
+			"Sec-Fetch-Mode": "navigate",
+			"Sec-Fetch-Site": "same-site",
+			"Sec-Fetch-User": "?1",
+			"Upgrade-Insecure-Requests": "1",
+			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0"
+		})
+			conn.execute(
+				"""INSERT INTO outlook_sources(name,code,entry_url,method,request_headers,parser_type,
+				   html_selector,title_selector,url_selector,content_selector,date_selector,author_selector,
+				   page_size_step,page_start,ai_expand_keyword,ai_clean_data,status,description) 
+				   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+				('百度新闻', 'baidu_news', 'https://www.baidu.com/s?tn=news&word={keyword}&pn={page}',
+				 'GET', default_headers, 'html',
+				 'div.result', 'h3', 'h3 a', 'div.content-right > span', 'span.c-color-gray2', 'p.author-text',
+				 10, 0, 1,
+				 '请对采集到的新闻标题和内容进行AI清洗，去除无关信息，提取核心要点，并以JSON格式返回：[{"title":"标题","content":"摘要","author":"作者","date":"日期"}]',
+				 1, '百度新闻搜索引擎采集源')
+			)
+
+		# 初始化默认用户
+		cursor = conn.execute("SELECT COUNT(*) as cnt FROM users").fetchone()
+		if cursor["cnt"] == 0:
+			from app.models.user import _hash_password
+			import secrets
+			salt = secrets.token_bytes(16)
+			password_hash = _hash_password("admin888", salt)
+			conn.execute(
+				"INSERT INTO users(username,password_hash,salt,role,status,can_login_admin) VALUES(?,?,?,?,?,?)",
+				("admin", password_hash, salt.hex(), "admin", 1, 1)
+			)
+
 		# 初始化默认数据
 		_init_default_data(conn)
 		conn.commit()

@@ -1,0 +1,121 @@
+{% extends "layout.html" %}
+{% block body %}
+<style>
+.data-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.data-header h3{font-size:20px;font-weight:600;color:#333;margin:0;}
+.data-toolbar{display:flex;gap:8px;align-items:center;}
+.data-toolbar input[type="text"]{width:200px;height:34px;padding:0 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;}
+</style>
+
+<div class="data-header">
+    <div>
+        <h3><i class="layui-icon layui-icon-table" style="font-size:22px;"></i> 数据仓库</h3>
+        <p style="color:#999;font-size:13px;margin-top:4px;">管理通过瞭望采集到的所有数据</p>
+    </div>
+    <div class="data-toolbar">
+        <input type="text" id="searchKeyword" placeholder="搜索标题...">
+        <button class="layui-btn layui-btn-sm" id="btnSearch"><i class="layui-icon layui-icon-search"></i> 搜索</button>
+        <button class="layui-btn layui-btn-sm layui-btn-danger" id="btnBatchDelete"><i class="layui-icon layui-icon-delete"></i> 批量删除</button>
+    </div>
+</div>
+
+<table id="dataTable" lay-filter="dataTable"></table>
+<script type="text/html" id="actionTpl">
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">删除</a>
+</script>
+{% end %}
+
+{% block extra_script %}
+<script>
+layui.use(['table','layer','form'], function(){
+    var table = layui.table;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.$;
+
+    function getCsrfToken(){
+        var cookies = document.cookie.split(';');
+        for(var i=0;i<cookies.length;i++){
+            var c = cookies[i].trim();
+            if(c.indexOf('_xsrf=') === 0) return decodeURIComponent(c.substring(6));
+        }
+        return '';
+    }
+
+    table.render({
+        elem: '#dataTable',
+        url: '/admin/outlook/data/api',
+        page: {
+            curr: 1,
+            prevText: '上一页',
+            nextText: '下一页',
+            layout: ['prev', 'page', 'next', 'skip', 'count', 'limit'],
+            limits: [20, 50, 100],
+            limit: 20
+        },
+        cols: [[
+            {type:'checkbox',width:50,align:'center'},
+            {field:'id',title:'ID',width:80,align:'center',sort:true},
+            {field:'source_name',title:'来源',width:120,align:'center'},
+            {field:'title',title:'标题',align:'left'},
+            {field:'author',title:'作者',width:100,align:'center'},
+            {field:'publish_date',title:'发布日期',width:120,align:'center'},
+            {field:'ai_processed',title:'AI处理',width:80,align:'center',templet:function(d){
+                return d.ai_processed == 1 ? '<span style="color:#52c41a;font-weight:600;">是</span>' : '<span style="color:#999;">否</span>';
+            }},
+            {field:'url',title:'链接',width:150,align:'center',templet:function(d){
+                return d.url ? '<a href="'+d.url+'" target="_blank" style="color:#0066cc;">查看</a>' : '-';
+            }},
+            {field:'create_at',title:'采集时间',width:180,align:'center'},
+            {title:'操作',width:100,align:'center',templet:'#actionTpl',fixed:'right'}
+        ]],
+        skin: 'line'
+    });
+
+    table.on('tool(dataTable)', function(obj){
+        if(obj.event === 'del'){
+            layer.confirm('确定要删除该数据吗？', function(index){
+                $.post('/admin/outlook/data/delete', {ids: obj.data.id, _xsrf: getCsrfToken()}, function(res){
+                    if(res.code === 0){
+                        layer.msg('删除成功', {icon:1});
+                        obj.del();
+                    } else {
+                        layer.msg(res.msg, {icon:2});
+                    }
+                });
+                layer.close(index);
+            });
+        }
+    });
+
+    $('#btnSearch').on('click', function(){
+        var keyword = $('#searchKeyword').val();
+        table.reload('dataTable', {
+            where: { keyword: keyword },
+            page: { curr: 1 }
+        });
+    });
+
+    $('#btnBatchDelete').on('click', function(){
+        var checkStatus = table.checkStatus('dataTable');
+        if(checkStatus.data.length === 0){
+            layer.msg('请选择要删除的数据', {icon:2});
+            return;
+        }
+        var ids = [];
+        $.each(checkStatus.data, function(i, item){ ids.push(item.id); });
+        layer.confirm('确定要批量删除选中的 '+ids.length+' 条数据吗？', function(index){
+            $.post('/admin/outlook/data/delete', {ids: ids.join(','), _xsrf: getCsrfToken()}, function(res){
+                if(res.code === 0){
+                    layer.msg('删除成功', {icon:1});
+                    table.reload('dataTable');
+                } else {
+                    layer.msg(res.msg, {icon:2});
+                }
+            });
+            layer.close(index);
+        });
+    });
+});
+</script>
+{% end %}

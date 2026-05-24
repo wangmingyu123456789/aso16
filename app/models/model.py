@@ -184,6 +184,30 @@ class ModelRepository:
             }
 
     @staticmethod
+    def call_model_api(api_url, api_key, model_code, messages, temperature=0.7, max_tokens=2000):
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": model_code,
+            "messages": messages,
+            "stream": False,
+            "temperature": temperature,
+            "max_tokens": max_tokens
+        }
+        try:
+            with httpx.Client(timeout=120.0) as client:
+                response = client.post(api_url, headers=headers, json=payload)
+                if response.status_code == 200:
+                    result = response.json()
+                    content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    return content.strip()
+        except Exception:
+            pass
+        return ""
+
+    @staticmethod
     def stream_model_chat(api_url, api_key, model_code, messages):
         """流式对话测试，生成器，逐块返回 SSE 数据"""
         import json
