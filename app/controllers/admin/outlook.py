@@ -1,8 +1,29 @@
 import json
+import time
+import threading
 import tornado.web
 from app.controllers.admin.base import AdminBaseHandler
 from app.models.outlook import OutlookSourceRepository, OutlookDataRepository, OutlookTaskRepository, OutlookCollector
 from app.models.db import get_connection
+
+# 采集状态存储（内存中）
+_collect_status = {}
+_status_lock = threading.Lock()
+
+def set_collect_status(task_id, status):
+    with _status_lock:
+        _collect_status[str(task_id)] = {
+            **status,
+            'update_time': time.time()
+        }
+
+def get_collect_status(task_id):
+    with _status_lock:
+        return _collect_status.get(str(task_id), {})
+
+def clear_collect_status(task_id):
+    with _status_lock:
+        _collect_status.pop(str(task_id), None)
 
 class AdminOutlookRedirectHandler(AdminBaseHandler):
     @tornado.web.authenticated
@@ -133,25 +154,74 @@ class AdminOutlookCollectHandler(AdminBaseHandler):
             pages, page_size_step, ai_expand, ai_clean
         )
 
+        # 初始化采集状态
+        total_urls = len(selected_sources) * pages
+        set_collect_status(task_id, {
+            'task_id': task_id,
+            'status': 'running',
+            'keyword': keyword,
+            'total_urls': total_urls,
+            'current_url': 0,
+            'current_source': '',
+            'total_count': 0,
+            'success_count': 0,
+            'fail_count': 0,
+            'start_time': time.time(),
+            'logs': [{'time': time.strftime('%H:%M:%S'), 'type': 'info', 'msg': f'开始采集: {keyword}'}]
+        })
+
         total_results = 0
         for source in selected_sources:
             step = page_size_step if page_size_step > 0 else source.get('page_size_step', 10)
             print(f"[Collect] source={source['name']}, keyword={keyword}, pages={pages}, step={step}")
-            count = OutlookCollector.collect(
+
+            # 更新当前源
+            status = get_collect_status(task_id)
+            status['current_source'] = source['name']
+            set_collect_status(task_id, status)
+
+            # 创建状态回调闭包，累计计数
+            def make_callback(tid):
+                def callback(update):
+                    current = get_collect_status(tid)
+                    # 累计计数
+                    if 'success_count' in update:
+                        current['success_count'] = current.get('success_count', 0) + update['success_count']
+                    if 'fail_count' in update:
+                        current['fail_count'] = current.get('fail_count', 0) + update['fail_count']
+                    if 'total_count' in update:
+                        current['total_count'] = current.get('total_count', 0) + update['total_count']
+                    # 更新其他字段
+                    for k, v in update.items():
+                        if k not in ('success_count', 'fail_count', 'total_count'):
+                            current[k] = v
+                    set_collect_status(tid, current)
+                return callback
+
+            count = OutlookCollector.collect_with_status(
                 source, keyword, pages, step,
                 use_ai_expand=ai_expand,
                 use_ai_clean=ai_clean,
-                task_id=task_id
+                task_id=task_id,
+                status_callback=make_callback(task_id)
             )
             total_results += count
             print(f"[Collect] source={source['name']}, saved={count}")
+
+        # 更新最终状态
+        final_status = get_collect_status(task_id)
+        final_status['status'] = 'completed'
+        final_status['total_count'] = total_results
+        final_status['logs'].append({'time': time.strftime('%H:%M:%S'), 'type': 'success', 'msg': f'采集完成，共获取 {total_results} 条数据'})
+        set_collect_status(task_id, final_status)
 
         OutlookTaskRepository.update_task(task_id, total_results)
 
         return self.write({
             "code": 0,
             "msg": f"采集完成，共获取 {total_results} 条数据",
-            "count": total_results
+            "count": total_results,
+            "task_id": task_id
         })
 
 class AdminOutlookDataListHandler(AdminBaseHandler):
@@ -224,11 +294,16 @@ class AdminOutlookTaskDataApiHandler(AdminBaseHandler):
                     (task_id, page_size, offset)
                 ).fetchall()
         self.set_header("Content-Type", "application/json")
+        data_list = []
+        for i, r in enumerate(rows):
+            d = dict(r)
+            d["_seq"] = offset + i + 1
+            data_list.append(d)
         self.write({
             "code": 0,
             "msg": "",
             "count": total,
-            "data": [dict(r) for r in rows]
+            "data": data_list
         })
 
 class AdminOutlookDataApiHandler(AdminBaseHandler):
@@ -266,3 +341,59 @@ class AdminOutlookCollectPageHandler(AdminBaseHandler):
     def get(self):
         sources = OutlookSourceRepository.get_active_sources()
         self.render("admin/outlook_collect.html", title="瞭望采集", username=self.current_user, current_page='outlook_collect', sources=sources, sources_json=json.dumps(sources))
+
+class AdminOutlookLatestDataApiHandler(AdminBaseHandler):
+    """获取最近一次采集的数据（用于采集页面展示）"""
+    @tornado.web.authenticated
+    def get(self):
+        task_id = self.get_argument("task_id", "")
+        page = int(self.get_argument("page", "1"))
+        page_size = int(self.get_argument("limit", "30"))
+        offset = (page - 1) * page_size
+        task_keyword = ""
+        with get_connection() as conn:
+            if task_id:
+                # 获取任务关键词
+                task_row = conn.execute("SELECT keyword FROM outlook_tasks WHERE id=?", (task_id,)).fetchone()
+                if task_row:
+                    task_keyword = task_row["keyword"]
+                count_row = conn.execute("SELECT COUNT(*) as total FROM outlook_data WHERE task_id=?", (task_id,)).fetchone()
+                total = count_row["total"]
+                rows = conn.execute(
+                    "SELECT * FROM outlook_data WHERE task_id=? ORDER BY id DESC LIMIT ? OFFSET ?",
+                    (task_id, page_size, offset)
+                ).fetchall()
+            else:
+                count_row = conn.execute("SELECT COUNT(*) as total FROM outlook_data").fetchone()
+                total = count_row["total"]
+                rows = conn.execute(
+                    "SELECT * FROM outlook_data ORDER BY id DESC LIMIT ? OFFSET ?",
+                    (page_size, offset)
+                ).fetchall()
+        self.set_header("Content-Type", "application/json")
+        self.write({
+            "code": 0,
+            "msg": "",
+            "count": total,
+            "task_keyword": task_keyword,
+            "data": [dict(r) for r in rows]
+        })
+
+class AdminOutlookStatusApiHandler(AdminBaseHandler):
+    """获取采集过程状态"""
+    @tornado.web.authenticated
+    def get(self):
+        task_id = self.get_argument("task_id", "")
+        if not task_id:
+            return self.write({"code": 1, "msg": "缺少task_id参数"})
+        status = get_collect_status(task_id)
+        if not status:
+            return self.write({"code": 0, "msg": "未找到状态信息", "data": {}})
+        elapsed = time.time() - status.get('start_time', time.time())
+        minutes = int(elapsed // 60)
+        seconds = int(elapsed % 60)
+        status['elapsed'] = f"{minutes:02d}:{seconds:02d}"
+        total_count = status.get('total_count', 0)
+        status['speed'] = round(total_count / elapsed, 1) if elapsed > 0 else 0
+        self.set_header("Content-Type", "application/json")
+        self.write({"code": 0, "data": status})

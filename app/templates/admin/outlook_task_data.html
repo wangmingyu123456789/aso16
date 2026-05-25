@@ -27,17 +27,19 @@
             <span class="info-item">时间：<strong>{{ task.get('create_at', '') }}</strong></span>
         </div>
     </div>
+    <input type="hidden" id="taskIdInput" value="{{ task.get('id', 0) }}">
     <table id="dataTable" lay-filter="dataTable"></table>
 
     <script src="/static/dist/layui-v2.13.6/layui-v2.13.6/layui/layui.js"></script>
     <script>
-    var taskId = {{ task.get('id', 0) }};
+    var taskId = parseInt(document.getElementById('taskIdInput').value) || 0;
     layui.use(['table','layer'], function(){
         var table = layui.table;
         var layer = layui.layer;
         var $ = layui.$;
 
-        table.render({
+        var tableIns;
+        tableIns = table.render({
             elem: '#dataTable',
             url: '/admin/outlook/task/data/api',
             where: {task_id: taskId},
@@ -50,7 +52,7 @@
                 limit: 20
             },
             cols: [[
-                {field:'id',title:'ID',width:70,align:'center',sort:true},
+                {field:'_seq',title:'序号',width:70,align:'center'},
                 {field:'source_name',title:'来源',width:110,align:'center'},
                 {field:'title',title:'标题',align:'left'},
                 {field:'author',title:'作者',width:100,align:'center'},
@@ -78,6 +80,13 @@
             }
         });
     });
+
+    /* 分页箭头白色显示 */
+    (function(){
+        var style = document.createElement('style');
+        style.textContent = '.layui-laypage .layui-laypage-curr .layui-laypage-em{background:none!important;} .layui-laypage .layui-laypage-prev,.layui-laypage .layui-laypage-next{color:#fff!important;} .layui-laypage .layui-laypage-prev em,.layui-laypage .layui-laypage-next em{color:#fff!important;} .layui-laypage a{color:rgba(255,255,255,.7)!important;} .layui-laypage a:hover{color:#fff!important;} .layui-laypage .layui-laypage-curr em{color:#fff!important;} .layui-laypage span{color:rgba(255,255,255,.5)!important;}';
+        document.head.appendChild(style);
+    })();
 
     function getCsrfToken(){
         var cookies = document.cookie.split(';');

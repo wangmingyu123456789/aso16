@@ -113,6 +113,7 @@ def init_db():
 					id integer PRIMARY KEY AUTOINCREMENT,
 					source_id INTEGER NOT NULL,
 					source_name TEXT,
+					source_keyword TEXT,
 					title TEXT NOT NULL,
 					url TEXT,
 					content TEXT,
@@ -122,7 +123,7 @@ def init_db():
 					ai_processed INTEGER NOT NULL DEFAULT 0,
 					task_id INTEGER NOT NULL DEFAULT 0,
 					collect_status TEXT NOT NULL DEFAULT 'success',
-					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+					create_at TEXT NOT NULL DEFAULT(datetime('now','localtime'))
 				)
 				"""
 			)
@@ -144,7 +145,7 @@ def init_db():
 					total_count INTEGER NOT NULL DEFAULT 0,
 					status TEXT NOT NULL DEFAULT 'completed',
 					error_msg TEXT,
-					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+					create_at TEXT NOT NULL DEFAULT(datetime('now','localtime'))
 				)
 				"""
 			)
@@ -285,7 +286,7 @@ def upgrade_db():
 					total_count INTEGER NOT NULL DEFAULT 0,
 					status TEXT NOT NULL DEFAULT 'completed',
 					error_msg TEXT,
-					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+					create_at TEXT NOT NULL DEFAULT(datetime('now','localtime'))
 				)
 				"""
 			)
@@ -295,6 +296,18 @@ def upgrade_db():
 		data_cols = [row[1] for row in cursor.fetchall()]
 		if len(data_cols) > 0 and 'task_id' not in data_cols:
 			conn.execute("ALTER TABLE outlook_data ADD COLUMN task_id INTEGER NOT NULL DEFAULT 0")
+
+		# outlook_data 添加 source_keyword 字段
+		cursor = conn.execute("PRAGMA table_info(outlook_data)")
+		data_cols = [row[1] for row in cursor.fetchall()]
+		if len(data_cols) > 0 and 'source_keyword' not in data_cols:
+			conn.execute("ALTER TABLE outlook_data ADD COLUMN source_keyword TEXT NOT NULL DEFAULT ''")
+
+		# 修复已有 outlook_tasks 的 UTC 时间为本地时间
+		conn.execute("UPDATE outlook_tasks SET create_at = datetime(create_at, '+8 hours') WHERE create_at LIKE '%-%' AND create_at NOT LIKE '%+08%' AND length(create_at) = 19")
+
+		# 修复已有 outlook_data 的 UTC 时间为本地时间
+		conn.execute("UPDATE outlook_data SET create_at = datetime(create_at, '+8 hours') WHERE create_at LIKE '%-%' AND create_at NOT LIKE '%+08%' AND length(create_at) = 19")
 
 		# 创建 functions 表（如果不存在）
 		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='functions'")

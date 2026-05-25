@@ -14,7 +14,7 @@ from app.controllers.admin.function import AdminFunctionListHandler,AdminFunctio
 from app.controllers.admin.role import AdminRoleListHandler,AdminRoleApiHandler,AdminRoleAddHandler,AdminRoleEditHandler,AdminRoleDeleteHandler
 from app.controllers.admin.permission import AdminPermissionListHandler,AdminPermissionTreeHandler,AdminPermissionSaveHandler
 from app.controllers.admin.model import AdminModelListHandler,AdminModelApiHandler,AdminModelAddHandler,AdminModelEditHandler,AdminModelDeleteHandler,AdminModelSetDefaultHandler,AdminModelChatTestHandler,AdminModelChatStreamHandler
-from app.controllers.admin.outlook import AdminOutlookRedirectHandler,AdminOutlookSourceListHandler,AdminOutlookSourceApiHandler,AdminOutlookSourceAddHandler,AdminOutlookSourceEditHandler,AdminOutlookSourceDeleteHandler,AdminOutlookCollectHandler,AdminOutlookDataListHandler,AdminOutlookDataApiHandler,AdminOutlookDataDeleteHandler,AdminOutlookCollectPageHandler,AdminOutlookTaskApiHandler,AdminOutlookTaskDeleteHandler,AdminOutlookTaskDataHandler,AdminOutlookTaskDataApiHandler
+from app.controllers.admin.outlook import AdminOutlookRedirectHandler,AdminOutlookSourceListHandler,AdminOutlookSourceApiHandler,AdminOutlookSourceAddHandler,AdminOutlookSourceEditHandler,AdminOutlookSourceDeleteHandler,AdminOutlookCollectHandler,AdminOutlookDataListHandler,AdminOutlookDataApiHandler,AdminOutlookDataDeleteHandler,AdminOutlookCollectPageHandler,AdminOutlookTaskApiHandler,AdminOutlookTaskDeleteHandler,AdminOutlookTaskDataHandler,AdminOutlookTaskDataApiHandler,AdminOutlookLatestDataApiHandler,AdminOutlookStatusApiHandler
 from app.models.db import init_db,upgrade_db
 
 class ViteClientHandler(tornado.web.RequestHandler):
@@ -111,8 +111,8 @@ def make_app():
 			(r"/admin/models/chat_stream",AdminModelChatStreamHandler),
 
 			# 瞭望管理
-			(r"/admin/outlook",AdminOutlookSourceListHandler),
-			(r"/admin/outlook/collect",AdminOutlookCollectPageHandler),
+			(r"/admin/outlook",AdminOutlookCollectPageHandler),
+			(r"/admin/outlook/sources",AdminOutlookSourceListHandler),
 			(r"/admin/outlook/sources/api",AdminOutlookSourceApiHandler),
 			(r"/admin/outlook/sources/add",AdminOutlookSourceAddHandler),
 			(r"/admin/outlook/sources/edit",AdminOutlookSourceEditHandler),
@@ -126,6 +126,8 @@ def make_app():
 			(r"/admin/outlook/task/data",AdminOutlookTaskDataHandler),
 			(r"/admin/outlook/task/data/api",AdminOutlookTaskDataApiHandler),
 			(r"/admin/outlook/task/delete",AdminOutlookTaskDeleteHandler),
+			(r"/admin/outlook/latest/data/api",AdminOutlookLatestDataApiHandler),
+			(r"/admin/outlook/status/api",AdminOutlookStatusApiHandler),
 
 			(r"/@vite/client",ViteClientHandler),
 			(r"/@vite/env",ViteEnvHandler),

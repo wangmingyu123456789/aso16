@@ -114,14 +114,17 @@ class OutlookTaskRepository:
         """
         创建新的采集任务
         """
+        import datetime
+        beijing_tz = datetime.timezone(datetime.timedelta(hours=8))
+        create_at = datetime.datetime.now(beijing_tz).strftime('%Y-%m-%d %H:%M:%S')
         with get_connection() as conn:
             cursor = conn.execute(
                 """INSERT INTO outlook_tasks(
                     keyword, source_ids, source_names, pages, page_size_step, 
-                    ai_expand, ai_clean, total_count, status
-                ) VALUES(?,?,?,?,?,?,?,?,?)""",
+                    ai_expand, ai_clean, total_count, status, create_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?)""",
                 (keyword, source_ids, source_names, pages, page_size_step, 
-                 1 if ai_expand else 0, 1 if ai_clean else 0, 0, 'running')
+                 1 if ai_expand else 0, 1 if ai_clean else 0, 0, 'running', create_at)
             )
             return cursor.lastrowid
 
@@ -234,13 +237,16 @@ class OutlookDataRepository:
         }
 
     @staticmethod
-    def save_data(source_id, source_name, title, url='', content='', author='', publish_date='', raw_html='', ai_processed=0, task_id=0):
+    def save_data(source_id, source_name, title, url='', content='', author='', publish_date='', raw_html='', ai_processed=0, task_id=0, source_keyword=''):
         try:
+            import datetime
+            beijing_tz = datetime.timezone(datetime.timedelta(hours=8))
+            create_at = datetime.datetime.now(beijing_tz).strftime('%Y-%m-%d %H:%M:%S')
             with get_connection() as conn:
                 conn.execute(
-                    """INSERT INTO outlook_data(source_id,source_name,title,url,content,author,publish_date,raw_html,ai_processed,task_id) 
-                       VALUES(?,?,?,?,?,?,?,?,?,?)""",
-                    (source_id, source_name, title, url, content, author, publish_date, raw_html, ai_processed, task_id)
+                    """INSERT INTO outlook_data(source_id,source_name,title,url,content,author,publish_date,raw_html,ai_processed,task_id,source_keyword,create_at) 
+                       VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (source_id, source_name, title, url, content, author, publish_date, raw_html, ai_processed, task_id, source_keyword, create_at)
                 )
                 return True
         except Exception:
@@ -404,6 +410,12 @@ class OutlookCollector:
             print(f"[AI-Clean] No prompt provided, skip cleaning")
             return raw_items
 
+        # Save source_keyword before cleaning (AI won't return it)
+        keyword_map = {}
+        for idx, item in enumerate(raw_items):
+            if isinstance(item, dict):
+                keyword_map[idx] = item.get('source_keyword', '')
+
         items_text = json.dumps(raw_items, ensure_ascii=False, indent=2)
         full_prompt = f"以下是采集到的原始数据：\n{items_text}\n\n处理要求：\n{prompt}\n\n请直接返回JSON数组，不要其他内容。"
 
@@ -429,6 +441,10 @@ class OutlookCollector:
                 cleaned_json = re.findall(r'\[.*\]', response_text, re.DOTALL)
                 if cleaned_json:
                     cleaned = json.loads(cleaned_json[0])
+                    # Restore source_keyword from original items
+                    for idx, c_item in enumerate(cleaned):
+                        if idx in keyword_map and keyword_map[idx]:
+                            c_item['source_keyword'] = keyword_map[idx]
                     print(f"[AI-Clean] {len(raw_items)} raw items -> {len(cleaned)} cleaned items in {elapsed}s")
                     return cleaned
                 else:
@@ -490,7 +506,15 @@ class OutlookCollector:
             if date_selector:
                 date_nodes = node.xpath(date_selector)
                 if date_nodes:
-                    item['publish_date'] = date_nodes[0].text_content().strip()
+                    date_text = date_nodes[0].text_content().strip()
+                    # Validate date format before saving
+                    if OutlookCollector._is_valid_date(date_text):
+                        item['publish_date'] = date_text
+                    else:
+                        # Try to find date in other sibling/child elements
+                        date_text = OutlookCollector._extract_date_from_node(node)
+                        if date_text:
+                            item['publish_date'] = date_text
 
             if author_selector:
                 author_nodes = node.xpath(author_selector)
@@ -507,7 +531,45 @@ class OutlookCollector:
         return items
 
     @staticmethod
+    def _is_valid_date(text):
+        """Check if text looks like a valid date string"""
+        import re
+        if not text:
+            return False
+        # Common date patterns
+        date_patterns = [
+            r'\d{4}[-/年]\d{1,2}[-/月]\d{1,2}',  # 2024-01-01 or 2024年1月1日
+            r'\d{1,2}[-/月]\d{1,2}',  # 01-01 or 1月1日
+            r'\d{4}[-/]\d{1,2}[-/]\d{1,2}',  # 2024/01/01
+            r'\d{1,2}:\d{2}',  # Time only (fallback)
+            r'今天|昨天|前天|刚刚|\d+分钟前|\d+小时前|\d+天前',  # Relative dates
+        ]
+        return any(re.search(p, text) for p in date_patterns)
+
+    @staticmethod
+    def _extract_date_from_node(node):
+        """Try to extract date from node's siblings or children"""
+        import re
+        # Check all text content in the node for date patterns
+        all_text = node.text_content()
+        date_patterns = [
+            r'\d{4}[-/年]\d{1,2}[-/月]\d{1,2}[日]?',
+            r'\d{1,2}月\d{1,2}日',
+            r'\d{4}[-/]\d{1,2}[-/]\d{1,2}',
+            r'今天|昨天|前天',
+        ]
+        for pattern in date_patterns:
+            match = re.search(pattern, all_text)
+            if match:
+                return match.group(0)
+        return None
+
+    @staticmethod
     def collect(source, keyword, pages=1, page_size_step=10, use_ai_expand=False, use_ai_clean=False, task_id=0):
+        return OutlookCollector.collect_with_status(source, keyword, pages, page_size_step, use_ai_expand, use_ai_clean, task_id, status_callback=None)
+
+    @staticmethod
+    def collect_with_status(source, keyword, pages=1, page_size_step=10, use_ai_expand=False, use_ai_clean=False, task_id=0, status_callback=None):
         t_start = time.time()
         print(f"\n{'='*60}")
         print(f"[Collect] START: source={source['name']} ({source['code']}), keyword={keyword}")
@@ -525,6 +587,10 @@ class OutlookCollector:
             )
             t_exp_elapsed = round(time.time() - t_exp, 2)
             print(f"[Collect] Step 1: AI keyword expansion completed in {t_exp_elapsed}s, {len(keywords)} keywords")
+            if status_callback:
+                status_callback({
+                    'logs': [{'time': time.strftime('%H:%M:%S'), 'type': 'info', 'msg': f'AI关键词扩展: {keyword} → {len(keywords)}个关键词'}]
+                })
 
         page_start = source.get('page_start', 0)
         page_fetch_times = []
@@ -544,6 +610,13 @@ class OutlookCollector:
                 print(f"[Collect] Step 2.{url_idx}/{total_urls}: keyword='{kw}', page={page_num+1}/{pages}")
                 print(f"[Collect]   URL: {url}")
 
+                if status_callback:
+                    status_callback({
+                        'current_url': url_idx,
+                        'total_urls': total_urls,
+                        'logs': [{'time': time.strftime('%H:%M:%S'), 'type': 'info', 'msg': f'正在采集第{page_num+1}页...'}]
+                    })
+
                 t_fetch = time.time()
                 status_code, html_content = OutlookCollector.fetch_page(
                     session,
@@ -557,12 +630,22 @@ class OutlookCollector:
                 if status_code != 200:
                     print(f"[Collect]   SKIP: HTTP {status_code}, error={html_content[:100]}")
                     page_parse_counts.append(0)
+                    if status_callback:
+                        status_callback({
+                            'fail_count': 1,
+                            'logs': [{'time': time.strftime('%H:%M:%S'), 'type': 'warn', 'msg': f'第{page_num+1}页获取失败 (HTTP {status_code})'}]
+                        })
                     continue
 
                 # Check captcha
                 if '验证码' in html_content or 'captcha' in html_content.lower():
                     print(f"[Collect]   SKIP: Captcha detected")
                     page_parse_counts.append(0)
+                    if status_callback:
+                        status_callback({
+                            'fail_count': 1,
+                            'logs': [{'time': time.strftime('%H:%M:%S'), 'type': 'warn', 'msg': f'第{page_num+1}页检测到验证码'}]
+                        })
                     continue
 
                 # Parse HTML
@@ -588,6 +671,13 @@ class OutlookCollector:
                 if len(items) > 2:
                     print(f"[Collect]     ... and {len(items) - 2} more items")
 
+                if status_callback:
+                    status_callback({
+                        'success_count': len(items),
+                        'total_count': len(items),
+                        'logs': [{'time': time.strftime('%H:%M:%S'), 'type': 'success', 'msg': f'完成第{page_num+1}页采集 ({len(items)}条)'}]
+                    })
+
                 for item in items:
                     item['source_keyword'] = kw
                     all_results.append(item)
@@ -607,6 +697,10 @@ class OutlookCollector:
         for item in all_results:
             if isinstance(item, dict):
                 ai_processed = 1 if (use_ai_clean or source.get('ai_clean_data', 0)) else 0
+                # Ensure source_keyword is never empty - fallback to search keyword
+                skw = item.get('source_keyword', '')
+                if not skw:
+                    skw = keyword
                 saved = OutlookDataRepository.save_data(
                     source_id=source['id'],
                     source_name=source['name'],
@@ -617,7 +711,8 @@ class OutlookCollector:
                     publish_date=item.get('publish_date', ''),
                     raw_html='',
                     ai_processed=ai_processed,
-                    task_id=task_id
+                    task_id=task_id,
+                    source_keyword=skw
                 )
                 if saved:
                     saved_count += 1
