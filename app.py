@@ -112,7 +112,7 @@ def make_app():
 
 			# 瞭望管理
 			(r"/admin/outlook",AdminOutlookSourceListHandler),
-			(r"/admin/outlook/collect",AdminOutlookSourceListHandler),
+			(r"/admin/outlook/collect",AdminOutlookCollectPageHandler),
 			(r"/admin/outlook/sources/api",AdminOutlookSourceApiHandler),
 			(r"/admin/outlook/sources/add",AdminOutlookSourceAddHandler),
 			(r"/admin/outlook/sources/edit",AdminOutlookSourceEditHandler),

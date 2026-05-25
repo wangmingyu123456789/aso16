@@ -1,14 +1,10 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>数据仓库 - AI智能瞭望系统</title>
-    <link rel="stylesheet" href="/static/dist/layui-v2.13.6/layui-v2.13.6/layui/css/layui.css">
+{% extends "layout.html" %}
+{% block body %}
 <style>
 .warehouse-page{
-    position:fixed;top:0;left:0;right:0;bottom:0;
-    background:#050810;overflow:hidden;
+    position:relative;min-height:calc(100vh - 160px);
+    background:linear-gradient(135deg,#050810 0%,#0a0e1a 50%,#050810 100%);
+    border-radius:12px;overflow:hidden;padding:24px;
 }
 .warehouse-bg{
     position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;
@@ -44,19 +40,19 @@
     opacity:0;
 }
 @keyframes particleFloat{
-    0%{transform:translateY(100vh) translateX(0);opacity:0}
+    0%{transform:translateY(100%) translateX(0);opacity:0}
     10%{opacity:.6}
     90%{opacity:.6}
-    100%{transform:translateY(-100vh) translateX(100px);opacity:0}
+    100%{transform:translateY(-100%) translateX(100px);opacity:0}
 }
 .warehouse-content{
-    position:relative;z-index:2;height:100vh;display:flex;flex-direction:column;padding:30px;
+    position:relative;z-index:2;display:flex;flex-direction:column;
 }
 .warehouse-header{
-    text-align:center;margin-bottom:30px;position:relative;
+    text-align:center;margin-bottom:24px;position:relative;
 }
 .warehouse-title{
-    font-size:48px;font-weight:900;letter-spacing:8px;
+    font-size:36px;font-weight:900;letter-spacing:6px;
     background:linear-gradient(135deg,#00d4ff,#7b2ff7,#00d4ff);
     background-size:200% auto;
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
@@ -69,15 +65,15 @@
     100%{background-position:200% center}
 }
 .warehouse-subtitle{
-    font-size:14px;color:rgba(255,255,255,.35);letter-spacing:4px;margin-top:8px;
+    font-size:12px;color:rgba(255,255,255,.35);letter-spacing:3px;margin-top:6px;
 }
 .warehouse-stats{
-    display:flex;justify-content:center;gap:40px;margin-top:20px;
+    display:flex;justify-content:center;gap:30px;margin-top:16px;
 }
 .stat-item{
-    text-align:center;padding:15px 30px;
-    background:rgba(0,212,255,.03);border:1px solid rgba(0,212,255,.1);border-radius:12px;
-    position:relative;overflow:hidden;
+    text-align:center;padding:12px 24px;
+    background:rgba(0,212,255,.03);border:1px solid rgba(0,212,255,.1);border-radius:10px;
+    position:relative;overflow:hidden;min-width:120px;
 }
 .stat-item::before{
     content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
@@ -89,18 +85,18 @@
     100%{transform:rotate(360deg)}
 }
 .stat-number{
-    font-size:32px;font-weight:800;
+    font-size:28px;font-weight:800;
     background:linear-gradient(135deg,#00d4ff,#7b2ff7);
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
     position:relative;z-index:1;
 }
 .stat-label{
-    font-size:11px;color:rgba(255,255,255,.4);margin-top:4px;letter-spacing:2px;
+    font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;letter-spacing:2px;
     position:relative;z-index:1;
 }
 .warehouse-main{
-    flex:1;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(17,24,39,.8),rgba(10,14,26,.9));
-    border:1px solid rgba(0,212,255,.15);border-radius:20px;padding:20px;
+    background:linear-gradient(180deg,rgba(17,24,39,.8),rgba(10,14,26,.9));
+    border:1px solid rgba(0,212,255,.15);border-radius:16px;padding:16px;
     position:relative;overflow:hidden;
 }
 .warehouse-main::before{
@@ -113,12 +109,12 @@
     100%{background-position:200% center}
 }
 .warehouse-toolbar{
-    display:flex;gap:15px;margin-bottom:20px;align-items:center;
+    display:flex;gap:12px;margin-bottom:16px;align-items:center;
 }
 .search-input{
-    flex:1;height:45px;padding:0 20px;
-    background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:10px;
-    color:#fff;font-size:14px;outline:none;transition:all .3s;
+    flex:1;height:40px;padding:0 16px;
+    background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:8px;
+    color:#fff;font-size:13px;outline:none;transition:all .3s;
 }
 .search-input:focus{
     border-color:#00d4ff;box-shadow:0 0 20px rgba(0,212,255,.2);
@@ -126,9 +122,9 @@
 }
 .search-input::placeholder{color:rgba(255,255,255,.25)}
 .search-btn{
-    height:45px;padding:0 25px;
-    background:linear-gradient(135deg,#00d4ff,#7b2ff7);border:none;border-radius:10px;
-    color:#fff;font-size:14px;font-weight:600;cursor:pointer;
+    height:40px;padding:0 20px;
+    background:linear-gradient(135deg,#00d4ff,#7b2ff7);border:none;border-radius:8px;
+    color:#fff;font-size:13px;font-weight:600;cursor:pointer;
     transition:all .3s;position:relative;overflow:hidden;
 }
 .search-btn::before{
@@ -139,15 +135,15 @@
 .search-btn:hover::before{width:300px;height:300px}
 .search-btn:hover{box-shadow:0 0 25px rgba(0,212,255,.4);transform:translateY(-2px)}
 .warehouse-table{
-    flex:1;overflow-y:auto;overflow-x:hidden;
+    max-height:500px;overflow-y:auto;overflow-x:hidden;
 }
 .warehouse-table::-webkit-scrollbar{width:6px}
 .warehouse-table::-webkit-scrollbar-track{background:rgba(0,212,255,.03);border-radius:3px}
 .warehouse-table::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#00d4ff,#7b2ff7);border-radius:3px}
 .data-row{
-    display:grid;grid-template-columns:80px 150px 1fr 120px 100px 120px 100px;
-    gap:15px;align-items:center;padding:15px 20px;margin-bottom:8px;
-    background:rgba(0,212,255,.02);border:1px solid rgba(0,212,255,.08);border-radius:12px;
+    display:grid;grid-template-columns:70px 130px 1fr 100px 90px 110px 90px;
+    gap:12px;align-items:center;padding:12px 16px;margin-bottom:6px;
+    background:rgba(0,212,255,.02);border:1px solid rgba(0,212,255,.08);border-radius:10px;
     transition:all .3s;cursor:pointer;position:relative;overflow:hidden;
 }
 .data-row::before{
@@ -165,53 +161,53 @@
     cursor:default;font-weight:600;
 }
 .data-row.header:hover{transform:none;box-shadow:none}
-.cell{color:rgba(255,255,255,.7);font-size:13px}
-.cell-id{color:rgba(255,255,255,.3);font-family:monospace;font-size:12px}
+.cell{color:rgba(255,255,255,.7);font-size:12px}
+.cell-id{color:rgba(255,255,255,.3);font-family:monospace;font-size:11px}
 .cell-source{
-    color:#00d4ff;font-weight:500;padding:4px 10px;
-    background:rgba(0,212,255,.1);border-radius:6px;display:inline-block;
+    color:#00d4ff;font-weight:500;padding:3px 8px;
+    background:rgba(0,212,255,.1);border-radius:5px;display:inline-block;
 }
-.cell-keyword{color:#fff;font-weight:500;font-size:14px}
+.cell-keyword{color:#fff;font-weight:500;font-size:13px}
 .cell-count{
-    font-weight:700;font-size:18px;
+    font-weight:700;font-size:16px;
     background:linear-gradient(135deg,#00d4ff,#7b2ff7);
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
 }
-.cell-time{color:rgba(255,255,255,.4);font-size:12px}
+.cell-time{color:rgba(255,255,255,.4);font-size:11px}
 .status-badge{
-    padding:4px 12px;border-radius:6px;font-size:11px;font-weight:500;display:inline-block;
+    padding:3px 10px;border-radius:5px;font-size:10px;font-weight:500;display:inline-block;
 }
 .status-done{background:rgba(82,196,86,.1);color:#52c41a;border:1px solid rgba(82,196,86,.2)}
 .status-ai{
-    display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
+    display:inline-flex;align-items:center;gap:3px;padding:2px 8px;
     background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(123,47,247,.1));
-    border:1px solid rgba(123,47,247,.2);border-radius:6px;font-size:11px;color:#7b2ff7;
+    border:1px solid rgba(123,47,247,.2);border-radius:5px;font-size:10px;color:#7b2ff7;
 }
 .view-btn{
-    padding:6px 16px;background:linear-gradient(135deg,#00d4ff,#7b2ff7);
-    border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;
+    padding:5px 14px;background:linear-gradient(135deg,#00d4ff,#7b2ff7);
+    border:none;border-radius:5px;color:#fff;font-size:11px;cursor:pointer;
     transition:all .3s;
 }
 .view-btn:hover{box-shadow:0 0 15px rgba(0,212,255,.4);transform:scale(1.05)}
 .empty-container{
-    text-align:center;padding:80px 20px;
+    text-align:center;padding:60px 20px;
 }
 .empty-icon{
-    font-size:60px;color:rgba(0,212,255,.2);margin-bottom:15px;
+    font-size:48px;color:rgba(0,212,255,.2);margin-bottom:12px;
     animation:emptyPulse 2s ease-in-out infinite;
 }
 @keyframes emptyPulse{
     0%,100%{transform:scale(1);opacity:.3}
     50%{transform:scale(1.1);opacity:.5}
 }
-.empty-text{color:rgba(255,255,255,.3);font-size:14px;letter-spacing:2px}
+.empty-text{color:rgba(255,255,255,.3);font-size:13px;letter-spacing:2px}
 .warehouse-pagination{
-    display:flex;justify-content:center;align-items:center;gap:10px;margin-top:20px;padding-top:20px;
+    display:flex;justify-content:center;align-items:center;gap:8px;margin-top:16px;padding-top:16px;
     border-top:1px solid rgba(0,212,255,.1);
 }
 .page-btn{
-    padding:8px 16px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);
-    border-radius:8px;color:rgba(255,255,255,.6);cursor:pointer;transition:all .3s;
+    padding:6px 14px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);
+    border-radius:6px;color:rgba(255,255,255,.6);cursor:pointer;transition:all .3s;font-size:12px;
 }
 .page-btn:hover:not(.disabled){
     border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,.1);
@@ -220,10 +216,10 @@
     background:linear-gradient(135deg,#00d4ff,#7b2ff7);border-color:transparent;color:#fff;
 }
 .page-btn.disabled{opacity:.3;cursor:not-allowed}
-.page-info{color:rgba(255,255,255,.4);font-size:13px}
+.page-info{color:rgba(255,255,255,.4);font-size:12px}
 </style>
-</head>
-<body>
+
+<div class="warehouse-page">
     <div class="warehouse-bg"></div>
     <div class="warehouse-grid"></div>
     <div class="warehouse-particles" id="particles"></div>
@@ -268,6 +264,7 @@
     </div>
 </div>
 
+<script src="/static/dist/layui-v2.13.6/layui-v2.13.6/layui/layui.js"></script>
 <script>
 layui.use(['layer'], function(){
     var layer = layui.layer;
@@ -280,7 +277,7 @@ layui.use(['layer'], function(){
 
     function createParticles(){
         var container = document.getElementById('particles');
-        for(var i = 0; i < 30; i++){
+        for(var i = 0; i < 20; i++){
             var p = document.createElement('div');
             p.className = 'particle';
             p.style.left = Math.random() * 100 + '%';
@@ -404,5 +401,4 @@ layui.use(['layer'], function(){
     loadTasks();
 });
 </script>
-</body>
-</html>
+{% end %}
