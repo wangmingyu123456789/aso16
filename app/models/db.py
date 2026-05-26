@@ -150,6 +150,32 @@ def init_db():
 				"""
 			)
 
+		# 创建 api_interfaces 表（第三方接口管理）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='api_interfaces'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE api_interfaces(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					name TEXT NOT NULL,
+					code TEXT NOT NULL UNIQUE,
+					api_url TEXT NOT NULL,
+					method TEXT NOT NULL DEFAULT 'GET',
+					response_format TEXT NOT NULL DEFAULT 'JSON',
+					request_example TEXT,
+					params_schema TEXT,
+					headers TEXT,
+					description TEXT,
+					qps_limit TEXT,
+					status INTEGER NOT NULL DEFAULT 1,
+					total_calls INTEGER NOT NULL DEFAULT 0,
+					last_called_at TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now','localtime'))
+				)
+				"""
+			)
+		_init_default_api_interfaces(conn)
+
 		# 初始化默认瞭望数据源
 		cursor = conn.execute("SELECT COUNT(*) as cnt FROM outlook_sources").fetchone()
 		if cursor["cnt"] == 0:
@@ -197,6 +223,38 @@ def init_db():
 		_init_default_data(conn)
 		conn.commit()
 
+def _init_default_api_interfaces(conn):
+	"""初始化默认第三方 API 接口"""
+	cursor = conn.execute("SELECT COUNT(*) as cnt FROM api_interfaces").fetchone()
+	if cursor["cnt"] > 0:
+		return
+	defaults = [
+		(
+			'QQ音乐VIP', 'music_qq_vip',
+			'https://api.52vmy.cn/api/music/qq/vip',
+			'GET', 'TEXT',
+			'https://api.52vmy.cn/api/music/qq/vip?msg=周杰伦',
+			'[{"name":"msg","label":"歌手/歌曲","example":"周杰伦","required":true}]',
+			'', 'QQ音乐VIP歌曲搜索接口', '', 1
+		),
+		(
+			'天气查询', 'weather_tian',
+			'https://api.52vmy.cn/api/query/tian',
+			'GET', 'JSON',
+			'https://api.52vmy.cn/api/query/tian?city=北京市',
+			'[{"name":"city","label":"城市","example":"北京市","required":true}]',
+			'', '三日天气查询API', '每2秒最多4次，携带Token可无视限制', 1
+		),
+	]
+	for item in defaults:
+		conn.execute(
+			"""INSERT INTO api_interfaces(
+			   name,code,api_url,method,response_format,request_example,
+			   params_schema,headers,description,qps_limit,status
+			) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+			item
+		)
+
 def _init_default_data(conn):
 	"""初始化默认的功能、角色和权限数据"""
 	# 检查是否已有功能数据
@@ -209,7 +267,7 @@ def _init_default_data(conn):
 		# 一级菜单(parent_id=0)
 		(0, '基础管理', 'base', 'layui-icon-set', '', 1, 1),
 		(0, '核心业务', 'business', 'layui-icon-engine', '', 2, 1),
-		(0, '数据管理', 'data', 'layui-icon-table', '', 3, 1),
+		(0, '瞭望采集', 'data', 'layui-icon-read', '', 3, 1),
 		(0, '系统', 'system', 'layui-icon-component', '', 4, 1),
 		# 二级菜单
 		(1, '系统首页', 'base_index', 'layui-icon-home', '/admin', 1, 1),
@@ -219,9 +277,9 @@ def _init_default_data(conn):
 		(1, '权限管理', 'base_permissions', 'layui-icon-auz', '/admin/permissions', 5, 1),
 		(2, '模型引擎', 'biz_models', 'layui-icon-engine', '/admin/models', 1, 1),
 		(2, '数字员工', 'biz_employees', 'layui-icon-user', '/admin/employees', 2, 1),
-		(2, '瞭望管理', 'biz_outlook', 'layui-icon-read', '/admin/outlook', 3, 1),
-		(3, '数据仓库', 'data_warehouse', 'layui-icon-table', '/admin/warehouse', 1, 1),
-		(3, '接口管理', 'data_api', 'layui-icon-link', '/admin/api', 2, 1),
+		(3, '瞭望采集', 'biz_outlook', 'layui-icon-search', '/admin/outlook', 1, 1),
+		(3, '数据仓库', 'data_warehouse', 'layui-icon-table', '/admin/warehouse', 2, 1),
+		(3, '接口管理', 'data_api', 'layui-icon-link', '/admin/api', 3, 1),
 		(4, '系统设置', 'sys_settings', 'layui-icon-set', '/admin/settings', 1, 1),
 		(4, '系统统计', 'sys_stats', 'layui-icon-chart', '/admin/stats', 2, 1),
 	]
@@ -421,6 +479,74 @@ def upgrade_db():
 					"INSERT INTO models(name,code,api_url,api_key,status,is_system_default) VALUES(?,?,?,?,?,?)",
 					('DeepSeek V3', 'deepseek-v3', 'https://aigc-api.aitoolcore.com/api/v1/chat/completions', 'sk-aigc-c0725a1b8a1b205154867945a3c667ce9d232fa7', 1, 1)
 				)
+
+		# 重组菜单：瞭望采集（一级）下含瞭望采集、数据仓库（二级）
+		data_row = conn.execute(
+			"SELECT id FROM functions WHERE parent_id=0 AND code='data'"
+		).fetchone()
+		if data_row:
+			data_id = data_row["id"]
+			conn.execute(
+				"UPDATE functions SET name='瞭望采集', icon='layui-icon-read' WHERE id=?",
+				(data_id,)
+			)
+			outlook_row = conn.execute(
+				"SELECT id FROM functions WHERE code='biz_outlook'"
+			).fetchone()
+			if outlook_row:
+				conn.execute(
+					"UPDATE functions SET name='瞭望采集', parent_id=?, sort_order=1, icon='layui-icon-search', url='/admin/outlook' WHERE id=?",
+					(data_id, outlook_row["id"])
+				)
+			else:
+				conn.execute(
+					"INSERT INTO functions(parent_id,name,code,icon,url,sort_order,status) VALUES(?,?,?,?,?,?,?)",
+					(data_id, "瞭望采集", "biz_outlook", "layui-icon-search", "/admin/outlook", 1, 1)
+				)
+				new_outlook_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+				admin_role = conn.execute("SELECT id FROM roles WHERE code='admin'").fetchone()
+				if admin_role:
+					conn.execute(
+						"INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)",
+						(admin_role["id"], new_outlook_id)
+					)
+			conn.execute(
+				"UPDATE functions SET parent_id=?, sort_order=2 WHERE code='data_warehouse'",
+				(data_id,)
+			)
+			conn.execute(
+				"UPDATE functions SET parent_id=?, sort_order=3 WHERE code='data_api'",
+				(data_id,)
+			)
+			conn.execute(
+				"UPDATE functions SET url='/admin/api' WHERE code='data_api'"
+			)
+
+		# 创建 api_interfaces 表
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='api_interfaces'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE api_interfaces(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					name TEXT NOT NULL,
+					code TEXT NOT NULL UNIQUE,
+					api_url TEXT NOT NULL,
+					method TEXT NOT NULL DEFAULT 'GET',
+					response_format TEXT NOT NULL DEFAULT 'JSON',
+					request_example TEXT,
+					params_schema TEXT,
+					headers TEXT,
+					description TEXT,
+					qps_limit TEXT,
+					status INTEGER NOT NULL DEFAULT 1,
+					total_calls INTEGER NOT NULL DEFAULT 0,
+					last_called_at TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now','localtime'))
+				)
+				"""
+			)
+		_init_default_api_interfaces(conn)
 
 		# 初始化默认数据
 		_init_default_data(conn)

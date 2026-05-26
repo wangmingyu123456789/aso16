@@ -1,0 +1,253 @@
+﻿{% extends "layout.html" %}
+{% block body %}
+<div class="page-header">
+    <h3>接口管理</h3>
+    <p>管理从互联网搜集的第三方 API，支持增删改查、在线测试，并为系统其他模块提供统一调用服务</p>
+</div>
+
+<div class="layui-card">
+    <div class="layui-card-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span>接口列表</span>
+            <button class="layui-btn layui-btn-sm layui-btn-normal" id="btnAdd">
+                <i class="layui-icon layui-icon-addition"></i> 新增接口
+            </button>
+        </div>
+    </div>
+    <div class="layui-card-body">
+        <div style="margin-bottom:16px;">
+            <div class="layui-inline">
+                <input type="text" id="searchKeyword" placeholder="搜索名称/编码/URL" class="layui-input" style="width:240px;height:32px;">
+            </div>
+            <button class="layui-btn layui-btn-sm" id="btnSearch"><i class="layui-icon layui-icon-search"></i> 搜索</button>
+        </div>
+        <table class="layui-hide" id="apiTable" lay-filter="apiTable"></table>
+    </div>
+</div>
+{% end %}
+
+{% block extra_script %}
+<script>
+function getCsrfToken(){
+    var m = document.cookie.match(/_xsrf=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+}
+
+function escapeHtml(text){
+    if(!text) return '';
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(text));
+    return div.innerHTML;
+}
+
+var methodTpl = function(d){
+    var cls = d.method === 'POST' ? 'layui-bg-orange' : 'layui-bg-blue';
+    return '<span class="layui-badge ' + cls + '">' + (d.method || 'GET') + '</span>';
+};
+
+var formatTpl = function(d){
+    return '<span class="layui-badge layui-bg-cyan">' + (d.response_format || 'JSON') + '</span>';
+};
+
+var statusTpl = function(d){
+    return d.status === 1
+        ? '<span class="layui-badge layui-bg-green">启用</span>'
+        : '<span class="layui-badge layui-bg-gray">禁用</span>';
+};
+
+var urlTpl = function(d){
+    var url = d.api_url || '';
+    if(url.length > 42) url = url.substring(0, 42) + '...';
+    return '<span title="' + escapeHtml(d.api_url) + '">' + escapeHtml(url) + '</span>';
+};
+
+var actionTpl = function(d){
+    return '<a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="test"><i class="layui-icon layui-icon-play"></i> 测试</a>' +
+        '<a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i> 编辑</a>' +
+        '<a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete"><i class="layui-icon layui-icon-delete"></i> 删除</a>';
+};
+
+layui.use(['table','form','layer'], function(){
+    var table = layui.table;
+    var form = layui.form;
+    var layer = layui.layer;
+    var $ = layui.$;
+    var currentKeyword = '';
+
+    table.render({
+        elem: '#apiTable',
+        url: '/admin/api/list',
+        page: {
+            layout: ['prev', 'page', 'next', 'skip', 'count', 'limit'],
+            limits: [10, 20, 50],
+            limit: 20
+        },
+        cols: [[
+            {field:'id', title:'ID', width:70, align:'center', sort:true},
+            {field:'name', title:'接口名称', width:140, align:'center'},
+            {field:'code', title:'编码', width:130, align:'center'},
+            {field:'api_url', title:'接口地址', minWidth:200, templet:urlTpl},
+            {field:'method', title:'方式', width:80, align:'center', templet:methodTpl},
+            {field:'response_format', title:'格式', width:80, align:'center', templet:formatTpl},
+            {field:'total_calls', title:'调用次数', width:90, align:'center'},
+            {field:'status', title:'状态', width:80, align:'center', templet:statusTpl},
+            {field:'create_at', title:'创建时间', width:170, align:'center'},
+            {title:'操作', width:220, align:'center', templet:actionTpl, fixed:'right'}
+        ]],
+        skin: 'line',
+        where: { keyword: '' }
+    });
+
+    $('#btnSearch').on('click', function(){
+        currentKeyword = $('#searchKeyword').val().trim();
+        table.reload('apiTable', { where: { keyword: currentKeyword }, page: { curr: 1 } });
+    });
+
+    $('#searchKeyword').on('keydown', function(e){
+        if(e.keyCode === 13){ $('#btnSearch').click(); }
+    });
+
+    $('#btnAdd').on('click', function(){ openForm(null); });
+
+    table.on('tool(apiTable)', function(obj){
+        var data = obj.data;
+        if(obj.event === 'edit'){
+            openForm(data);
+        } else if(obj.event === 'delete'){
+            layer.confirm('确定删除该接口吗？', function(index){
+                $.post('/admin/api/delete', { id: data.id, _xsrf: getCsrfToken() }, function(res){
+                    if(res.code === 0){
+                        layer.msg('删除成功');
+                        table.reload('apiTable');
+                    } else {
+                        layer.msg(res.msg || '删除失败');
+                    }
+                });
+                layer.close(index);
+            });
+        } else if(obj.event === 'test'){
+            openTest(data);
+        }
+    });
+
+    function getFormHtml(d){
+        d = d || {};
+        return '<form class="layui-form" style="padding:20px 24px 0;max-height:70vh;overflow-y:auto;">' +
+            '<div class="layui-form-item"><label class="layui-form-label">名称</label>' +
+            '<div class="layui-input-block"><input type="text" name="name" value="' + escapeHtml(d.name||'') + '" class="layui-input" lay-verify="required"></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">编码</label>' +
+            '<div class="layui-input-block"><input type="text" name="code" value="' + escapeHtml(d.code||'') + '" placeholder="唯一标识，如 music_qq_vip" class="layui-input" lay-verify="required"></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">接口地址</label>' +
+            '<div class="layui-input-block"><input type="text" name="api_url" value="' + escapeHtml(d.api_url||'') + '" class="layui-input" lay-verify="required"></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">请求方式</label>' +
+            '<div class="layui-input-block">' +
+            '<input type="radio" name="method" value="GET" title="GET" ' + ((d.method||'GET')==='GET'?'checked':'') + '>' +
+            '<input type="radio" name="method" value="POST" title="POST" ' + (d.method==='POST'?'checked':'') + '>' +
+            '</div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">返回格式</label>' +
+            '<div class="layui-input-block">' +
+            '<input type="radio" name="response_format" value="JSON" title="JSON" ' + ((d.response_format||'JSON')==='JSON'?'checked':'') + '>' +
+            '<input type="radio" name="response_format" value="TEXT" title="TEXT" ' + (d.response_format==='TEXT'?'checked':'') + '>' +
+            '</div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">请求示例</label>' +
+            '<div class="layui-input-block"><input type="text" name="request_example" value="' + escapeHtml(d.request_example||'') + '" placeholder="完整请求 URL 示例" class="layui-input"></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">参数说明</label>' +
+            '<div class="layui-input-block"><textarea name="params_schema" placeholder=\'[{"name":"msg","label":"关键词","example":"周杰伦"}]\' class="layui-textarea" rows="3">' + escapeHtml(d.params_schema||'') + '</textarea></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">请求头</label>' +
+            '<div class="layui-input-block"><textarea name="headers" placeholder=\'{"Authorization":"Bearer xxx"}\' class="layui-textarea" rows="2">' + escapeHtml(d.headers||'') + '</textarea></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">QPS 限制</label>' +
+            '<div class="layui-input-block"><input type="text" name="qps_limit" value="' + escapeHtml(d.qps_limit||'') + '" placeholder="如：每2秒最多4次" class="layui-input"></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">备注</label>' +
+            '<div class="layui-input-block"><textarea name="description" class="layui-textarea" rows="2">' + escapeHtml(d.description||'') + '</textarea></div></div>' +
+            '<div class="layui-form-item"><label class="layui-form-label">状态</label>' +
+            '<div class="layui-input-block">' +
+            '<input type="radio" name="status" value="1" title="启用" ' + (d.status!=0?'checked':'') + '>' +
+            '<input type="radio" name="status" value="0" title="禁用" ' + (d.status==0?'checked':'') + '>' +
+            '</div></div>' +
+            '<div class="layui-form-item"><div class="layui-input-block">' +
+            '<button class="layui-btn" lay-submit lay-filter="saveApiForm">保存</button>' +
+            '</div></div></form>';
+    }
+
+    function openForm(data){
+        var isEdit = !!data;
+        layer.open({
+            type: 1,
+            title: isEdit ? '编辑接口' : '新增接口',
+            area: ['620px', '90%'],
+            content: getFormHtml(data),
+            success: function(layero, index){
+                form.render();
+                form.on('submit(saveApiForm)', function(formData){
+                    var url = isEdit ? '/admin/api/edit' : '/admin/api/add';
+                    if(isEdit) formData.field.id = data.id;
+                    formData.field._xsrf = getCsrfToken();
+                    $.post(url, formData.field, function(res){
+                        if(res.code === 0){
+                            layer.msg(isEdit ? '修改成功' : '新增成功');
+                            layer.close(index);
+                            table.reload('apiTable');
+                        } else {
+                            layer.msg(res.msg || '操作失败');
+                        }
+                    });
+                    return false;
+                });
+            }
+        });
+    }
+
+    function openTest(data){
+        var defaultParams = '{}';
+        if(data.params_schema){
+            try{
+                var schema = JSON.parse(data.params_schema);
+                if(Array.isArray(schema) && schema.length){
+                    var obj = {};
+                    schema.forEach(function(p){ if(p.example) obj[p.name] = p.example; });
+                    defaultParams = JSON.stringify(obj, null, 2);
+                }
+            }catch(e){}
+        }
+        var html = '<div style="padding:20px;">' +
+            '<p style="margin-bottom:8px;color:#666;">接口：<b>' + escapeHtml(data.name) + '</b>（' + escapeHtml(data.code) + '）</p>' +
+            '<p style="margin-bottom:12px;font-size:12px;color:#999;word-break:break-all;">' + escapeHtml(data.request_example || data.api_url) + '</p>' +
+            '<div class="layui-form-item"><label class="layui-form-label" style="width:80px;">参数 JSON</label>' +
+            '<div class="layui-input-block" style="margin-left:100px;"><textarea id="testParams" class="layui-textarea" rows="4">' + escapeHtml(defaultParams) + '</textarea></div></div>' +
+            '<button class="layui-btn layui-btn-sm" id="btnDoTest"><i class="layui-icon layui-icon-play"></i> 发送请求</button>' +
+            '<pre id="testResult" style="margin-top:16px;padding:12px;background:#f6f8fa;border-radius:6px;max-height:320px;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-all;">等待测试...</pre>' +
+            '</div>';
+
+        layer.open({
+            type: 1,
+            title: '接口测试',
+            area: ['680px', '560px'],
+            content: html,
+            success: function(){
+                $('#btnDoTest').on('click', function(){
+                    var params = $('#testParams').val().trim() || '{}';
+                    $('#testResult').text('请求中...');
+                    $.post('/admin/api/test', {
+                        api_id: data.id,
+                        params: params,
+                        _xsrf: getCsrfToken()
+                    }, function(res){
+                        var out = res.data || {};
+                        var text = '';
+                        if(out.url) text += '请求 URL: ' + out.url + '\n\n';
+                        if(out.data !== undefined){
+                            text += typeof out.data === 'string' ? out.data : JSON.stringify(out.data, null, 2);
+                        } else {
+                            text += res.msg || JSON.stringify(res, null, 2);
+                        }
+                        $('#testResult').text(text);
+                    }).fail(function(){
+                        $('#testResult').text('请求失败');
+                    });
+                });
+            }
+        });
+    }
+});
+</script>
+{% end %}

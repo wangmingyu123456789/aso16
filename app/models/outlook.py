@@ -115,8 +115,7 @@ class OutlookTaskRepository:
         创建新的采集任务
         """
         import datetime
-        beijing_tz = datetime.timezone(datetime.timedelta(hours=8))
-        create_at = datetime.datetime.now(beijing_tz).strftime('%Y-%m-%d %H:%M:%S')
+        create_at = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         with get_connection() as conn:
             cursor = conn.execute(
                 """INSERT INTO outlook_tasks(
@@ -240,8 +239,7 @@ class OutlookDataRepository:
     def save_data(source_id, source_name, title, url='', content='', author='', publish_date='', raw_html='', ai_processed=0, task_id=0, source_keyword=''):
         try:
             import datetime
-            beijing_tz = datetime.timezone(datetime.timedelta(hours=8))
-            create_at = datetime.datetime.now(beijing_tz).strftime('%Y-%m-%d %H:%M:%S')
+            create_at = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
             with get_connection() as conn:
                 conn.execute(
                     """INSERT INTO outlook_data(source_id,source_name,title,url,content,author,publish_date,raw_html,ai_processed,task_id,source_keyword,create_at) 
