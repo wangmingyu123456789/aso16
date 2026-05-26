@@ -4,56 +4,70 @@
 # 登录态 用 secure cookie 保存 username
 
 import tornado.web
+import urllib.parse
 from app.controllers.base import BaseHandler
 from app.models.user import UserRepository
 
 class LoginHandler(BaseHandler):
-	# /auth/login
-	# get:渲染登录页
-	# post:校验用户名和密码，通过后写入secure cookie 并跳转到目标页
 	def get(self):
-		# self.write(f"""<h3>登录</h3>
-		# 	<form method="post" action="/auth/login">
-		# 	<input name="username">
-		# 	<input name="password">
-		# 	<button type="submit">登录admin</button>
-		# 	{self.xsrf_form_html()}
-		# 	</form>
-		# """)
-		self.render("login.html",title="登录",error=None)
+		self.render("user_login.html",title="登录")
 
 	def post(self):
 		username=(self.get_body_argument("username","")or"").strip()
 		password=self.get_body_argument("password","")
-		if not username or not password:
-			self.set_status(400)
-			# return self.write(f"""<h3>登录</h3>
-			# 用户名不能为空，输入无效数据
-			# <form method="post" action="/auth/login">
-			# <input name="username">
-			# <input name="password">
-			# <button type="submit">登录admin</button>
-			# {self.xsrf_form_html()}
-			# </form>
-			# """)
-			return self.render("login.html",title="登录",error="用户名或密码不能为空或输入无效数据")
-
+		if not username:
+			self.redirect("/auth/login?error="+urllib.parse.quote("请填写用户名"))
+			return
+		if not password:
+			self.redirect("/auth/login?error="+urllib.parse.quote("请填写密码"))
+			return
+		user = UserRepository.get_user_by_username(username)
+		if not user:
+			self.redirect("/auth/login?error="+urllib.parse.quote("用户还未注册"))
+			return
 		if not UserRepository.verify_user(username,password):
-			self.set_status(401)
-			# return self.write(f"""<h3>登录</h3>
-			# 用户名或密码错误
-			# <form method="post" action="/auth/login">
-			# <input name="username">
-			# <input name="password">
-			# <button type="submit">登录admin</button>
-			# {self.xsrf_form_html()}
-			# </form>
-			# """)
-			return self.render("login.html",title="登录",error="用户名或密码错误")
-
+			self.redirect("/auth/login?error="+urllib.parse.quote("用户名或密码填写错误"))
+			return
 		self.set_secure_cookie("username",username)
-		# self.write(f"登录成功,欢迎:{username}")
-		self.redirect("/")
+		self.redirect("/chat")
+
+class RegisterHandler(BaseHandler):
+	def get(self):
+		self.render("register.html",title="注册")
+
+	def post(self):
+		username=(self.get_body_argument("username","")or"").strip()
+		password=self.get_body_argument("password","")
+		password2=self.get_body_argument("password2","")
+
+		err = None
+		if not username or not password:
+			err = "用户名或密码不能为空"
+		elif len(username) < 2:
+			err = "用户名至少2个字符"
+		elif len(password) < 6:
+			err = "密码至少6位"
+		elif password != password2:
+			err = "两次密码不一致"
+
+		if err:
+			self.redirect("/auth/register?error="+urllib.parse.quote(err))
+			return
+
+		from app.models.db import get_connection
+		with get_connection() as conn:
+			exist = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+			if exist:
+				self.redirect("/auth/register?error="+urllib.parse.quote("用户名已存在"))
+				return
+
+		if UserRepository.create_user(username, password):
+			from app.models.db import get_connection
+			with get_connection() as conn:
+				conn.execute("UPDATE users SET role='user' WHERE username=?", (username,))
+			self.redirect("/auth/login?registered=1")
+		else:
+			self.redirect("/auth/register?error="+urllib.parse.quote("注册失败，请重试"))
 
 class LogoutHandler(BaseHandler):
 	def post(self):

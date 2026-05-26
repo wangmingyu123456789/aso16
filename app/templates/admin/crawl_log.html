@@ -1,0 +1,87 @@
+{% extends "layout.html" %}
+{% block body %}
+<style>
+.log-wrap { margin:-24px; }
+.log-toolbar { display:flex; justify-content:space-between; align-items:center; padding:16px 24px; background:linear-gradient(135deg,#0a1628 0%,#1a2a4a 100%); border-radius:8px 8px 0 0; }
+.log-toolbar h2 { color:#e8edf5; margin:0; font-size:18px; font-weight:600; display:flex; align-items:center; gap:10px; }
+.log-toolbar h2 i { color:#4fc3f7; font-size:22px; }
+.log-toolbar .log-actions { display:flex; gap:10px; align-items:center; }
+.log-toolbar .auto-refresh { color:#8899bb; font-size:12px; display:flex; align-items:center; gap:6px; cursor:pointer; }
+.log-toolbar .auto-refresh input { accent-color:#4fc3f7; margin:0; }
+.log-table-wrap { padding:0 24px 24px; }
+#logTable { margin:0; }
+.log-status-badge { display:inline-block; padding:3px 12px; border-radius:12px; font-size:12px; font-weight:600; }
+.log-status-badge.running { background:#fff3e0; color:#e65100; }
+.log-status-badge.running::before { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:#e65100; margin-right:6px; animation:logPulse 1.2s infinite; }
+.log-status-badge.completed { background:#e8f5e9; color:#2e7d32; }
+.log-status-badge.completed::before { content:'✓ '; }
+.log-status-badge.error { background:#ffebee; color:#c62828; }
+.log-status-badge.error::before { content:'✗ '; }
+@keyframes logPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.5)} }
+.log-err-txt { max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#e53935; font-size:12px; display:inline-block; }
+</style>
+<div class="log-wrap">
+<div class="log-toolbar">
+<h2><i class="layui-icon layui-icon-file"></i>采集日志</h2>
+<div class="log-actions">
+<label class="auto-refresh"><input type="checkbox" id="autoRefresh" checked> 自动刷新(10s)</label>
+<button class="layui-btn layui-btn-sm" id="btnRefresh"><i class="layui-icon layui-icon-refresh"></i> 刷新</button>
+</div>
+</div>
+<div class="log-table-wrap">
+<table id="logTable" lay-filter="logTable"></table>
+</div>
+</div>
+{% end %}
+{% block extra_script %}
+<script>
+layui.use(['table'], function(){
+	var table=layui.table, $=layui.$;
+	var autoTimer=null;
+
+	var tIns=table.render({
+		elem:'#logTable', url:'/admin/outlook/log/api', page:true, limit:20, skin:'line',
+		cols:[[
+			{field:'id', title:'ID', width:70, sort:true},
+			{field:'task_id', title:'任务ID', width:80},
+			{field:'source_name', title:'采集源', width:140},
+			{field:'keyword', title:'关键词', width:110},
+			{field:'start_time', title:'开始时间', width:165},
+			{field:'end_time', title:'结束时间', width:165},
+			{field:'total_count', title:'获取数', width:80, sort:true},
+			{field:'saved_count', title:'保存数', width:80, sort:true},
+			{field:'status', title:'状态', width:110, templet:function(d){
+				return '<span class="log-status-badge '+d.status+'">' + d.status + '</span>';
+			}},
+			{field:'error_msg', title:'错误信息', minWidth:200, templet:function(d){
+				return d.error_msg ? '<span class="log-err-txt" title="'+d.error_msg+'">'+d.error_msg+'</span>' : '-';
+			}},
+			{field:'create_at', title:'创建时间', width:165}
+		]]
+	});
+
+	function doRefresh(){ tIns.reload({page:{curr:1}}); }
+
+	$('#btnRefresh').on('click', doRefresh);
+
+	function startAuto(){
+		clearInterval(autoTimer);
+		autoTimer=setInterval(function(){ tIns.reload(); }, 10000);
+	}
+	function stopAuto(){
+		clearInterval(autoTimer); autoTimer=null;
+	}
+	$('#autoRefresh').on('change', function(){
+		this.checked ? startAuto() : stopAuto();
+	});
+	if($('#autoRefresh').is(':checked')) startAuto();
+
+	document.addEventListener("visibilitychange", function(){
+		if(!$('#autoRefresh').is(':checked')) return;
+		if(document.hidden){ stopAuto(); }
+		else { startAuto(); }
+	});
+	window.addEventListener("beforeunload", stopAuto);
+});
+</script>
+{% end %}

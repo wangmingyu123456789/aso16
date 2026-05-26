@@ -21,9 +21,9 @@ class AdminLoginHandler(AdminBaseHandler):
 				return self.render("admin/login.html",title="系统登录",error="管理员账号或密码错误，或账号已被禁用")
 			self.set_secure_cookie("admin_username",username)
 		else:
-			if not UserRepository.verify_user(username,password):
+			if not UserRepository.verify_admin_user(username,password):
 				self.set_status(401)
-				return self.render("admin/login.html",title="系统登录",error="用户账号或密码错误")
+				return self.render("admin/login.html",title="系统登录",error="用户未授权，请联系管理员授权后登录")
 			self.set_secure_cookie("admin_username",username)
 
 		self.redirect("/admin")

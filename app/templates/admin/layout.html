@@ -67,11 +67,16 @@
                     <a href="/admin/users" class="menu-item {% if current_page == 'users' %}active{% end %}"><i class="layui-icon layui-icon-username"></i><span>用户管理</span></a>
                     <div class="menu-title">核心业务</div>
                     <a href="/admin/models" class="menu-item {% if current_page == 'models' %}active{% end %}"><i class="layui-icon layui-icon-engine"></i><span>模型引擎</span></a>
-                    <a href="javascript:;" class="menu-item"><i class="layui-icon layui-icon-auz"></i><span>数字员工</span></a>
+                    <a href="/admin/agent" class="menu-item {% if current_page == 'biz_employees' %}active{% end %}"><i class="layui-icon layui-icon-user"></i><span>数字员工</span></a>
                     <div class="menu-title">瞭望采集</div>
                     <a href="/admin/outlook" class="menu-item {% if current_page == 'outlook' or current_page == 'outlook_collect' %}active{% end %}"><i class="layui-icon layui-icon-search"></i><span>瞭望采集</span></a>
                     <a href="/admin/outlook/data" class="menu-item {% if current_page == 'outlook_data' %}active{% end %}"><i class="layui-icon layui-icon-table"></i><span>数据仓库</span></a>
                     <a href="/admin/api" class="menu-item {% if current_page == 'data_api' %}active{% end %}"><i class="layui-icon layui-icon-link"></i><span>接口管理</span></a>
+                    <a href="/admin/outlook/schedule" class="menu-item {% if current_page == 'outlook_schedule' %}active{% end %}"><i class="layui-icon layui-icon-log"></i><span>定时采集</span></a>
+                    <a href="/admin/outlook/log" class="menu-item {% if current_page == 'outlook_log' %}active{% end %}"><i class="layui-icon layui-icon-file"></i><span>采集日志</span></a>
+                    <div class="menu-title">数智大屏</div>
+                    <a href="/dashboard" class="menu-item {% if current_page == 'biz_dashboard_home' %}active{% end %}"><i class="layui-icon layui-icon-home"></i><span>数智大屏</span></a>
+                    <a href="/admin/dashboard/components" class="menu-item {% if current_page == 'biz_dashboard_components' %}active{% end %}"><i class="layui-icon layui-icon-set"></i><span>组件管理</span></a>
                     <div class="menu-title">系统</div>
                     <a href="javascript:;" class="menu-item"><i class="layui-icon layui-icon-set"></i><span>系统设置</span></a>
                     <a href="javascript:;" class="menu-item"><i class="layui-icon layui-icon-chart"></i><span>系统统计</span></a>

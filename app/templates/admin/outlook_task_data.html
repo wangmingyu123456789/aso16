@@ -148,18 +148,28 @@
                 closeBtn: 1,
                 success: function(){
                     pollProgress(taskId);
+                },
+                cancel: function(){
+                    if(deepPollTimer){ clearInterval(deepPollTimer); deepPollTimer=null; }
+                },
+                end: function(){
+                    if(deepPollTimer){ clearInterval(deepPollTimer); deepPollTimer=null; }
                 }
             });
         }
 
+        var deepPollTimer = null;
+
         // 关闭进度弹窗
         window.closeProgressDialog = function(){
+            if(deepPollTimer){ clearInterval(deepPollTimer); deepPollTimer=null; }
             layer.closeAll();
         };
 
         // 轮询进度
         function pollProgress(taskId){
-            var pollTimer = setInterval(function(){
+            if(deepPollTimer) clearInterval(deepPollTimer);
+            deepPollTimer = setInterval(function(){
                 $.get('/admin/outlook/deep/collect/status', {task_id: taskId}, function(res){
                     if(res.code !== 0 || !res.data) return;
                     var data = res.data;
@@ -180,7 +190,7 @@
 
                     // 更新标题
                     if(data.status === 'completed'){
-                        clearInterval(pollTimer);
+                        clearInterval(deepPollTimer); deepPollTimer=null;
                         $('.deep-progress-header h4').text('AI深度采集完成 - 成功 '+data.success+' 条，失败 '+data.failed+' 条');
                         $('#closeBtnContainer').show();
                         // 刷新表格
@@ -188,7 +198,7 @@
                             table.reload('dataTable');
                         }, 500);
                     } else if(data.status === 'error'){
-                        clearInterval(pollTimer);
+                        clearInterval(deepPollTimer); deepPollTimer=null;
                         $('.deep-progress-header h4').text('AI深度采集出错');
                         $('#closeBtnContainer').show();
                     }

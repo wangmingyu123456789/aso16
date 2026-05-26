@@ -1,0 +1,90 @@
+{% extends "layout.html" %}
+{% block body %}
+<style>
+.comp-grid{display:flex;flex-wrap:wrap;gap:16px;padding:10px 0;}
+.comp-card{width:240px;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:20px;position:relative;}
+.comp-card .comp-color{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:6px;}
+.comp-card .comp-name{font-size:15px;font-weight:bold;margin-bottom:8px;}
+.comp-card .comp-info{font-size:12px;color:#999;line-height:1.8;}
+.comp-card .comp-actions{margin-top:12px;display:flex;gap:8px;}
+</style>
+<div class="comp-page">
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
+<h2>大屏组件管理</h2>
+<button class="layui-btn layui-btn-sm layui-btn-normal" onclick="openForm()"><i class="layui-icon layui-icon-add-1"></i> 新增组件</button>
+</div>
+<div class="comp-grid" id="compGrid"></div>
+</div>
+
+<div id="formLayer" style="display:none;padding:20px;">
+<form class="layui-form" lay-filter="compForm">
+<input type="hidden" name="id">
+<div class="layui-form-item"><label class="layui-form-label">名称</label><div class="layui-input-block"><input type="text" name="name" class="layui-input" required></div></div>
+<div class="layui-form-item"><label class="layui-form-label">类型</label><div class="layui-input-block">
+<select name="type"><option value="line">折线图</option><option value="bar">柱状图</option><option value="pie">饼图</option><option value="number">数字卡片</option><option value="three">3D预览</option></select></div></div>
+<div class="layui-form-item"><label class="layui-form-label">颜色</label><div class="layui-input-block"><input type="text" name="color" value="#1890ff" class="layui-input"></div></div>
+<div class="layui-form-item"><label class="layui-form-label">刷新(秒)</label><div class="layui-input-block"><input type="number" name="refresh_interval" value="30" class="layui-input"></div></div>
+<div class="layui-form-item"><label class="layui-form-label">Grid X/Y</label><div class="layui-input-inline" style="width:45%"><input type="number" name="grid_x" value="0" class="layui-input"></div><div class="layui-input-inline" style="width:45%"><input type="number" name="grid_y" value="0" class="layui-input"></div></div>
+<div class="layui-form-item"><label class="layui-form-label">Grid W/H</label><div class="layui-input-inline" style="width:45%"><input type="number" name="grid_w" value="4" class="layui-input"></div><div class="layui-input-inline" style="width:45%"><input type="number" name="grid_h" value="4" class="layui-input"></div></div>
+<div class="layui-form-item"><label class="layui-form-label">排序</label><div class="layui-input-block"><input type="number" name="sort_order" value="0" class="layui-input"></div></div>
+<div class="layui-form-item"><label class="layui-form-label">启用</label><div class="layui-input-block"><input type="checkbox" name="is_enabled" value="1" lay-skin="switch" lay-text="ON|OFF" checked></div></div>
+</form>
+</div>
+{% end %}
+{% block extra_script %}
+<script>
+layui.use(['form','layer'],function(){
+	var form=layui.form, layer=layui.layer, $=layui.$;
+	function loadComps(){
+		$.get('/api/dashboard/components',function(res){
+			var html='';
+			if(res.data&&res.data.length){
+				$.each(res.data,function(i,c){
+					html+='<div class="comp-card">';
+					html+='<div class="comp-name"><span class="comp-color" style="background:'+c.color+'"></span>'+c.name+'</div>';
+					html+='<div class="comp-info">类型:'+c.type+' | 刷新:'+c.refresh_interval+'s | 网格:'+c.grid_x+','+c.grid_y+' '+c.grid_w+'x'+c.grid_h+'</div>';
+					html+='<div class="comp-actions">';
+					html+='<a class="layui-btn layui-btn-xs" onclick="editComp('+c.id+')">编辑</a>';
+					html+='<a class="layui-btn layui-btn-xs layui-btn-danger" onclick="delComp('+c.id+')">删除</a>';
+					html+='</div></div>';
+				});
+			}
+			$('#compGrid').html(html||'<div style="color:#999;width:100%;text-align:center;padding:40px;">暂无组件，请新增</div>');
+		});
+	}
+	loadComps();
+	var layerIdx;
+	window.openForm=function(){ layerIdx=layer.open({type:1,title:'新增组件',area:'500px',content:$('#formLayer')});form.val('compForm',{}); };
+	window.editComp=function(id){
+		$.get('/api/dashboard/components',function(res){
+			var found=null;
+			if(res.data)$.each(res.data,function(i,c){if(c.id===id)found=c;});
+			if(found){
+				layerIdx=layer.open({type:1,title:'编辑组件',area:'500px',content:$('#formLayer')});
+				form.val('compForm',found);
+				$('#formLayer input[name=is_enabled]').prop('checked',found.is_enabled===1);
+				form.render();
+			}
+		});
+	};
+	window.delComp=function(id){
+		layer.confirm('确定删除？',function(idx){
+			$.ajax({url:'/api/dashboard/components?id='+id,type:'DELETE',success:function(r){
+				if(r.code===0){layer.msg('已删除');loadComps();}else{layer.msg(r.msg);}
+			}});layer.close(idx);
+		});
+	};
+	form.on('submit',function(d){
+		var data=d.field; data.is_enabled=data.is_enabled?1:0; data.sort_order=parseInt(data.sort_order)||0;
+		data.grid_x=parseInt(data.grid_x)||0; data.grid_y=parseInt(data.grid_y)||0;
+		data.grid_w=parseInt(data.grid_w)||4; data.grid_h=parseInt(data.grid_h)||4;
+		data.refresh_interval=parseInt(data.refresh_interval)||30;
+		var act=data.id?'edit':'add';
+		$.post('/api/dashboard/components?action='+act,data,function(r){
+			if(r.code===0){layer.msg(r.msg);layer.close(layerIdx);loadComps();}else{layer.msg(r.msg);}
+		});
+		return false;
+	});
+});
+</script>
+{% end %}

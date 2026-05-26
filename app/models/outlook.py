@@ -272,7 +272,8 @@ class OutlookDataRepository:
                     (source_id, source_name, title, url, content, author, publish_date, raw_html, ai_processed, task_id, source_keyword, create_at)
                 )
                 return True
-        except Exception:
+        except Exception as e:
+            print(f"[save_data] FAILED: source_id={source_id} title={title[:50] if title else ''} error={e}", flush=True)
             return False
 
     @staticmethod
@@ -1113,10 +1114,155 @@ class OutlookDeepCollectRepository:
 
     @staticmethod
     def get_detail_by_data_id(data_id):
-        """根据数据ID获取深度采集结果"""
         with get_connection() as conn:
             row = conn.execute(
                 "SELECT * FROM outlook_data_detail WHERE data_id=? ORDER BY id DESC LIMIT 1",
                 (data_id,)
             ).fetchone()
             return dict(row) if row else None
+
+
+class CrawlLogRepository:
+	@staticmethod
+	def create_log(task_id, source_id, source_name, keyword):
+		import datetime
+		start_time = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+		with get_connection() as conn:
+			c = conn.execute(
+				"INSERT INTO crawl_logs(task_id,source_id,source_name,keyword,start_time,status) VALUES(?,?,?,?,?,?)",
+				(task_id, source_id, source_name, keyword, start_time, "running")
+			)
+		return c.lastrowid
+
+	@staticmethod
+	def update_log(log_id, **kwargs):
+		updates = []
+		params = []
+		for k, v in kwargs.items():
+			updates.append(f"{k}=?")
+			params.append(v)
+		if not updates:
+			return
+		params.append(log_id)
+		with get_connection() as conn:
+			conn.execute(f"UPDATE crawl_logs SET {','.join(updates)} WHERE id=?", params)
+
+	@staticmethod
+	def complete_log(log_id, total_count=0, saved_count=0):
+		import datetime
+		with get_connection() as conn:
+			conn.execute(
+				"UPDATE crawl_logs SET end_time=?,total_count=?,saved_count=?,status='completed' WHERE id=?",
+				(datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), total_count, saved_count, log_id)
+			)
+
+	@staticmethod
+	def fail_log(log_id, error_msg=""):
+		import datetime
+		with get_connection() as conn:
+			conn.execute(
+				"UPDATE crawl_logs SET end_time=?,status='error',error_msg=? WHERE id=?",
+				(datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), error_msg[:500], log_id)
+			)
+
+	@staticmethod
+	def get_log_list(page=1, page_size=20):
+		offset = (page - 1) * page_size
+		with get_connection() as conn:
+			total = conn.execute("SELECT COUNT(*) as cnt FROM crawl_logs").fetchone()["cnt"]
+			rows = conn.execute(
+				"SELECT * FROM crawl_logs ORDER BY id DESC LIMIT ? OFFSET ?",
+				(page_size, offset)
+			).fetchall()
+		return {"total": total, "data": [dict(r) for r in rows]}
+
+
+class CrawlScheduleRepository:
+	@staticmethod
+	def get_all_enabled():
+		with get_connection() as conn:
+			rows = conn.execute("SELECT * FROM crawl_schedules WHERE is_enabled=1").fetchall()
+		return [dict(r) for r in rows]
+
+	@staticmethod
+	def add_schedule(source_id, source_name, keyword, cron_expression, pages=1, per_page=10, is_enabled=1, sch_year=0):
+		try:
+			import datetime
+			create_at = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+			with get_connection() as conn:
+				conn.execute(
+					"INSERT INTO crawl_schedules(source_id,source_name,keyword,cron_expression,sch_year,pages,per_page,is_enabled,create_at) VALUES(?,?,?,?,?,?,?,?,?)",
+					(source_id, source_name, keyword, cron_expression, sch_year, pages, per_page, is_enabled, create_at)
+				)
+			print(f"[add_schedule] OK: source_id={source_id}, cron={cron_expression}, sch_year={sch_year}, enabled={is_enabled}", flush=True)
+			return True
+		except Exception as e:
+			import traceback
+			print(f"[add_schedule] FAILED: {e}", flush=True)
+			traceback.print_exc()
+			return False
+
+	@staticmethod
+	def update_schedule(schedule_id, **kwargs):
+		updates = []
+		params = []
+		for k, v in kwargs.items():
+			updates.append(f"{k}=?")
+			params.append(v)
+		if not updates:
+			return False
+		params.append(schedule_id)
+		try:
+			with get_connection() as conn:
+				conn.execute(f"UPDATE crawl_schedules SET {','.join(updates)} WHERE id=?", params)
+			return True
+		except Exception as e:
+			print(f"[update_schedule] FAILED: {e}", flush=True)
+			return False
+
+	@staticmethod
+	def delete_schedule(schedule_id):
+		try:
+			with get_connection() as conn:
+				conn.execute("DELETE FROM crawl_schedules WHERE id=?", (schedule_id,))
+			return True
+		except Exception:
+			return False
+
+	@staticmethod
+	def batch_delete(ids):
+		try:
+			with get_connection() as conn:
+				placeholders = ','.join(['?'] * len(ids))
+				conn.execute(f"DELETE FROM crawl_schedules WHERE id IN ({placeholders})", ids)
+			return True
+		except Exception:
+			return False
+
+	@staticmethod
+	def get_schedule_list(page=1, page_size=20):
+		offset = (page - 1) * page_size
+		with get_connection() as conn:
+			total = conn.execute("SELECT COUNT(*) as cnt FROM crawl_schedules").fetchone()["cnt"]
+			rows = conn.execute(
+				"""SELECT cs.*, os.name as source_display_name,
+				(SELECT status FROM crawl_logs WHERE task_id=cs.id ORDER BY id DESC LIMIT 1) as last_log_status
+				FROM crawl_schedules cs
+				LEFT JOIN outlook_sources os ON cs.source_id=os.id
+				ORDER BY cs.id DESC LIMIT ? OFFSET ?""",
+				(page_size, offset)
+			).fetchall()
+		return {"total": total, "data": [dict(r) for r in rows]}
+
+	@staticmethod
+	def get_schedule_by_id(schedule_id):
+		with get_connection() as conn:
+			row = conn.execute(
+				"""SELECT cs.*, os.name as source_display_name,
+				(SELECT status FROM crawl_logs WHERE task_id=cs.id ORDER BY id DESC LIMIT 1) as last_log_status
+				FROM crawl_schedules cs
+				LEFT JOIN outlook_sources os ON cs.source_id=os.id
+				WHERE cs.id=?""",
+				(schedule_id,)
+			).fetchone()
+		return dict(row) if row else None

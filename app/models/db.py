@@ -258,6 +258,130 @@ def init_db():
 				("admin", password_hash, salt.hex(), "admin", 1, 1)
 			)
 
+		# 创建 crawl_logs 表
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='crawl_logs'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE crawl_logs(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					task_id INTEGER NOT NULL DEFAULT 0,
+					source_id INTEGER NOT NULL,
+					source_name TEXT,
+					keyword TEXT,
+					start_time TEXT,
+					end_time TEXT,
+					total_count INTEGER NOT NULL DEFAULT 0,
+					saved_count INTEGER NOT NULL DEFAULT 0,
+					status TEXT NOT NULL DEFAULT 'running',
+					error_msg TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# 创建 crawl_schedules 表
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='crawl_schedules'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE crawl_schedules(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					source_id INTEGER NOT NULL,
+					source_name TEXT,
+					keyword TEXT,
+					cron_expression TEXT NOT NULL,
+					sch_year INTEGER NOT NULL DEFAULT 0,
+					pages INTEGER NOT NULL DEFAULT 1,
+					per_page INTEGER NOT NULL DEFAULT 10,
+					is_enabled INTEGER NOT NULL DEFAULT 1,
+					last_run TEXT,
+					next_run TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# crawl_schedules 表新增 sch_year 字段
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='crawl_schedules'")
+		if cursor.fetchone():
+			cursor2 = conn.execute("PRAGMA table_info(crawl_schedules)")
+			columns = [row["name"] for row in cursor2.fetchall()]
+			if "sch_year" not in columns:
+				conn.execute("ALTER TABLE crawl_schedules ADD COLUMN sch_year INTEGER NOT NULL DEFAULT 0")
+
+		# 创建 assistants 表
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='assistants'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE assistants(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					assistant_name TEXT NOT NULL,
+					assistant_code TEXT NOT NULL UNIQUE,
+					icon TEXT NOT NULL DEFAULT 'layui-icon-user',
+					prompt_template TEXT,
+					model_id INTEGER,
+					sort_order INTEGER NOT NULL DEFAULT 0,
+					is_enabled INTEGER NOT NULL DEFAULT 1,
+					api_key TEXT,
+					api_url TEXT,
+					description TEXT,
+					category TEXT NOT NULL DEFAULT 'AI',
+					api_interface_id INTEGER,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+		else:
+			cursor2 = conn.execute("PRAGMA table_info(assistants)")
+			cols = [r[1] for r in cursor2.fetchall()]
+			if 'category' not in cols:
+				conn.execute("ALTER TABLE assistants ADD COLUMN category TEXT NOT NULL DEFAULT 'AI'")
+			if 'api_interface_id' not in cols:
+				conn.execute("ALTER TABLE assistants ADD COLUMN api_interface_id INTEGER")
+
+		# 创建 chat_history 表
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chat_history'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE chat_history(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					user_id INTEGER NOT NULL,
+					assistant_id INTEGER,
+					model_id INTEGER,
+					role TEXT NOT NULL,
+					content TEXT NOT NULL,
+					prompt_tokens INTEGER NOT NULL DEFAULT 0,
+					completion_tokens INTEGER NOT NULL DEFAULT 0,
+					total_tokens INTEGER NOT NULL DEFAULT 0,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# 创建 dashboard_components 表
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='dashboard_components'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE dashboard_components(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					name TEXT NOT NULL,
+					type TEXT NOT NULL DEFAULT 'line',
+					color TEXT NOT NULL DEFAULT '#1890ff',
+					refresh_interval INTEGER NOT NULL DEFAULT 30,
+					grid_x INTEGER NOT NULL DEFAULT 0,
+					grid_y INTEGER NOT NULL DEFAULT 0,
+					grid_w INTEGER NOT NULL DEFAULT 4,
+					grid_h INTEGER NOT NULL DEFAULT 4,
+					is_enabled INTEGER NOT NULL DEFAULT 1,
+					sort_order INTEGER NOT NULL DEFAULT 0
+				)
+				"""
+			)
+
 		# 初始化默认数据
 		_init_default_data(conn)
 		conn.commit()
@@ -307,7 +431,8 @@ def _init_default_data(conn):
 		(0, '基础管理', 'base', 'layui-icon-set', '', 1, 1),
 		(0, '核心业务', 'business', 'layui-icon-engine', '', 2, 1),
 		(0, '瞭望采集', 'data', 'layui-icon-read', '', 3, 1),
-		(0, '系统', 'system', 'layui-icon-component', '', 4, 1),
+		(0, '数智大屏', 'biz_dashboard', 'layui-icon-chart', '', 4, 1),
+		(0, '系统', 'system', 'layui-icon-component', '', 5, 1),
 		# 二级菜单
 		(1, '系统首页', 'base_index', 'layui-icon-home', '/admin', 1, 1),
 		(1, '用户管理', 'base_users', 'layui-icon-username', '/admin/users', 2, 1),
@@ -315,12 +440,16 @@ def _init_default_data(conn):
 		(1, '功能管理', 'base_functions', 'layui-icon-menu-fill', '/admin/functions', 4, 1),
 		(1, '权限管理', 'base_permissions', 'layui-icon-auz', '/admin/permissions', 5, 1),
 		(2, '模型引擎', 'biz_models', 'layui-icon-engine', '/admin/models', 1, 1),
-		(2, '数字员工', 'biz_employees', 'layui-icon-user', '/admin/employees', 2, 1),
+		(2, '数字员工', 'biz_employees', 'layui-icon-user', '/admin/agent', 2, 1),
 		(3, '瞭望采集', 'biz_outlook', 'layui-icon-search', '/admin/outlook', 1, 1),
 		(3, '数据仓库', 'data_warehouse', 'layui-icon-table', '/admin/warehouse', 2, 1),
 		(3, '接口管理', 'data_api', 'layui-icon-link', '/admin/api', 3, 1),
-		(4, '系统设置', 'sys_settings', 'layui-icon-set', '/admin/settings', 1, 1),
-		(4, '系统统计', 'sys_stats', 'layui-icon-chart', '/admin/stats', 2, 1),
+		(3, '定时采集', 'outlook_schedule', 'layui-icon-log', '/admin/outlook/schedule', 4, 1),
+		(3, '采集日志', 'outlook_log', 'layui-icon-file', '/admin/outlook/log', 5, 1),
+		(4, '数智大屏', 'biz_dashboard_home', 'layui-icon-home', '/dashboard', 1, 1),
+		(4, '组件管理', 'biz_dashboard_components', 'layui-icon-set', '/admin/dashboard/components', 2, 1),
+		(5, '系统设置', 'sys_settings', 'layui-icon-set', '/admin/settings', 1, 1),
+		(5, '系统统计', 'sys_stats', 'layui-icon-chart', '/admin/stats', 2, 1),
 	]
 	for f in functions:
 		conn.execute(
@@ -560,6 +689,100 @@ def upgrade_db():
 				"UPDATE functions SET url='/admin/api' WHERE code='data_api'"
 			)
 
+			# 添加「定时采集」子菜单
+			schedule_row = conn.execute("SELECT id FROM functions WHERE code='outlook_schedule'").fetchone()
+			if not schedule_row:
+				conn.execute(
+					"INSERT INTO functions(parent_id,name,code,icon,url,sort_order,status) VALUES(?,?,?,?,?,?,?)",
+					(data_id, "定时采集", "outlook_schedule", "layui-icon-log", "/admin/outlook/schedule", 4, 1)
+				)
+				sched_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+				admin_role = conn.execute("SELECT id FROM roles WHERE code='admin'").fetchone()
+				if admin_role:
+					conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], sched_id))
+
+			# 添加「采集日志」子菜单
+			log_row = conn.execute("SELECT id FROM functions WHERE code='outlook_log'").fetchone()
+			if not log_row:
+				conn.execute(
+					"INSERT INTO functions(parent_id,name,code,icon,url,sort_order,status) VALUES(?,?,?,?,?,?,?)",
+					(data_id, "采集日志", "outlook_log", "layui-icon-file", "/admin/outlook/log", 5, 1)
+				)
+				log_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+				admin_role = conn.execute("SELECT id FROM roles WHERE code='admin'").fetchone()
+				if admin_role:
+					conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], log_id))
+
+		# 确保「核心业务」下数字员工菜单存在
+		biz_row = conn.execute("SELECT id FROM functions WHERE parent_id=0 AND code='business'").fetchone()
+		if biz_row:
+			biz_id = biz_row["id"]
+			emp_row = conn.execute("SELECT id FROM functions WHERE code='biz_employees'").fetchone()
+			if not emp_row:
+				conn.execute(
+					"INSERT INTO functions(parent_id,name,code,icon,url,sort_order,status) VALUES(?,?,?,?,?,?,?)",
+					(biz_id, "数字员工", "biz_employees", "layui-icon-user", "/admin/agent", 2, 1)
+				)
+				emp_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+				admin_role = conn.execute("SELECT id FROM roles WHERE code='admin'").fetchone()
+				if admin_role:
+					conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], emp_id))
+			else:
+				conn.execute("UPDATE functions SET url='/admin/agent', parent_id=?, sort_order=2 WHERE code='biz_employees'", (biz_id,))
+
+		# 把「系统」一级菜单 sort_order 改为 5
+		conn.execute("UPDATE functions SET sort_order=5 WHERE parent_id=0 AND code='system'")
+
+		# 新增「数智大屏」一级菜单（sort_order=4，放在系统前面）
+		db_row = conn.execute("SELECT id FROM functions WHERE parent_id=0 AND code='biz_dashboard'").fetchone()
+		if not db_row:
+			conn.execute(
+				"INSERT INTO functions(parent_id,name,code,icon,url,sort_order,status) VALUES(?,?,?,?,?,?,?)",
+				(0, "数智大屏", "biz_dashboard", "layui-icon-chart", "", 4, 1)
+			)
+			db_parent_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+			admin_role = conn.execute("SELECT id FROM roles WHERE code='admin'").fetchone()
+			# 大屏主页
+			conn.execute(
+				"INSERT INTO functions(parent_id,name,code,icon,url,sort_order,status) VALUES(?,?,?,?,?,?,?)",
+				(db_parent_id, "数智大屏", "biz_dashboard_home", "layui-icon-home", "/dashboard", 1, 1)
+			)
+			home_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+			if admin_role:
+				conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], db_parent_id))
+				conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], home_id))
+			# 组件管理
+			conn.execute(
+				"INSERT INTO functions(parent_id,name,code,icon,url,sort_order,status) VALUES(?,?,?,?,?,?,?)",
+				(db_parent_id, "组件管理", "biz_dashboard_components", "layui-icon-set", "/admin/dashboard/components", 2, 1)
+			)
+			comp_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+			if admin_role:
+				conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], comp_id))
+		else:
+			db_parent_id = db_row["id"]
+			# 确保子菜单存在
+			home_row = conn.execute("SELECT id FROM functions WHERE code='biz_dashboard_home'").fetchone()
+			if not home_row:
+				conn.execute(
+					"INSERT INTO functions(parent_id,name,code,icon,url,sort_order,status) VALUES(?,?,?,?,?,?,?)",
+					(db_parent_id, "数智大屏", "biz_dashboard_home", "layui-icon-home", "/dashboard", 1, 1)
+				)
+				home_id2 = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+				admin_role = conn.execute("SELECT id FROM roles WHERE code='admin'").fetchone()
+				if admin_role:
+					conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], home_id2))
+			comp_row = conn.execute("SELECT id FROM functions WHERE code='biz_dashboard_components'").fetchone()
+			if not comp_row:
+				conn.execute(
+					"INSERT INTO functions(parent_id,name,code,icon,url,sort_order,status) VALUES(?,?,?,?,?,?,?)",
+					(db_parent_id, "组件管理", "biz_dashboard_components", "layui-icon-set", "/admin/dashboard/components", 2, 1)
+				)
+				comp_id2 = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+				admin_role = conn.execute("SELECT id FROM roles WHERE code='admin'").fetchone()
+				if admin_role:
+					conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], comp_id2))
+
 		# 创建 api_interfaces 表
 		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='api_interfaces'")
 		if not cursor.fetchone():
@@ -585,6 +808,38 @@ def upgrade_db():
 				"""
 			)
 		_init_default_api_interfaces(conn)
+
+		# 创建 chat_conversations 表
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chat_conversations'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE chat_conversations(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					user_id INTEGER NOT NULL,
+					title TEXT NOT NULL DEFAULT '新对话',
+					model_id INTEGER,
+					create_at TEXT NOT NULL DEFAULT(datetime('now')),
+					update_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# 创建 chat_messages 表
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chat_messages'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE chat_messages(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					conversation_id INTEGER NOT NULL,
+					role TEXT NOT NULL,
+					content TEXT NOT NULL,
+					tool_calls TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
 
 		# 初始化默认数据
 		_init_default_data(conn)

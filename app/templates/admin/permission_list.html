@@ -89,31 +89,16 @@ layui.use(['tree', 'layer', 'form'], function(){
         return result;
     }
 
-    // 收集所有节点ID
-    var allIds = [];
-    function collectAllIds(nodes){
-        nodes.forEach(function(n){
-            allIds.push(n.id);
-            if(n.children) collectAllIds(n.children);
-        });
-    }
-
     $('#btnSelectAll').on('click', function(){
-        collectAllIds(treeIns.config.data);
-        tree.setChecked('permTree', allIds);
+        $('#functionTree').find('input[type="checkbox"]').each(function(){
+            $(this).prop('checked', true);
+        });
     });
 
     $('#btnUnselectAll').on('click', function(){
-        var checkedData = tree.getChecked('permTree');
-        var checkedIds = [];
-        function collectCheckedIds(nodes){
-            nodes.forEach(function(n){
-                checkedIds.push(n.id);
-                if(n.children) collectCheckedIds(n.children);
-            });
-        }
-        collectCheckedIds(checkedData);
-        tree.setChecked('permTree', checkedIds, false);
+        $('#functionTree').find('input[type="checkbox"]').each(function(){
+            $(this).prop('checked', false);
+        });
     });
 
     $('#btnSave').on('click', function(){

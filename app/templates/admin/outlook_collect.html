@@ -739,6 +739,26 @@ layui.use(['layer'], function(){
 
     var currentTaskId = null;
     var statusCheckInterval = null;
+
+    function clearStatusPolling(){
+        if(statusCheckInterval){ clearInterval(statusCheckInterval); statusCheckInterval=null; }
+    }
+
+    function startStatusPolling(){
+        clearStatusPolling();
+        statusCheckInterval = setInterval(function(){
+            if(!currentTaskId) return;
+            $.get('/admin/outlook/status/api', {task_id: currentTaskId}, function(res){
+                if(res.code === 0 && res.data) updateMonitorStatus(res.data);
+            });
+        }, 1000);
+    }
+
+    document.addEventListener("visibilitychange", function(){
+        if(document.hidden){ clearStatusPolling(); }
+        else if(currentTaskId){ startStatusPolling(); }
+    });
+    window.addEventListener("beforeunload", clearStatusPolling);
     var dataPage = 1;
     var dataTotal = 0;
     var DATA_PAGE_SIZE = 30;
@@ -772,7 +792,7 @@ layui.use(['layer'], function(){
                 currentTaskId = res.task_id || null;
                 $('#resultCount').text(count);
                 $('#resultPanel').addClass('active').slideDown(500);
-                if(statusCheckInterval) clearInterval(statusCheckInterval);
+                if(statusCheckInterval) clearStatusPolling();
                 updateMonitorComplete(count);
                 $('#dataDisplayZone').slideDown(400);
                 dataPage = 1;
@@ -821,16 +841,6 @@ layui.use(['layer'], function(){
         $('#monitorStatusIcon').removeClass('idle running completed').addClass('error').html('✗');
         $('#monitorStatusText').text('采集失败');
         $('#monitorProgressBar').removeClass('active');
-    }
-
-    function startStatusPolling(){
-        if(statusCheckInterval) clearInterval(statusCheckInterval);
-        statusCheckInterval = setInterval(function(){
-            if(!currentTaskId) return;
-            $.get('/admin/outlook/status/api', {task_id: currentTaskId}, function(res){
-                if(res.code === 0 && res.data) updateMonitorStatus(res.data);
-            });
-        }, 1000);
     }
 
     function updateMonitorStatus(data){

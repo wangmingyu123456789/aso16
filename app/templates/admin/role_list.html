@@ -219,32 +219,17 @@ layui.use(['table', 'layer', 'form', 'tree'], function(){
                     spread: true
                 });
 
-                // 收集所有节点ID
-                var allIds = [];
-                function collectAllIds(nodes){
-                    nodes.forEach(function(n){
-                        allIds.push(n.id);
-                        if(n.children) collectAllIds(n.children);
-                    });
-                }
-                collectAllIds(treeData);
-
-                // 绑定按钮事件
                 $('#btnSelectAll').off('click').on('click', function(){
-                    tree.setChecked('rolePermTree', allIds);
+                    var treeElem = $('#permTree');
+                    treeElem.find('input[type="checkbox"]').each(function(){
+                        $(this).prop('checked', true);
+                    });
                 });
                 $('#btnUnselectAll').off('click').on('click', function(){
-                    // 取消全选：遍历所有已选中的节点并取消
-                    var checkedData = tree.getChecked('rolePermTree');
-                    var checkedIds = [];
-                    function collectCheckedIds(nodes){
-                        nodes.forEach(function(n){
-                            checkedIds.push(n.id);
-                            if(n.children) collectCheckedIds(n.children);
-                        });
-                    }
-                    collectCheckedIds(checkedData);
-                    tree.setChecked('rolePermTree', checkedIds, false);
+                    var treeElem = $('#permTree');
+                    treeElem.find('input[type="checkbox"]').each(function(){
+                        $(this).prop('checked', false);
+                    });
                 });
                 $('#btnSavePerm').off('click').on('click', function(){
                     var checkedData = tree.getChecked('rolePermTree');

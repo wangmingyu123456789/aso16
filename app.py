@@ -5,7 +5,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
-from app.controllers.auth import LoginHandler,LogoutHandler
+from app.controllers.auth import LoginHandler,LogoutHandler,RegisterHandler
 from app.controllers.home import IndexHandler
 from app.controllers.admin.auth import AdminLoginHandler,AdminLogoutHandler
 from app.controllers.admin.index import AdminIndexHandler
@@ -16,6 +16,10 @@ from app.controllers.admin.permission import AdminPermissionListHandler,AdminPer
 from app.controllers.admin.model import AdminModelListHandler,AdminModelApiHandler,AdminModelAddHandler,AdminModelEditHandler,AdminModelDeleteHandler,AdminModelSetDefaultHandler,AdminModelChatTestHandler,AdminModelChatStreamHandler
 from app.controllers.admin.outlook import AdminOutlookRedirectHandler,AdminOutlookSourceListHandler,AdminOutlookSourceApiHandler,AdminOutlookSourceAddHandler,AdminOutlookSourceEditHandler,AdminOutlookSourceDeleteHandler,AdminOutlookCollectHandler,AdminOutlookDataListHandler,AdminOutlookDataApiHandler,AdminOutlookDataDeleteHandler,AdminOutlookCollectPageHandler,AdminOutlookTaskApiHandler,AdminOutlookTaskDeleteHandler,AdminOutlookTaskDataHandler,AdminOutlookTaskDataApiHandler,AdminOutlookLatestDataApiHandler,AdminOutlookStatusApiHandler,AdminOutlookDeepCollectHandler,AdminOutlookDeepCollectStatusHandler,AdminOutlookDeepDetailHandler
 from app.controllers.admin.api_mgmt import AdminApiListHandler,AdminApiListApiHandler,AdminApiAddHandler,AdminApiEditHandler,AdminApiDeleteHandler,AdminApiTestHandler,AdminApiServiceHandler
+from app.controllers.admin.watch import AdminCrawlLogHandler,AdminCrawlLogApiHandler,AdminCrawlScheduleHandler,AdminCrawlScheduleApiHandler
+from app.controllers.admin.assistant import AdminAssistantConfigHandler,AdminAssistantApiHandler,AdminAssistantChatHandler,AdminAssistantUsageHandler,AdminChatSendHandler,AdminChatHistoryHandler,AdminChatClearHandler
+from app.controllers.dashboard import DashboardPageHandler,DashboardStatsHandler,DashboardComponentsHandler,DashboardComponentAPIHandler
+from app.controllers.chat import ChatPageHandler,ChatStreamHandler,ChatAssistantsHandler,ChatHistoryHandler,ChatModelsHandler
 from app.models.db import init_db,upgrade_db
 
 class ViteClientHandler(tornado.web.RequestHandler):
@@ -68,7 +72,14 @@ def make_app():
 	return tornado.web.Application([
 			(r"/",IndexHandler),
 			(r"/auth/login",LoginHandler),
+			(r"/auth/register",RegisterHandler),
 			(r"/auth/logout",LogoutHandler),
+
+			(r"/chat",ChatPageHandler),
+			(r"/api/chat/stream",ChatStreamHandler),
+			(r"/api/chat/history",ChatHistoryHandler),
+			(r"/api/chat/models",ChatModelsHandler),
+			(r"/api/chat/assistants",ChatAssistantsHandler),
 
 			(r"/admin/login",AdminLoginHandler),
 			(r"/admin/logout",AdminLogoutHandler),
@@ -142,6 +153,27 @@ def make_app():
 			(r"/admin/api/test",AdminApiTestHandler),
 			(r"/admin/api/service",AdminApiServiceHandler),
 
+			# 定时采集
+			(r"/admin/outlook/log",AdminCrawlLogHandler),
+			(r"/admin/outlook/log/api",AdminCrawlLogApiHandler),
+			(r"/admin/outlook/schedule",AdminCrawlScheduleHandler),
+			(r"/admin/outlook/schedule/api",AdminCrawlScheduleApiHandler),
+
+			# 数字员工
+			(r"/admin/agent",AdminAssistantConfigHandler),
+			(r"/admin/agent/chat",AdminAssistantChatHandler),
+			(r"/admin/agent/usage",AdminAssistantUsageHandler),
+			(r"/admin/assistant/api",AdminAssistantApiHandler),
+			(r"/api/admin/chat/send",AdminChatSendHandler),
+			(r"/api/admin/chat/history",AdminChatHistoryHandler),
+			(r"/api/admin/chat/clear",AdminChatClearHandler),
+
+			# 数智大屏
+			(r"/dashboard",DashboardPageHandler),
+			(r"/admin/dashboard/components",DashboardComponentsHandler),
+			(r"/api/dashboard/stats",DashboardStatsHandler),
+			(r"/api/dashboard/components",DashboardComponentAPIHandler),
+
 			(r"/@vite/client",ViteClientHandler),
 			(r"/@vite/env",ViteEnvHandler),
 			(r"/@id/__x00__vite/client",ViteIdHandler),
@@ -159,6 +191,8 @@ if __name__ == "__main__":
 	try:
 		init_db()
 		upgrade_db()
+		from app.models import crawl_scheduler
+		crawl_scheduler.start_scheduler()
 	except Exception as e:
 		print(f"DB init error: {e}",flush=True)
 		traceback.print_exc()

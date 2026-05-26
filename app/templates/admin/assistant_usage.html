@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+{% block body %}
+<style>
+.usage-page .stat-cards { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+.usage-page .stat-card { flex:1; min-width:200px; background:#fff; border-radius:8px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+.usage-page .stat-card .card-label { font-size:13px; color:#999; margin-bottom:8px; }
+.usage-page .stat-card .card-value { font-size:28px; font-weight:bold; color:#1890ff; }
+</style>
+<div class="usage-page">
+<div class="page-header"><h2>数字员工使用统计</h2></div>
+<div class="stat-cards" id="statCards"></div>
+<div class="layui-card">
+<div class="layui-card-body">
+<table id="usageTable" lay-filter="usageTable"></table>
+</div></div></div>
+{% end %}
+{% block extra_script %}
+<script>
+layui.use(['table'],function(){
+	var table=layui.table;
+	function loadUsage(){
+		$.get('/admin/assistant/api',function(res){
+			if(res.code===0){
+				var data=res.data, cardsHtml='';
+				var totalCalls=0, totalTokens=0;
+				$.each(data,function(i,a){
+					totalCalls++; totalTokens+=a.total_tokens||0;
+				});
+				cardsHtml+='<div class="stat-card"><div class="card-label">助手总数</div><div class="card-value">'+totalCalls+'</div></div>';
+				cardsHtml+='<div class="stat-card"><div class="card-label">Token总消耗</div><div class="card-value">'+totalTokens+'</div></div>';
+				cardsHtml+='<div class="stat-card"><div class="card-label">启用中</div><div class="card-value">'+(function(){var c=0;$.each(data,function(i,a){if(a.is_enabled)c++});return c;})()+'</div></div>';
+				$('#statCards').html(cardsHtml);
+			}
+		});
+	}
+	loadUsage();
+	table.render({
+		elem:'#usageTable',
+		data:[], cols:[[
+			{field:'assistant_name', title:'助手名称', width:150},
+			{field:'call_count', title:'调用次数', width:120, sort:true},
+			{field:'total_tokens', title:'Token总数', width:130, sort:true},
+			{field:'prompt_tokens', title:'输入Token', width:130},
+			{field:'completion_tokens', title:'输出Token', width:130}
+		]]
+	});
+});
+</script>
+{% end %}

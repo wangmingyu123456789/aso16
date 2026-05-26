@@ -1,0 +1,155 @@
+{% extends "layout.html" %}
+{% block body %}
+<style>
+.asst-page .assistant-grid { display:flex; flex-wrap:wrap; gap:20px; padding:10px 0; }
+.asst-page .assistant-card { width:280px; background:#fff; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,.1); padding:20px; position:relative; transition:all .3s; }
+.asst-page .assistant-card:hover { box-shadow:0 4px 20px rgba(0,0,0,.15); transform:translateY(-2px); }
+.asst-page .card-icon { font-size:36px; color:#1890ff; margin-bottom:12px; }
+.asst-page .card-name { font-size:16px; font-weight:bold; margin-bottom:6px; }
+.asst-page .card-code { font-size:12px; color:#999; margin-bottom:10px; }
+.asst-page .card-desc { font-size:13px; color:#666; line-height:1.6; min-height:40px; }
+.asst-page .card-actions { margin-top:12px; display:flex; gap:8px; }
+.asst-page .card-status { position:absolute; top:12px; right:16px; font-size:12px; color:#52c41a; }
+.asst-page .card-category { display:inline-block; padding:2px 8px; border-radius:3px; font-size:11px; margin-bottom:8px; }
+.asst-page .card-category.AI { background:#e6f7ff; color:#1890ff; }
+.asst-page .card-category.API { background:#fff7e6; color:#fa8c16; }
+</style>
+<div class="asst-page">
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
+<h2>数字员工</h2>
+<button class="layui-btn layui-btn-sm layui-btn-normal" onclick="openForm()"><i class="layui-icon layui-icon-add-1"></i> 新增助手</button>
+</div>
+<div class="assistant-grid" id="assistantGrid"></div>
+</div>
+
+<div id="formLayer" style="display:none;padding:20px;">
+<form class="layui-form" lay-filter="asstForm">
+<input type="hidden" name="id">
+<div class="layui-form-item"><label class="layui-form-label">类别</label><div class="layui-input-block">
+<select name="category" lay-filter="categoryChange"><option value="AI">AI助手</option><option value="API">API服务</option></select></div></div>
+<div class="layui-form-item"><label class="layui-form-label">名称</label><div class="layui-input-block"><input type="text" name="assistant_name" class="layui-input" required></div></div>
+<div class="layui-form-item"><label class="layui-form-label">编码</label><div class="layui-input-block"><input type="text" name="assistant_code" class="layui-input" required placeholder="如 chuangxiaonong"></div></div>
+<div class="layui-form-item"><label class="layui-form-label">图标</label><div class="layui-input-block"><input type="text" name="icon" value="layui-icon-user" class="layui-input"></div></div>
+<div class="layui-form-item"><label class="layui-form-label">描述</label><div class="layui-input-block"><input type="text" name="description" class="layui-input" placeholder="如: 川小农AI助手"></div></div>
+<div id="aiFields">
+<div class="layui-form-item"><label class="layui-form-label">关联模型</label><div class="layui-input-block"><select name="model_id" lay-search><option value="0">使用默认模型</option></select></div></div>
+<div class="layui-form-item"><label class="layui-form-label">Prompt模板</label><div class="layui-input-block"><textarea name="prompt_template" class="layui-textarea" rows="4" placeholder="提示词模板，使用 {query} 代表用户输入"></textarea></div></div>
+</div>
+<div id="apiFields" style="display:none;">
+<div class="layui-form-item"><label class="layui-form-label">关联接口</label><div class="layui-input-block"><select name="api_interface_id" lay-search><option value="0">请选择API接口</option></select></div></div>
+</div>
+<div class="layui-form-item"><label class="layui-form-label">排序</label><div class="layui-input-block"><input type="number" name="sort_order" value="0" class="layui-input"></div></div>
+<div class="layui-form-item"><label class="layui-form-label">启用</label><div class="layui-input-block"><input type="checkbox" name="is_enabled" value="1" lay-skin="switch" lay-text="ON|OFF" checked></div></div>
+</form>
+</div>
+{% end %}
+{% block extra_script %}
+<script>
+layui.use(['form','layer'], function(){
+	var form=layui.form, layer=layui.layer, $=layui.$;
+
+	function loadAssistants(){
+		$.get('/admin/assistant/api',function(res){
+			if(res.code===0){
+				var html='';
+				$.each(res.data,function(i,item){
+					var catLabel = item.category === 'API' ? 'API服务' : 'AI助手';
+					var catCls = item.category === 'API' ? 'API' : 'AI';
+					html+='<div class="assistant-card">';
+					html+='<div class="card-status">'+(item.is_enabled?'启用中':'已停用')+'</div>';
+					html+='<div class="card-icon"><i class="layui-icon '+item.icon+'"></i></div>';
+					html+='<div class="card-name">'+item.assistant_name+' <span class="card-category '+catCls+'">'+catLabel+'</span></div>';
+					html+='<div class="card-code">@'+item.assistant_code+'</div>';
+					html+='<div class="card-desc">'+(item.description||'无描述')+'</div>';
+					html+='<div class="card-actions">';
+					html+='<a class="layui-btn layui-btn-xs layui-btn-normal" href="/admin/agent/chat?assistant_id='+item.id+'">对话</a>';
+					html+='<a class="layui-btn layui-btn-xs" onclick="editAsst('+item.id+')">编辑</a>';
+					html+='<a class="layui-btn layui-btn-xs layui-btn-danger" onclick="delAsst('+item.id+')">删除</a>';
+					html+='</div></div>';
+				});
+				$('#assistantGrid').html(html||'<div style="color:#999;width:100%;text-align:center;padding:60px;">暂无数字员工，请新增</div>');
+			}
+		});
+	}
+	loadAssistants();
+
+	var layerIdx;
+
+	form.on('select(categoryChange)', function(data){
+		if(data.value === 'API'){
+			$('#aiFields').hide();
+			$('#apiFields').show();
+		}else{
+			$('#aiFields').show();
+			$('#apiFields').hide();
+		}
+	});
+
+	window.openForm=function(){
+		layerIdx=layer.open({type:1,title:'新增助手',area:'550px',content:$('#formLayer')});
+		form.val('asstForm',{category:'AI'});
+		$('#aiFields').show();
+		$('#apiFields').hide();
+		form.render('select');
+	};
+
+	window.editAsst=function(id){
+		$.get('/admin/assistant/api?action=detail&id='+id,function(res){
+			if(res.code===0&&res.data){
+				layerIdx=layer.open({type:1,title:'编辑助手',area:'550px',content:$('#formLayer')});
+				var d=res.data;
+				form.val('asstForm',{
+					id:d.id, category:d.category||'AI', assistant_name:d.assistant_name,
+					assistant_code:d.assistant_code, icon:d.icon||'layui-icon-user',
+					description:d.description||'', model_id:d.model_id||'0',
+					prompt_template:d.prompt_template||'', sort_order:d.sort_order||0,
+					api_interface_id:d.api_interface_id||'0'
+				});
+				if(d.category==='API'){$('#aiFields').hide();$('#apiFields').show();}else{$('#aiFields').show();$('#apiFields').hide();}
+				$('#formLayer input[name=is_enabled]').prop('checked',d.is_enabled==1);
+				form.render();
+			}
+		});
+	};
+
+	window.delAsst=function(id){
+		layer.confirm('确定删除？',function(idx){
+			$.ajax({url:'/admin/assistant/api?id='+id,type:'DELETE',success:function(r){
+				if(r.code===0){layer.msg('已删除');loadAssistants();}else{layer.msg(r.msg);}
+			}});layer.close(idx);
+		});
+	};
+
+	form.on('submit',function(d){
+		var data=d.field; data.is_enabled=data.is_enabled?1:0; data.sort_order=parseInt(data.sort_order)||0;
+		var act=data.id?'edit':'add';
+		data.model_id=data.model_id||'0';
+		data.api_interface_id=data.api_interface_id||'0';
+		$.post('/admin/assistant/api?action='+act,data,function(r){
+			if(r.code===0){layer.msg(r.msg);layer.close(layerIdx);loadAssistants();}else{layer.msg(r.msg);}
+		});
+		return false;
+	});
+
+	// Load models
+	$.get('/admin/assistant/api?action=models',function(res){
+		if(res.code===0&&res.data){
+			$.each(res.data,function(i,m){
+				$('select[name=model_id]').append('<option value="'+m.id+'">'+m.name+'</option>');
+			});
+			form.render('select');
+		}
+	});
+
+	// Load API interfaces
+	$.get('/admin/assistant/api?action=apis',function(res){
+		if(res.code===0&&res.data){
+			$.each(res.data,function(i,a){
+				$('select[name=api_interface_id]').append('<option value="'+a.id+'">'+a.name+' ('+a.code+')</option>');
+			});
+			form.render('select');
+		}
+	});
+});
+</script>
+{% end %}
