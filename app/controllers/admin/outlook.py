@@ -280,7 +280,7 @@ class AdminOutlookTaskDataApiHandler(AdminBaseHandler):
                 ).fetchone()
                 total = count_row["total"]
                 rows = conn.execute(
-                    "SELECT * FROM outlook_data WHERE task_id=? AND title LIKE ? ORDER BY id DESC LIMIT ? OFFSET ?",
+                    "SELECT * FROM outlook_data WHERE task_id=? AND title LIKE ? ORDER BY create_at DESC LIMIT ? OFFSET ?",
                     (task_id, f'%{keyword}%', page_size, offset)
                 ).fetchall()
             else:
@@ -290,14 +290,14 @@ class AdminOutlookTaskDataApiHandler(AdminBaseHandler):
                 ).fetchone()
                 total = count_row["total"]
                 rows = conn.execute(
-                    "SELECT * FROM outlook_data WHERE task_id=? ORDER BY id DESC LIMIT ? OFFSET ?",
+                    "SELECT * FROM outlook_data WHERE task_id=? ORDER BY create_at DESC LIMIT ? OFFSET ?",
                     (task_id, page_size, offset)
                 ).fetchall()
         self.set_header("Content-Type", "application/json")
         data_list = []
         for i, r in enumerate(rows):
             d = dict(r)
-            d["_seq"] = offset + i + 1
+            d["_seq"] = total - offset - i
             data_list.append(d)
         self.write({
             "code": 0,

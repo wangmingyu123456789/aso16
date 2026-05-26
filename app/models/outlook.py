@@ -152,19 +152,31 @@ class OutlookTaskRepository:
                 ).fetchone()
                 total = count_row["total"]
                 rows = conn.execute(
-                    "SELECT * FROM outlook_tasks WHERE keyword LIKE ? ORDER BY id DESC LIMIT ? OFFSET ?",
-                    (f'%{keyword}%', page_size, offset)
+                    "SELECT * FROM outlook_tasks WHERE keyword LIKE ? ORDER BY create_at DESC",
+                    (f'%{keyword}%',)
                 ).fetchall()
             else:
                 count_row = conn.execute("SELECT COUNT(*) as total FROM outlook_tasks").fetchone()
                 total = count_row["total"]
                 rows = conn.execute(
-                    "SELECT * FROM outlook_tasks ORDER BY id DESC LIMIT ? OFFSET ?",
-                    (page_size, offset)
+                    "SELECT * FROM outlook_tasks ORDER BY create_at DESC"
                 ).fetchall()
+        
+        # 添加序号（最新的数据序号最大，最早的序号为1）
+        data_list = []
+        for i, r in enumerate(rows):
+            d = dict(r)
+            d['_seq'] = total - i
+            data_list.append(d)
+        
+        # 分页切片
+        start = offset
+        end = offset + page_size
+        paged_data = data_list[start:end]
+        
         return {
             'total': total,
-            'data': [dict(r) for r in rows],
+            'data': paged_data,
             'page': page,
             'page_size': page_size
         }

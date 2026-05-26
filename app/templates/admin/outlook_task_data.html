@@ -30,6 +30,10 @@
     <input type="hidden" id="taskIdInput" value="{{ task.get('id', 0) }}">
     <table id="dataTable" lay-filter="dataTable"></table>
 
+    <script type="text/html" id="deleteBar">
+        <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">删除</a>
+    </script>
+
     <script src="/static/dist/layui-v2.13.6/layui-v2.13.6/layui/layui.js"></script>
     <script>
     var taskId = parseInt(document.getElementById('taskIdInput').value) || 0;
@@ -63,7 +67,8 @@
                 {field:'url',title:'链接',width:80,align:'center',templet:function(d){
                     return d.url ? '<a href="'+d.url+'" target="_blank" style="color:#00d4ff;">查看</a>' : '-';
                 }},
-                {field:'create_at',title:'采集时间',width:160,align:'center'}
+                {field:'create_at',title:'采集时间',width:160,align:'center'},
+                {title:'操作',width:80,align:'center',toolbar:'#deleteBar'}
             ]],
             skin: 'line'
         });
