@@ -40,6 +40,7 @@
 </div>
 <div class="layui-form-item"><label class="layui-form-label">排序</label><div class="layui-input-block"><input type="number" name="sort_order" value="0" class="layui-input"></div></div>
 <div class="layui-form-item"><label class="layui-form-label">启用</label><div class="layui-input-block"><input type="checkbox" name="is_enabled" value="1" lay-skin="switch" lay-text="ON|OFF" checked></div></div>
+<button lay-submit lay-filter="asstSubmit" style="display:none"></button>
 </form>
 </div>
 {% end %}
@@ -47,6 +48,11 @@
 <script>
 layui.use(['form','layer'], function(){
 	var form=layui.form, layer=layui.layer, $=layui.$;
+
+	function getCsrfToken(){
+		var m=document.cookie.match(/_xsrf=([^;]+)/);
+		return m?m[1]:'';
+	}
 
 	function loadAssistants(){
 		$.get('/admin/assistant/api',function(res){
@@ -57,7 +63,8 @@ layui.use(['form','layer'], function(){
 					var catCls = item.category === 'API' ? 'API' : 'AI';
 					html+='<div class="assistant-card">';
 					html+='<div class="card-status">'+(item.is_enabled?'启用中':'已停用')+'</div>';
-					html+='<div class="card-icon"><i class="layui-icon '+item.icon+'"></i></div>';
+				var isFa = item.icon && item.icon.startsWith('fa');
+					html+='<div class="card-icon"><i class="'+(isFa?item.icon:'layui-icon '+item.icon)+'"></i></div>';
 					html+='<div class="card-name">'+item.assistant_name+' <span class="card-category '+catCls+'">'+catLabel+'</span></div>';
 					html+='<div class="card-code">@'+item.assistant_code+'</div>';
 					html+='<div class="card-desc">'+(item.description||'无描述')+'</div>';
@@ -86,7 +93,11 @@ layui.use(['form','layer'], function(){
 	});
 
 	window.openForm=function(){
-		layerIdx=layer.open({type:1,title:'新增助手',area:'550px',content:$('#formLayer')});
+		layerIdx=layer.open({type:1,title:'新增助手',area:'550px',content:$('#formLayer'),
+			btn:['确定','取消'],
+			yes:function(idx){$('button[lay-filter="asstSubmit"]').click();},
+			btn2:function(idx){layer.close(idx);}
+		});
 		form.val('asstForm',{category:'AI'});
 		$('#aiFields').show();
 		$('#apiFields').hide();
@@ -96,7 +107,11 @@ layui.use(['form','layer'], function(){
 	window.editAsst=function(id){
 		$.get('/admin/assistant/api?action=detail&id='+id,function(res){
 			if(res.code===0&&res.data){
-				layerIdx=layer.open({type:1,title:'编辑助手',area:'550px',content:$('#formLayer')});
+				layerIdx=layer.open({type:1,title:'编辑助手',area:'550px',content:$('#formLayer'),
+					btn:['确定','取消'],
+					yes:function(idx){$('button[lay-filter="asstSubmit"]').click();},
+					btn2:function(idx){layer.close(idx);}
+				});
 				var d=res.data;
 				form.val('asstForm',{
 					id:d.id, category:d.category||'AI', assistant_name:d.assistant_name,
@@ -114,14 +129,14 @@ layui.use(['form','layer'], function(){
 
 	window.delAsst=function(id){
 		layer.confirm('确定删除？',function(idx){
-			$.ajax({url:'/admin/assistant/api?id='+id,type:'DELETE',success:function(r){
+			$.ajax({url:'/admin/assistant/api?id='+id+'&_xsrf='+getCsrfToken(),type:'DELETE',success:function(r){
 				if(r.code===0){layer.msg('已删除');loadAssistants();}else{layer.msg(r.msg);}
 			}});layer.close(idx);
 		});
 	};
 
-	form.on('submit',function(d){
-		var data=d.field; data.is_enabled=data.is_enabled?1:0; data.sort_order=parseInt(data.sort_order)||0;
+	form.on('submit(asstSubmit)',function(d){
+		var data=d.field; data.is_enabled=data.is_enabled?1:0; data.sort_order=parseInt(data.sort_order)||0; data._xsrf=getCsrfToken();
 		var act=data.id?'edit':'add';
 		data.model_id=data.model_id||'0';
 		data.api_interface_id=data.api_interface_id||'0';

@@ -235,15 +235,15 @@ def init_db():
 		})
 			conn.execute(
 				"""INSERT INTO outlook_sources(name,code,entry_url,method,request_headers,parser_type,
-				   html_selector,title_selector,url_selector,content_selector,date_selector,author_selector,
-				   page_size_step,page_start,ai_expand_keyword,ai_clean_data,status,description) 
-				   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-				('百度新闻', 'baidu_news', 'https://www.baidu.com/s?tn=news&word={keyword}&pn={page}',
-				 'GET', default_headers, 'html',
-				 'div.result', 'h3', 'h3 a', 'div.content-right > span', 'span.c-color-gray2', 'p.author-text',
-				 10, 0, 1,
-				 '请对采集到的新闻标题和内容进行AI清洗，去除无关信息，提取核心要点，并以JSON格式返回：[{"title":"标题","content":"摘要","author":"作者","date":"日期"}]',
-				 1, '百度新闻搜索引擎采集源')
+				html_selector,title_selector,url_selector,content_selector,date_selector,author_selector,
+				page_size_step,page_start,ai_expand_keyword,ai_clean_data,status,description)
+				VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+			('百度新闻', 'baidu_news', 'https://www.baidu.com/s?tn=news&word={keyword}&pn={page}',
+				'GET', default_headers, 'html',
+				'div.result', 'h3', 'h3 a', 'div.content-right > span', 'span.c-color-gray2', 'p.author-text',
+				10, 0, 1,
+				'请对采集到的新闻标题和内容进行AI清洗，去除无关信息，提取核心要点，并以JSON格式返回：[{"title":"标题","content":"摘要","author":"作者","date":"日期"}]',
+				1, '百度新闻搜索引擎采集源')
 			)
 
 		# 初始化默认用户
@@ -384,6 +384,40 @@ def init_db():
 
 		# 初始化默认数据
 		_init_default_data(conn)
+
+		# 初始化默认数字员工
+		asst_cnt = conn.execute("SELECT COUNT(*) as cnt FROM assistants").fetchone()["cnt"]
+		if asst_cnt == 0:
+			weather_id = conn.execute("SELECT id FROM api_interfaces WHERE code='weather_tian'").fetchone()
+			music_id = conn.execute("SELECT id FROM api_interfaces WHERE code='music_qq_vip'").fetchone()
+			default_assistants = [
+				("川小农", "chuangxiaonong", "layui-icon-user",
+					"你是「川小农」，专注农业智能服务的AI助手。提供农业政策解读、种植技术指导、农产品市场分析等服务。请用专业且易懂的中文回答。",
+					None, 1, 1, "", "", "专注农业领域的智能助手", "AI", None),
+				("通用AI助手", "general_ai", "layui-icon-user",
+					"你是一个智能对话助手，能够回答各类问题，提供建议和帮助。请用友好、专业的方式回应用户。",
+					None, 2, 1, "", "", "通用AI对话助手", "AI", None),
+				("数据分析师", "data_analyst", "layui-icon-align-left",
+					"你是一个专业的数据分析师。擅长解读数据、生成报表、发现趋势并提出数据驱动的建议。回复时请条理清晰，使用数据和事实支撑观点。",
+					None, 3, 1, "", "", "数据分析与洞察专家", "AI", None),
+				("翻译助手", "translator", "fas fa-language",
+					"你是一个多语言翻译专家。能够准确翻译中英文，并保持原文的语气和风格。对于专业术语，你会提供准确的翻译和解释。",
+					None, 4, 1, "", "", "多语言翻译专家", "AI", None),
+				("代码助手", "code_helper", "fas fa-code",
+					"你是一个编程助手，擅长编写、调试和优化代码。请提供清晰、可运行的代码示例，并解释关键逻辑。",
+					None, 5, 1, "", "", "编程与代码调试助手", "AI", None),
+				("天气查询", "weather_query", "fas fa-cloud-sun",
+					"天气查询助手，可查询全国城市的实时天气、三日预报、空气质量等信息。",
+					None, 6, 1, "", "", "三日天气查询服务", "API", weather_id["id"] if weather_id else None),
+				("音乐助手", "music_helper", "fas fa-music",
+					"QQ音乐VIP搜索助手，可搜索歌手、歌曲信息，获取高品质音乐资源。",
+					None, 7, 1, "", "", "QQ音乐VIP歌曲搜索", "API", music_id["id"] if music_id else None),
+			]
+			for a in default_assistants:
+				conn.execute(
+					"INSERT INTO assistants(assistant_name,assistant_code,icon,prompt_template,model_id,sort_order,is_enabled,api_key,api_url,description,category,api_interface_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+					a
+				)
 		conn.commit()
 
 def _init_default_api_interfaces(conn):
@@ -412,8 +446,8 @@ def _init_default_api_interfaces(conn):
 	for item in defaults:
 		conn.execute(
 			"""INSERT INTO api_interfaces(
-			   name,code,api_url,method,response_format,request_example,
-			   params_schema,headers,description,qps_limit,status
+			name,code,api_url,method,response_format,request_example,
+			params_schema,headers,description,qps_limit,status
 			) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
 			item
 		)

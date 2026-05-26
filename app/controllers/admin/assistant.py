@@ -20,6 +20,11 @@ class AdminAssistantApiHandler(AdminBaseHandler):
 			row = AssistantRepository.get_assistant_by_id(aid)
 			self.set_header("Content-Type", "application/json")
 			self.write({"code": 0, "data": row})
+		elif action == "stats":
+			days = int(self.get_argument("days", "7"))
+			result = AssistantRepository.get_usage_stats(days=days)
+			self.set_header("Content-Type", "application/json")
+			self.write({"code": 0, "data": result})
 		elif action == "models":
 			rows = ModelRepository.get_model_list(page_size=100)
 			self.write({"code": 0, "data": rows.get("data", [])})
@@ -102,10 +107,12 @@ class AdminChatSendHandler(AdminBaseHandler):
 		content = self.get_body_argument("content", "").strip()
 		assistant_id = int(self.get_body_argument("assistant_id", "0"))
 		if not content:
+			self.set_header("Content-Type", "application/json")
 			self.write({"code": 1, "msg": "内容不能为空"})
 			return
 		assistant = AssistantRepository.get_assistant_by_id(assistant_id)
 		if not assistant:
+			self.set_header("Content-Type", "application/json")
 			self.write({"code": 1, "msg": "助手不存在"})
 			return
 		prompt_template = assistant.get("prompt_template", "")
@@ -120,6 +127,7 @@ class AdminChatSendHandler(AdminBaseHandler):
 		if not model:
 			model = ModelRepository.get_default_model()
 		if not model:
+			self.set_header("Content-Type", "application/json")
 			self.write({"code": 1, "msg": "没有可用模型"})
 			return
 		user_id = self._get_admin_user_id()
@@ -127,34 +135,44 @@ class AdminChatSendHandler(AdminBaseHandler):
 		self.set_header("Content-Type", "text/event-stream")
 		self.set_header("Cache-Control", "no-cache")
 		self.set_header("Connection", "keep-alive")
+		self.set_header("X-Accel-Buffering", "no")
 		full_response = ""
 		try:
 			import httpx
-			headers = {"Authorization": f"Bearer {model.get('api_key','')}", "Content-Type": "application/json"}
-			payload = {"model": model.get("model_code",""), "messages": messages, "stream": True}
-			with httpx.Client(timeout=60.0) as client:
-				response = client.post(model.get("api_url",""), headers=headers, json=payload, stream=True)
-				if response.status_code != 200:
-					self.write(f"data: {json.dumps({'error': f'API Error: {response.status_code}'})}\n\n")
-					await self.flush()
-					await self.finish()
-					return
-				for line in response.iter_lines():
-					if line.startswith("data: "):
-						data_str = line[6:]
-						if data_str == "[DONE]":
-							break
+			api_headers = {"Authorization": f"Bearer {model.get('api_key','')}", "Content-Type": "application/json"}
+			payload = {"model": model.get("code",""), "messages": messages, "stream": True}
+			api_url = model.get("api_url","")
+			with httpx.Client(timeout=120.0) as client:
+				with client.stream("POST", api_url, headers=api_headers, json=payload) as response:
+					if response.status_code != 200:
+						err_text = ""
 						try:
-							block = json.loads(data_str)
-							delta = block.get("choices", [{}])[0].get("delta", {})
-							chunk = delta.get("content", "")
-							if chunk:
-								full_response += chunk
-								self.write(f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n")
-								await self.flush()
+							err_text = response.read().decode("utf-8", errors="replace")[:300]
 						except Exception:
 							pass
-			ChatHistoryRepository.save_message(user_id, assistant_id, model.get("id"), "assistant", full_response)
+						self.write(f"data: {json.dumps({'error': f'API Error {response.status_code}: {err_text}'}, ensure_ascii=False)}\n\n")
+						await self.flush()
+						await self.finish()
+						return
+					for line in response.iter_lines():
+						if not line:
+							continue
+						if line.startswith("data: "):
+							data_str = line[6:]
+							if data_str == "[DONE]":
+								break
+							try:
+								block = json.loads(data_str)
+								delta = block.get("choices", [{}])[0].get("delta", {})
+								chunk = delta.get("content", "")
+								if chunk:
+									full_response += chunk
+									self.write(f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n")
+									await self.flush()
+							except Exception:
+								continue
+			if full_response:
+				ChatHistoryRepository.save_message(user_id, assistant_id, model.get("id"), "assistant", full_response)
 			self.write("data: [DONE]\n\n")
 		except Exception as e:
 			self.write(f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n")

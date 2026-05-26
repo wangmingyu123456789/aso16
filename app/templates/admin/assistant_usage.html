@@ -1,49 +1,90 @@
 {% extends "layout.html" %}
 {% block body %}
 <style>
-.usage-page .stat-cards { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
-.usage-page .stat-card { flex:1; min-width:200px; background:#fff; border-radius:8px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
-.usage-page .stat-card .card-label { font-size:13px; color:#999; margin-bottom:8px; }
-.usage-page .stat-card .card-value { font-size:28px; font-weight:bold; color:#1890ff; }
+.usage-wrap{margin:-24px;background:linear-gradient(180deg,#0a0e27 0%,#0d1235 100%);min-height:calc(100vh - 100px);padding:20px 24px;}
+.usage-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.usage-header h2{color:#e8edf5;font-size:20px;display:flex;align-items:center;gap:10px;}
+.usage-header h2 i{color:#a855f7;}
+.usage-back{display:flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:rgba(255,255,255,.6);font-size:13px;cursor:pointer;text-decoration:none;transition:all .3s;}
+.usage-back:hover{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.3);color:#fff;}
+.stat-cards{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px;}
+.stat-card{flex:1;min-width:180px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:20px;text-align:center;transition:all .3s;}
+.stat-card:hover{border-color:rgba(168,85,247,.3);box-shadow:0 0 20px rgba(168,85,247,.1);}
+.stat-card .card-value{font-size:32px;font-weight:bold;color:#a855f7;line-height:1.2;}
+.stat-card .card-value.green{color:#52c41a;}
+.stat-card .card-value.blue{color:#1890ff;}
+.stat-card .card-label{font-size:12px;color:#556;margin-top:6px;}
+.usage-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+.usage-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:20px;position:relative;overflow:hidden;transition:all .3s;}
+.usage-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#667eea,#764ba2);}
+.usage-card:hover{border-color:rgba(168,85,247,.3);transform:translateY(-2px);box-shadow:0 8px 30px rgba(168,85,247,.15);}
+.usage-card-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.usage-card-icon{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;flex-shrink:0;}
+.usage-card-name{font-size:16px;font-weight:600;color:#fff;}
+.usage-card-code{font-size:11px;color:rgba(168,85,247,.6);margin-top:2px;}
+.usage-card-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.usage-stat{background:rgba(255,255,255,.02);border-radius:8px;padding:12px;text-align:center;}
+.usage-stat .stat-num{font-size:22px;font-weight:bold;line-height:1.2;}
+.usage-stat .stat-num.green{color:#52c41a;}
+.usage-stat .stat-num.purple{color:#a855f7;}
+.usage-stat .stat-num.orange{color:#faad14;}
+.usage-stat .stat-num.red{color:#ff4d4f;}
+.usage-stat .stat-label{font-size:10px;color:#556;margin-top:4px;}
+.usage-empty{grid-column:1/-1;text-align:center;color:#445;padding:60px 20px;font-size:14px;}
 </style>
-<div class="usage-page">
-<div class="page-header"><h2>数字员工使用统计</h2></div>
+<div class="usage-wrap">
+<div class="usage-header">
+<h2><i class="layui-icon layui-icon-chart"></i>数字员工调用统计</h2>
+<a href="/admin/agent" class="usage-back"><i class="layui-icon layui-icon-prev"></i>返回</a>
+</div>
 <div class="stat-cards" id="statCards"></div>
-<div class="layui-card">
-<div class="layui-card-body">
-<table id="usageTable" lay-filter="usageTable"></table>
-</div></div></div>
+<div class="usage-grid" id="usageGrid"></div>
+</div>
 {% end %}
 {% block extra_script %}
 <script>
-layui.use(['table'],function(){
-	var table=layui.table;
+layui.use(['layer'],function(){
+	var $=layui.$;
+
 	function loadUsage(){
-		$.get('/admin/assistant/api',function(res){
-			if(res.code===0){
-				var data=res.data, cardsHtml='';
-				var totalCalls=0, totalTokens=0;
+		$.get('/admin/assistant/api?action=stats',function(res){
+			if(res.code===0&&res.data){
+				var data=res.data, cardsHtml='', gridHtml='';
+				var totalCalls=0, totalTokens=0, enabledCount=0;
 				$.each(data,function(i,a){
-					totalCalls++; totalTokens+=a.total_tokens||0;
+					totalCalls+=(a.call_count||0);
+					totalTokens+=(a.total_tokens||0);
+					enabledCount++;
 				});
-				cardsHtml+='<div class="stat-card"><div class="card-label">助手总数</div><div class="card-value">'+totalCalls+'</div></div>';
-				cardsHtml+='<div class="stat-card"><div class="card-label">Token总消耗</div><div class="card-value">'+totalTokens+'</div></div>';
-				cardsHtml+='<div class="stat-card"><div class="card-label">启用中</div><div class="card-value">'+(function(){var c=0;$.each(data,function(i,a){if(a.is_enabled)c++});return c;})()+'</div></div>';
+				cardsHtml+='<div class="stat-card"><div class="card-value">'+enabledCount+'</div><div class="card-label">助手总数</div></div>';
+				cardsHtml+='<div class="stat-card"><div class="card-value">'+totalCalls.toLocaleString()+'</div><div class="card-label">总调用次数</div></div>';
+				cardsHtml+='<div class="stat-card"><div class="card-value blue">'+totalTokens.toLocaleString()+'</div><div class="card-label">Token总消耗</div></div>';
 				$('#statCards').html(cardsHtml);
+
+				if(data.length===0){
+					$('#usageGrid').html('<div class="usage-empty">暂无调用记录</div>');
+					return;
+				}
+				$.each(data,function(i,a){
+					gridHtml+='<div class="usage-card">';
+					gridHtml+='<div class="usage-card-header">';
+					gridHtml+='<div class="usage-card-icon"><i class="layui-icon '+(a.icon||'layui-icon-user')+'"></i></div>';
+					gridHtml+='<div>';
+					gridHtml+='<div class="usage-card-name">'+(a.assistant_name||'未知')+'</div>';
+					gridHtml+='<div class="usage-card-code">@'+(a.assistant_code||'')+'</div>';
+					gridHtml+='</div></div>';
+					gridHtml+='<div class="usage-card-stats">';
+					gridHtml+='<div class="usage-stat"><div class="stat-num green">'+(a.call_count||0)+'</div><div class="stat-label">调用次数</div></div>';
+					gridHtml+='<div class="usage-stat"><div class="stat-num purple">'+(a.total_tokens||0)+'</div><div class="stat-label">总Token</div></div>';
+					gridHtml+='<div class="usage-stat"><div class="stat-num orange">'+(a.prompt_tokens||0)+'</div><div class="stat-label">输入Token</div></div>';
+					gridHtml+='<div class="usage-stat"><div class="stat-num red">'+(a.completion_tokens||0)+'</div><div class="stat-label">输出Token</div></div>';
+					gridHtml+='</div></div>';
+				});
+				$('#usageGrid').html(gridHtml);
 			}
 		});
 	}
 	loadUsage();
-	table.render({
-		elem:'#usageTable',
-		data:[], cols:[[
-			{field:'assistant_name', title:'助手名称', width:150},
-			{field:'call_count', title:'调用次数', width:120, sort:true},
-			{field:'total_tokens', title:'Token总数', width:130, sort:true},
-			{field:'prompt_tokens', title:'输入Token', width:130},
-			{field:'completion_tokens', title:'输出Token', width:130}
-		]]
-	});
 });
 </script>
 {% end %}

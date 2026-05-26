@@ -222,32 +222,31 @@ class ModelRepository:
         }
         try:
             with httpx.Client(timeout=60.0) as client:
-                response = client.post(api_url, headers=headers, json=payload, stream=True)
-                if response.status_code != 200:
-                    yield f'{{"error":"API Error: {response.status_code}"}}'
-                    return
+                with client.stream("POST", api_url, headers=headers, json=payload) as response:
+                    if response.status_code != 200:
+                        yield f'{{"error":"API Error: {response.status_code}"}}'
+                        return
                 
-                full_content = ""
-                for line in response.iter_lines():
-                    if not line:
-                        continue
-                    if line.startswith("data: "):
-                        data_str = line[6:]
-                        if data_str == "[DONE]":
-                            yield '{"done":true}'
-                            break
-                        try:
-                            data = json.loads(data_str)
-                            delta = data.get("choices", [{}])[0].get("delta", {})
-                            content = delta.get("content", "")
-                            if content:
-                                full_content += content
-                                yield json.dumps({"content": content}, ensure_ascii=False)
-                            # 捕获 usage
-                            u = data.get("usage")
-                            if u:
-                                yield json.dumps({"usage": u}, ensure_ascii=False)
-                        except Exception:
+                    full_content = ""
+                    for line in response.iter_lines():
+                        if not line:
                             continue
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str == "[DONE]":
+                                yield '{"done":true}'
+                                break
+                            try:
+                                data = json.loads(data_str)
+                                delta = data.get("choices", [{}])[0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    full_content += content
+                                    yield json.dumps({"content": content}, ensure_ascii=False)
+                                u = data.get("usage")
+                                if u:
+                                    yield json.dumps({"usage": u}, ensure_ascii=False)
+                            except Exception:
+                                continue
         except Exception as e:
             yield json.dumps({"error": str(e)}, ensure_ascii=False)
