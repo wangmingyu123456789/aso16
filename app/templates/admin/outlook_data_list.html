@@ -348,7 +348,10 @@ layui.use(['layer'], function(){
 
     function renderTaskRow(task){
         var aiTags = '';
-        if(task.ai_expand && task.ai_clean){
+        // 优先显示深度采集状态
+        if(task.has_deep_collect){
+            aiTags = '<span class="status-ai"><i class="layui-icon layui-icon-star-fill"></i> 深度采集</span>';
+        } else if(task.ai_expand && task.ai_clean){
             aiTags = '<span class="status-ai"><i class="layui-icon layui-icon-star-fill"></i> 扩词+清洗</span>';
         } else if(task.ai_expand){
             aiTags = '<span class="status-ai"><i class="layui-icon layui-icon-star"></i> AI扩词</span>';

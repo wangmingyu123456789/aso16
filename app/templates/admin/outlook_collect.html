@@ -891,7 +891,7 @@ layui.use(['layer'], function(){
         var date = item.publish_date || '未知';
         var url = item.url || '';
         var keyword = item.source_keyword || currentTaskKeyword || '未知';
-        var urlHtml = url ? 
+        var urlHtml = url ?
             '<a href="' + url + '" target="_blank" class="data-card-btn open">' +
             '<svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3h6v6"/><line x1="10" y1="14" x2="21" y2="3"/></svg>打开</a>' :
             '<span class="data-card-btn open" style="opacity:0.3;cursor:not-allowed;"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3h6v6"/><line x1="10" y1="14" x2="21" y2="3"/></svg>无链接</span>';

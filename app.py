@@ -14,7 +14,7 @@ from app.controllers.admin.function import AdminFunctionListHandler,AdminFunctio
 from app.controllers.admin.role import AdminRoleListHandler,AdminRoleApiHandler,AdminRoleAddHandler,AdminRoleEditHandler,AdminRoleDeleteHandler
 from app.controllers.admin.permission import AdminPermissionListHandler,AdminPermissionTreeHandler,AdminPermissionSaveHandler
 from app.controllers.admin.model import AdminModelListHandler,AdminModelApiHandler,AdminModelAddHandler,AdminModelEditHandler,AdminModelDeleteHandler,AdminModelSetDefaultHandler,AdminModelChatTestHandler,AdminModelChatStreamHandler
-from app.controllers.admin.outlook import AdminOutlookRedirectHandler,AdminOutlookSourceListHandler,AdminOutlookSourceApiHandler,AdminOutlookSourceAddHandler,AdminOutlookSourceEditHandler,AdminOutlookSourceDeleteHandler,AdminOutlookCollectHandler,AdminOutlookDataListHandler,AdminOutlookDataApiHandler,AdminOutlookDataDeleteHandler,AdminOutlookCollectPageHandler,AdminOutlookTaskApiHandler,AdminOutlookTaskDeleteHandler,AdminOutlookTaskDataHandler,AdminOutlookTaskDataApiHandler,AdminOutlookLatestDataApiHandler,AdminOutlookStatusApiHandler
+from app.controllers.admin.outlook import AdminOutlookRedirectHandler,AdminOutlookSourceListHandler,AdminOutlookSourceApiHandler,AdminOutlookSourceAddHandler,AdminOutlookSourceEditHandler,AdminOutlookSourceDeleteHandler,AdminOutlookCollectHandler,AdminOutlookDataListHandler,AdminOutlookDataApiHandler,AdminOutlookDataDeleteHandler,AdminOutlookCollectPageHandler,AdminOutlookTaskApiHandler,AdminOutlookTaskDeleteHandler,AdminOutlookTaskDataHandler,AdminOutlookTaskDataApiHandler,AdminOutlookLatestDataApiHandler,AdminOutlookStatusApiHandler,AdminOutlookDeepCollectHandler,AdminOutlookDeepCollectStatusHandler,AdminOutlookDeepDetailHandler
 from app.controllers.admin.api_mgmt import AdminApiListHandler,AdminApiListApiHandler,AdminApiAddHandler,AdminApiEditHandler,AdminApiDeleteHandler,AdminApiTestHandler,AdminApiServiceHandler
 from app.models.db import init_db,upgrade_db
 
@@ -129,6 +129,9 @@ def make_app():
 			(r"/admin/outlook/task/delete",AdminOutlookTaskDeleteHandler),
 			(r"/admin/outlook/latest/data/api",AdminOutlookLatestDataApiHandler),
 			(r"/admin/outlook/status/api",AdminOutlookStatusApiHandler),
+			(r"/admin/outlook/deep/collect",AdminOutlookDeepCollectHandler),
+			(r"/admin/outlook/deep/collect/status",AdminOutlookDeepCollectStatusHandler),
+			(r"/admin/outlook/deep/detail",AdminOutlookDeepDetailHandler),
 
 			# 接口管理
 			(r"/admin/api",AdminApiListHandler),

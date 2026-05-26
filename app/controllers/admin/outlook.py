@@ -3,7 +3,7 @@ import time
 import threading
 import tornado.web
 from app.controllers.admin.base import AdminBaseHandler
-from app.models.outlook import OutlookSourceRepository, OutlookDataRepository, OutlookTaskRepository, OutlookCollector
+from app.models.outlook import OutlookSourceRepository, OutlookDataRepository, OutlookTaskRepository, OutlookCollector, OutlookDeepCollectRepository
 from app.models.db import get_connection
 
 # 采集状态存储（内存中）
@@ -171,6 +171,7 @@ class AdminOutlookCollectHandler(AdminBaseHandler):
         })
 
         total_results = 0
+        url_offset = 0
         for source in selected_sources:
             step = page_size_step if page_size_step > 0 else source.get('page_size_step', 10)
             print(f"[Collect] source={source['name']}, keyword={keyword}, pages={pages}, step={step}")
@@ -181,20 +182,21 @@ class AdminOutlookCollectHandler(AdminBaseHandler):
             set_collect_status(task_id, status)
 
             # 创建状态回调闭包，累计计数
-            def make_callback(tid):
+            def make_callback(tid, offset):
                 def callback(update):
                     current = get_collect_status(tid)
-                    # 累计计数
                     if 'success_count' in update:
                         current['success_count'] = current.get('success_count', 0) + update['success_count']
                     if 'fail_count' in update:
                         current['fail_count'] = current.get('fail_count', 0) + update['fail_count']
                     if 'total_count' in update:
                         current['total_count'] = current.get('total_count', 0) + update['total_count']
-                    # 更新其他字段
                     for k, v in update.items():
                         if k not in ('success_count', 'fail_count', 'total_count'):
                             current[k] = v
+                    # current_url 跨source累计
+                    if 'current_url' in update and offset > 0:
+                        current['current_url'] = update['current_url'] + offset
                     set_collect_status(tid, current)
                 return callback
 
@@ -203,9 +205,10 @@ class AdminOutlookCollectHandler(AdminBaseHandler):
                 use_ai_expand=ai_expand,
                 use_ai_clean=ai_clean,
                 task_id=task_id,
-                status_callback=make_callback(task_id)
+                status_callback=make_callback(task_id, url_offset)
             )
             total_results += count
+            url_offset += pages
             print(f"[Collect] source={source['name']}, saved={count}")
 
         # 更新最终状态
@@ -280,7 +283,7 @@ class AdminOutlookTaskDataApiHandler(AdminBaseHandler):
                 ).fetchone()
                 total = count_row["total"]
                 rows = conn.execute(
-                    "SELECT * FROM outlook_data WHERE task_id=? AND title LIKE ? ORDER BY create_at DESC LIMIT ? OFFSET ?",
+                    "SELECT * FROM outlook_data WHERE task_id=? AND title LIKE ? ORDER BY create_at ASC LIMIT ? OFFSET ?",
                     (task_id, f'%{keyword}%', page_size, offset)
                 ).fetchall()
             else:
@@ -290,14 +293,20 @@ class AdminOutlookTaskDataApiHandler(AdminBaseHandler):
                 ).fetchone()
                 total = count_row["total"]
                 rows = conn.execute(
-                    "SELECT * FROM outlook_data WHERE task_id=? ORDER BY create_at DESC LIMIT ? OFFSET ?",
+                    "SELECT * FROM outlook_data WHERE task_id=? ORDER BY create_at ASC LIMIT ? OFFSET ?",
                     (task_id, page_size, offset)
                 ).fetchall()
         self.set_header("Content-Type", "application/json")
         data_list = []
         for i, r in enumerate(rows):
             d = dict(r)
-            d["_seq"] = total - offset - i
+            d["_seq"] = offset + i + 1
+            # 获取深度采集状态
+            deep_row = conn.execute(
+                "SELECT status FROM outlook_data_detail WHERE data_id=? ORDER BY id DESC LIMIT 1",
+                (d['id'],)
+            ).fetchone()
+            d['deep_status'] = deep_row['status'] if deep_row else None
             data_list.append(d)
         self.write({
             "code": 0,
@@ -397,3 +406,96 @@ class AdminOutlookStatusApiHandler(AdminBaseHandler):
         status['speed'] = round(total_count / elapsed, 1) if elapsed > 0 else 0
         self.set_header("Content-Type", "application/json")
         self.write({"code": 0, "data": status})
+
+
+class AdminOutlookDeepCollectHandler(AdminBaseHandler):
+    """AI深度采集 - 启动"""
+    @tornado.web.authenticated
+    def post(self):
+        data_ids_str = self.get_body_argument("data_ids", "")
+        if not data_ids_str:
+            return self.write({"code": 1, "msg": "请选择要深度采集的数据"})
+
+        try:
+            data_ids = [int(x.strip()) for x in data_ids_str.split(",") if x.strip()]
+        except ValueError:
+            return self.write({"code": 1, "msg": "数据ID格式错误"})
+
+        if not data_ids:
+            return self.write({"code": 1, "msg": "请选择要深度采集的数据"})
+
+        # 生成任务ID
+        import uuid
+        task_id = str(uuid.uuid4())[:8]
+
+        # 初始化进度
+        logs = []
+        OutlookDeepCollectRepository.set_progress(task_id, {
+            "task_id": task_id,
+            "total": len(data_ids),
+            "current": 0,
+            "status": "running",
+            "logs": logs,
+            "success": 0,
+            "failed": 0
+        })
+
+        def progress_callback(current, total, log_msg, data_id, status):
+            progress = OutlookDeepCollectRepository.get_progress(task_id)
+            if progress:
+                progress["current"] = current
+                progress["logs"].append({"msg": log_msg, "status": status, "data_id": data_id})
+                if status == "success":
+                    progress["success"] += 1
+                elif status == "failed":
+                    progress["failed"] += 1
+
+        # 在后台线程中执行深度采集
+        import threading
+        def run_deep_collect():
+            try:
+                result = OutlookDeepCollectRepository.deep_collect(data_ids, callback=progress_callback)
+                progress = OutlookDeepCollectRepository.get_progress(task_id)
+                if progress:
+                    progress["status"] = "completed"
+                    progress["result"] = result
+            except Exception as e:
+                progress = OutlookDeepCollectRepository.get_progress(task_id)
+                if progress:
+                    progress["status"] = "error"
+                    progress["error"] = str(e)
+
+        thread = threading.Thread(target=run_deep_collect, daemon=True)
+        thread.start()
+
+        return self.write({"code": 0, "msg": "深度采集已启动", "task_id": task_id})
+
+
+class AdminOutlookDeepCollectStatusHandler(AdminBaseHandler):
+    """AI深度采集 - 查询进度"""
+    @tornado.web.authenticated
+    def get(self):
+        task_id = self.get_argument("task_id", "")
+        if not task_id:
+            return self.write({"code": 1, "msg": "缺少task_id参数"})
+
+        progress = OutlookDeepCollectRepository.get_progress(task_id)
+        if not progress:
+            return self.write({"code": 1, "msg": "未找到采集任务"})
+
+        return self.write({"code": 0, "data": progress})
+
+
+class AdminOutlookDeepDetailHandler(AdminBaseHandler):
+    """AI深度采集 - 查看某条数据的深度采集结果"""
+    @tornado.web.authenticated
+    def get(self):
+        data_id = int(self.get_argument("data_id", "0"))
+        if not data_id:
+            return self.write({"code": 1, "msg": "缺少data_id参数"})
+
+        detail = OutlookDeepCollectRepository.get_detail_by_data_id(data_id)
+        if not detail:
+            return self.write({"code": 1, "msg": "未找到深度采集结果"})
+
+        return self.write({"code": 0, "data": detail})

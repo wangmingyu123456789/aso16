@@ -2,9 +2,9 @@
 import os
 import json
 import sqlite3
-def _projiect_root():
+def _project_root():
 	return os.path.abspath(os.path.join(os.path.dirname(__file__),os.pardir,os.pardir))
-DB_PATH = os.path.join(_projiect_root(),"database","app.db")
+DB_PATH = os.path.join(_project_root(),"database","app.db")
 
 def get_connection():
 	os.makedirs(os.path.dirname(DB_PATH),exist_ok=True)
@@ -121,12 +121,51 @@ def init_db():
 					publish_date TEXT,
 					raw_html TEXT,
 					ai_processed INTEGER NOT NULL DEFAULT 0,
+					ai_deep_status INTEGER NOT NULL DEFAULT 0,
 					task_id INTEGER NOT NULL DEFAULT 0,
 					collect_status TEXT NOT NULL DEFAULT 'success',
-					create_at TEXT NOT NULL DEFAULT(datetime('now','localtime'))
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
 				)
 				"""
 			)
+
+		# 升级 outlook_data 表字段
+		cursor = conn.execute("PRAGMA table_info(outlook_data)")
+		columns = [row[1] for row in cursor.fetchall()]
+		if len(columns) > 0:
+			if 'ai_deep_status' not in columns:
+				conn.execute("ALTER TABLE outlook_data ADD COLUMN ai_deep_status INTEGER NOT NULL DEFAULT 0")
+
+		# 创建 outlook_data_detail 表（AI深度采集结果）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='outlook_data_detail'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE outlook_data_detail(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					data_id INTEGER NOT NULL,
+					task_id INTEGER NOT NULL DEFAULT 0,
+					source_id INTEGER NOT NULL,
+					source_name TEXT,
+					title TEXT,
+					url TEXT,
+					raw_content TEXT,
+					deep_content TEXT,
+					summary TEXT,
+					key_points TEXT,
+					model_used TEXT,
+					status TEXT NOT NULL DEFAULT 'pending',
+					error_msg TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+		else:
+			# 检查是否有raw_content字段
+			cursor2 = conn.execute("PRAGMA table_info(outlook_data_detail)")
+			columns = [row[1] for row in cursor2.fetchall()]
+			if 'raw_content' not in columns:
+				conn.execute("ALTER TABLE outlook_data_detail ADD COLUMN raw_content TEXT")
 
 		# 创建 outlook_tasks 表（瞭望采集任务）
 		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='outlook_tasks'")
@@ -145,7 +184,7 @@ def init_db():
 					total_count INTEGER NOT NULL DEFAULT 0,
 					status TEXT NOT NULL DEFAULT 'completed',
 					error_msg TEXT,
-					create_at TEXT NOT NULL DEFAULT(datetime('now','localtime'))
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
 				)
 				"""
 			)
@@ -170,7 +209,7 @@ def init_db():
 					status INTEGER NOT NULL DEFAULT 1,
 					total_calls INTEGER NOT NULL DEFAULT 0,
 					last_called_at TEXT,
-					create_at TEXT NOT NULL DEFAULT(datetime('now','localtime'))
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
 				)
 				"""
 			)
@@ -344,28 +383,27 @@ def upgrade_db():
 					total_count INTEGER NOT NULL DEFAULT 0,
 					status TEXT NOT NULL DEFAULT 'completed',
 					error_msg TEXT,
-					create_at TEXT NOT NULL DEFAULT(datetime('now','localtime'))
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
 				)
 				"""
 			)
 
-		# outlook_data 添加 task_id 字段
+		# outlook_data 添加 task_id 和 source_keyword 字段
 		cursor = conn.execute("PRAGMA table_info(outlook_data)")
 		data_cols = [row[1] for row in cursor.fetchall()]
-		if len(data_cols) > 0 and 'task_id' not in data_cols:
-			conn.execute("ALTER TABLE outlook_data ADD COLUMN task_id INTEGER NOT NULL DEFAULT 0")
+		if len(data_cols) > 0:
+			if 'task_id' not in data_cols:
+				conn.execute("ALTER TABLE outlook_data ADD COLUMN task_id INTEGER NOT NULL DEFAULT 0")
+			if 'source_keyword' not in data_cols:
+				conn.execute("ALTER TABLE outlook_data ADD COLUMN source_keyword TEXT NOT NULL DEFAULT ''")
 
-		# outlook_data 添加 source_keyword 字段
-		cursor = conn.execute("PRAGMA table_info(outlook_data)")
-		data_cols = [row[1] for row in cursor.fetchall()]
-		if len(data_cols) > 0 and 'source_keyword' not in data_cols:
-			conn.execute("ALTER TABLE outlook_data ADD COLUMN source_keyword TEXT NOT NULL DEFAULT ''")
-
-		# 修复已有 outlook_tasks 的 UTC 时间为本地时间
-		conn.execute("UPDATE outlook_tasks SET create_at = datetime(create_at, '+8 hours') WHERE create_at LIKE '%-%' AND create_at NOT LIKE '%+08%' AND length(create_at) = 19")
-
-		# 修复已有 outlook_data 的 UTC 时间为本地时间
-		conn.execute("UPDATE outlook_data SET create_at = datetime(create_at, '+8 hours') WHERE create_at LIKE '%-%' AND create_at NOT LIKE '%+08%' AND length(create_at) = 19")
+		# 一次性修复：修复被错误累加8小时的时间数据（仅执行一次）
+		# 检测是否已经执行过修复（通过检查是否有时间大于当前时间的记录）
+		cursor = conn.execute("SELECT COUNT(*) as cnt FROM outlook_tasks WHERE create_at > datetime('now','+1 hour')").fetchone()
+		if cursor["cnt"] > 0:
+			# 有异常数据，减去8小时
+			conn.execute("UPDATE outlook_tasks SET create_at = datetime(create_at, '-8 hours') WHERE create_at > datetime('now','+1 hour')")
+			conn.execute("UPDATE outlook_data SET create_at = datetime(create_at, '-8 hours') WHERE create_at > datetime('now','+1 hour')")
 
 		# 创建 functions 表（如果不存在）
 		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='functions'")
@@ -542,7 +580,7 @@ def upgrade_db():
 					status INTEGER NOT NULL DEFAULT 1,
 					total_calls INTEGER NOT NULL DEFAULT 0,
 					last_called_at TEXT,
-					create_at TEXT NOT NULL DEFAULT(datetime('now','localtime'))
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
 				)
 				"""
 			)
