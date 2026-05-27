@@ -6,7 +6,7 @@ import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
 from app.controllers.auth import LoginHandler,LogoutHandler,RegisterHandler
-from app.controllers.home import IndexHandler
+from app.controllers.home import IndexHandler,HomePageHandler
 from app.controllers.admin.auth import AdminLoginHandler,AdminLogoutHandler
 from app.controllers.admin.index import AdminIndexHandler
 from app.controllers.admin.user import AdminUserListHandler,AdminUserApiHandler,AdminUserRolesApiHandler,AdminUserAddHandler,AdminUserEditHandler,AdminUserDeleteHandler,AdminUserBatchDeleteHandler
@@ -20,6 +20,8 @@ from app.controllers.admin.watch import AdminCrawlLogHandler,AdminCrawlLogApiHan
 from app.controllers.admin.assistant import AdminAssistantConfigHandler,AdminAssistantApiHandler,AdminAssistantChatHandler,AdminAssistantUsageHandler,AdminChatSendHandler,AdminChatHistoryHandler,AdminChatClearHandler
 from app.controllers.dashboard import DashboardPageHandler,DashboardStatsHandler,DashboardComponentsHandler,DashboardComponentAPIHandler
 from app.controllers.chat import ChatPageHandler,ChatStreamHandler,ChatAssistantsHandler,ChatHistoryHandler,ChatModelsHandler
+from app.controllers.im import IMPageHandler,IMConversationsHandler,IMHistoryHandler,IMSendHandler,IMCreatePrivateHandler,IMAssistantChatHandler,IMCreateGroupHandler,IMMembersHandler,IMUsersHandler,IMAssistantsHandler,IMSearchHandler,IMMarkReadHandler,IMFriendsHandler,IMFriendRequestHandler,IMRemoveFriendHandler,IMGroupsHandler,IMGroupManageHandler,IMFileUploadHandler,IMFileDownloadHandler
+from app.controllers.im_ws import IMWebSocketHandler
 from app.models.db import init_db,upgrade_db
 
 class ViteClientHandler(tornado.web.RequestHandler):
@@ -75,11 +77,34 @@ def make_app():
 			(r"/auth/register",RegisterHandler),
 			(r"/auth/logout",LogoutHandler),
 
-			(r"/chat",ChatPageHandler),
+			(r"/home",HomePageHandler),
+			(r"/qa",ChatPageHandler),
 			(r"/api/chat/stream",ChatStreamHandler),
 			(r"/api/chat/history",ChatHistoryHandler),
 			(r"/api/chat/models",ChatModelsHandler),
 			(r"/api/chat/assistants",ChatAssistantsHandler),
+
+			# 智能聊天
+			(r"/im",IMPageHandler),
+			(r"/im/ws",IMWebSocketHandler),
+			(r"/im/api/conversations",IMConversationsHandler),
+			(r"/im/api/history",IMHistoryHandler),
+			(r"/im/api/send",IMSendHandler),
+			(r"/im/api/private",IMCreatePrivateHandler),
+			(r"/im/api/assistant-chat",IMAssistantChatHandler),
+			(r"/im/api/group",IMCreateGroupHandler),
+			(r"/im/api/members",IMMembersHandler),
+			(r"/im/api/users",IMUsersHandler),
+			(r"/im/api/assistants",IMAssistantsHandler),
+			(r"/im/api/search",IMSearchHandler),
+			(r"/im/api/read",IMMarkReadHandler),
+			(r"/im/api/friends",IMFriendsHandler),
+			(r"/im/api/friend/request",IMFriendRequestHandler),
+			(r"/im/api/friend/remove",IMRemoveFriendHandler),
+			(r"/im/api/groups",IMGroupsHandler),
+			(r"/im/api/group/manage",IMGroupManageHandler),
+		(r"/im/api/file/upload",IMFileUploadHandler),
+		(r"/im/api/file/(.+)",IMFileDownloadHandler),
 
 			(r"/admin/login",AdminLoginHandler),
 			(r"/admin/logout",AdminLogoutHandler),

@@ -171,7 +171,8 @@ cnAgentOS/
 │   │   ├── __init__.py             # 包标识，说明控制器模块约定
 │   │   ├── base.py                 # 基础 Handler 类，提供公共登录态校验逻辑
 │   │   ├── auth.py                 # 认证控制器：登录/退出功能
-│   │   └── home.py                 # 后台首页控制器
+│   │   └── home.py                 # 首页控制器：用户侧首页/根路径跳转
+│   │   └── chat.py                 # 智能问数控制器：对话页面/API
 │   │
 │   ├── models/                     # 【模型层】数据库操作与业务逻辑
 │   │   ├── __init__.py             # 包标识，说明模型层职责
@@ -181,6 +182,8 @@ cnAgentOS/
 │   ├── templates/                  # 【视图层-模板】HTML 模板文件
 │   │   ├── base.html               # 基础布局模板（所有页面继承此模板）
 │   │   ├── index.html              # 后台首页模板
+│   │   ├── home.html               # 用户侧首页模板（带左侧导航栏）
+│   │   ├── chat.html               # 智能问数对话模板
 │   │   ├── login.html              # 登录页模板
 │   │   └── register.html           # 注册页模板（空文件，待开发）
 │   │
@@ -277,7 +280,7 @@ POST /auth/login
   ├─> 参数校验：用户名或密码为空 → 返回 400 + 错误提示
   ├─> 调用 UserRepository.verify_user() 验证
   │   └─> 验证失败 → 返回 401 + 错误提示
-  └─> 验证成功 → 写入 Secure Cookie → 跳转到首页 (/)
+  └─> 验证成功 → 写入 Secure Cookie → 跳转到用户首页 (/home)
 ```
 
 **LogoutHandler 逻辑**：
@@ -289,11 +292,25 @@ POST /auth/logout
 
 #### 5.2.3 首页控制器 [home.py](file:///c:/Users/wangmingyu/Desktop/work/day5/cnAgentOS/app/controllers/home.py)
 
-**Handler 类**：`IndexHandler`
+**Handler 类**：
 
-| URL | 方法 | 说明 |
-|-----|------|------|
-| `/` | GET | 后台首页，需要登录才能访问 |
+| 类名 | URL | 说明 |
+|------|-----|------|
+| `IndexHandler` | `/` | 根路径，根据角色跳转到 `/admin` 或 `/home` |
+| `HomePageHandler` | `/home` | 用户侧首页，带左侧导航栏（智能问数/智能聊天） |
+
+**IndexHandler 逻辑**：
+```
+GET /
+  ├─> 管理员/manager → 跳转到 /admin
+  └─> 普通用户 → 跳转到 /home
+```
+
+**HomePageHandler 逻辑**：
+```
+GET /home
+  └─> 渲染 home.html，展示左侧功能导航栏
+```
 
 **特性**：使用 `@tornado.web.authenticated` 装饰器，未登录用户自动跳转到登录页。
 
@@ -359,18 +376,25 @@ password + salt → PBKDF2-HMAC-SHA256 (100,000 次迭代) → hex 字符串
 
 | URL | Handler | 方法 | 是否需要登录 | 功能说明 |
 |-----|---------|------|-------------|----------|
-| `/` | `IndexHandler` | GET | ✅ | 后台首页 |
+| `/` | `IndexHandler` | GET | ✅ | 根路径，按角色跳转 |
+| `/home` | `HomePageHandler` | GET | ✅ | 用户侧首页（带左侧导航） |
+| `/qa` | `ChatPageHandler` | GET | ✅ | 智能问数主界面 |
+| `/api/chat/*` | `Chat*Handler` | POST/GET | ✅ | 智能问数 API 接口 |
 | `/auth/login` | `LoginHandler` | GET | ❌ | 渲染登录页 |
 | `/auth/login` | `LoginHandler` | POST | ❌ | 处理登录请求 |
 | `/auth/logout` | `LogoutHandler` | POST | ✅ | 退出登录 |
 
 ### 6.2 路由注册位置
 
-路由在 [app.py](file:///c:/Users/wangmingyu/Desktop/work/day5/cnAgentOS/app.py#L26-L31) 的 `make_app()` 函数中通过列表形式注册：
+路由在 [app.py](file:///c:/Users/wangmingyu/Desktop/work/day5/cnAgentOS/app.py) 的 `make_app()` 函数中通过列表形式注册：
 
 ```python
 return tornado.web.Application([
     (r"/", IndexHandler),
+    (r"/home", HomePageHandler),
+    (r"/qa", ChatPageHandler),
+    (r"/api/chat/stream", ChatStreamHandler),
+    ...
     (r"/auth/login", LoginHandler),
     (r"/auth/logout", LogoutHandler),
 ], **settings)
@@ -806,11 +830,14 @@ tornado==6.5.5
 |------|------|------|
 | 主入口 | `app.py` | 服务启动与配置 |
 | 基础 Handler | `app/controllers/base.py` | 公共认证逻辑 |
-| 认证控制器 | `app/controllers/auth.py` | 登录/退出 |
-| 首页控制器 | `app/controllers/home.py` | 后台首页 |
+| 认证控制器 | `app/controllers/auth.py` | 登录/退出/注册 |
+| 首页控制器 | `app/controllers/home.py` | 根路径跳转/用户侧首页 |
+| 智能问数控制器 | `app/controllers/chat.py` | 智能问数页面与API |
 | 数据库连接 | `app/models/db.py` | SQLite 连接与建表 |
 | 用户模型 | `app/models/user.py` | 用户数据操作 |
 | 基础模板 | `app/templates/base.html` | 页面布局 |
+| 用户首页模板 | `app/templates/home.html` | 用户侧首页（带左侧导航） |
+| 智能问数模板 | `app/templates/chat.html` | 智能问数对话页 |
 | 登录模板 | `app/templates/login.html` | 登录页 |
 | 首页模板 | `app/templates/index.html` | 后台首页 |
 

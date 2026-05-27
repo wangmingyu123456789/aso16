@@ -66,6 +66,18 @@ class AssistantRepository:
 		return dict(row) if row else None
 
 	@staticmethod
+	def get_assistant_by_name(name):
+		with get_connection() as conn:
+			row = conn.execute(
+				"""SELECT a.*, m.name as model_name, m.api_url as model_api_url,
+				m.api_key as model_api_key, m.code as model_code FROM assistants a
+				LEFT JOIN models m ON a.model_id=m.id
+				WHERE a.assistant_name=? AND a.is_enabled=1""",
+				(name,)
+			).fetchone()
+		return dict(row) if row else None
+
+	@staticmethod
 	def add_assistant(data):
 		try:
 			with get_connection() as conn:

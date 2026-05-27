@@ -10,4 +10,10 @@ class IndexHandler(BaseHandler):
 		if row and row["role"] in ("admin", "manager"):
 			self.redirect("/admin")
 		else:
-			self.redirect("/chat")
+			self.redirect("/home")
+
+class HomePageHandler(BaseHandler):
+	"""用户侧首页 - 带左侧导航栏，展示智能问数/智能聊天等模块入口"""
+	@tornado.web.authenticated
+	def get(self):
+		self.render("home.html", title="cnAgentOS", username=self.current_user)

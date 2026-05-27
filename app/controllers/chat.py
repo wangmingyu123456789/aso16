@@ -10,7 +10,7 @@ from app.models.db import get_connection
 class ChatPageHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        self.render("chat.html", title="AI对话 - cnAgentOS", username=self.current_user)
+        self.render("chat.html", title="智能问数", username=self.current_user)
 
 
 class ChatStreamHandler(BaseHandler):

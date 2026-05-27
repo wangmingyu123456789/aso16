@@ -257,6 +257,91 @@ def init_db():
 				"INSERT INTO users(username,password_hash,salt,role,status,can_login_admin) VALUES(?,?,?,?,?,?)",
 				("admin", password_hash, salt.hex(), "admin", 1, 1)
 			)
+			# 创建测试用户 test1 和 test2
+			salt1 = secrets.token_bytes(16)
+			password_hash1 = _hash_password("test1234", salt1)
+			conn.execute(
+				"INSERT INTO users(username,password_hash,salt,role,status,can_login_admin) VALUES(?,?,?,?,?,?)",
+				("test1", password_hash1, salt1.hex(), "user", 1, 0)
+			)
+			salt2 = secrets.token_bytes(16)
+			password_hash2 = _hash_password("test1234", salt2)
+			conn.execute(
+				"INSERT INTO users(username,password_hash,salt,role,status,can_login_admin) VALUES(?,?,?,?,?,?)",
+				("test2", password_hash2, salt2.hex(), "user", 1, 0)
+			)
+
+		# 预置 IM 测试好友数据（在 IM 表创建后执行）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_friends'")
+		if cursor.fetchone():
+			# 确保测试用户存在
+			from app.models.user import _hash_password
+			import secrets
+
+			def ensure_user(username, password="test1234"):
+				row = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+				if not row:
+					salt = secrets.token_bytes(16)
+					pw_hash = _hash_password(password, salt)
+					conn.execute(
+						"INSERT INTO users(username,password_hash,salt,role,status,can_login_admin) VALUES(?,?,?,?,?,?)",
+						(username, pw_hash, salt.hex(), "user", 1, 0)
+					)
+					row = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+				return row["id"]
+
+			aid = ensure_user("admin", "admin123")
+			t1id = ensure_user("test1")
+			t2id = ensure_user("test2")
+			zhangsan_id = ensure_user("张三")
+			zhangsan1_id = ensure_user("张三1")
+			zhangsan2_id = ensure_user("张三2")
+			lisi_id = ensure_user("李四")
+			wangwu_id = ensure_user("王五")
+
+			# 检查是否已有好友数据
+			fc = conn.execute("SELECT COUNT(*) as cnt FROM im_friends").fetchone()
+			if fc["cnt"] == 0:
+				# admin ↔ test1 互为好友
+				conn.execute("INSERT OR IGNORE INTO im_friends(user_id,friend_id) VALUES(?,?)", (aid, t1id))
+				conn.execute("INSERT OR IGNORE INTO im_friends(user_id,friend_id) VALUES(?,?)", (t1id, aid))
+				# admin ↔ test2 互为好友
+				conn.execute("INSERT OR IGNORE INTO im_friends(user_id,friend_id) VALUES(?,?)", (aid, t2id))
+				conn.execute("INSERT OR IGNORE INTO im_friends(user_id,friend_id) VALUES(?,?)", (t2id, aid))
+				# admin ↔ 张三 互为好友
+				conn.execute("INSERT OR IGNORE INTO im_friends(user_id,friend_id) VALUES(?,?)", (aid, zhangsan_id))
+				conn.execute("INSERT OR IGNORE INTO im_friends(user_id,friend_id) VALUES(?,?)", (zhangsan_id, aid))
+				# test1 ↔ 张三1 互为好友
+				conn.execute("INSERT OR IGNORE INTO im_friends(user_id,friend_id) VALUES(?,?)", (t1id, zhangsan1_id))
+				conn.execute("INSERT OR IGNORE INTO im_friends(user_id,friend_id) VALUES(?,?)", (zhangsan1_id, t1id))
+				# test1 ↔ 张三2 互为好友
+				conn.execute("INSERT OR IGNORE INTO im_friends(user_id,friend_id) VALUES(?,?)", (t1id, zhangsan2_id))
+				conn.execute("INSERT OR IGNORE INTO im_friends(user_id,friend_id) VALUES(?,?)", (zhangsan2_id, t1id))
+				# test2 ↔ 李四 互为好友
+				conn.execute("INSERT OR IGNORE INTO im_friends(user_id,friend_id) VALUES(?,?)", (t2id, lisi_id))
+				conn.execute("INSERT OR IGNORE INTO im_friends(user_id,friend_id) VALUES(?,?)", (lisi_id, t2id))
+
+			# 预置好友申请 mock 数据
+			frc = conn.execute("SELECT COUNT(*) as cnt FROM im_friend_requests").fetchone()
+			if frc["cnt"] == 0:
+				# admin 收到 test1 的申请（待处理）
+				conn.execute("INSERT OR IGNORE INTO im_friend_requests(from_user_id,to_user_id,message,status) VALUES(?,?,?,?)",
+					(t1id, aid, "你好，我是test1，想加你为好友", "pending"))
+				# admin 收到 李四 的申请（待处理）
+				conn.execute("INSERT OR IGNORE INTO im_friend_requests(from_user_id,to_user_id,message,status) VALUES(?,?,?,?)",
+					(lisi_id, aid, "你好，我是李四", "pending"))
+				# admin 收到 王五 的申请（已同意）
+				conn.execute("INSERT OR IGNORE INTO im_friend_requests(from_user_id,to_user_id,message,status) VALUES(?,?,?,?)",
+					(wangwu_id, aid, "你好，我是王五", "accepted"))
+				# admin 发出的申请给 张三1（待处理）
+				conn.execute("INSERT OR IGNORE INTO im_friend_requests(from_user_id,to_user_id,message,status) VALUES(?,?,?,?)",
+					(aid, zhangsan1_id, "你好，我想加你为好友", "pending"))
+				# admin 发出的申请给 张三2（已拒绝）
+				conn.execute("INSERT OR IGNORE INTO im_friend_requests(from_user_id,to_user_id,message,status) VALUES(?,?,?,?)",
+					(aid, zhangsan2_id, "你好，认识一下", "rejected"))
+				# test1 收到 张三 的申请（已同意）
+				conn.execute("INSERT OR IGNORE INTO im_friend_requests(from_user_id,to_user_id,message,status) VALUES(?,?,?,?)",
+					(zhangsan_id, t1id, "你好，我是张三", "accepted"))
 
 		# 创建 crawl_logs 表
 		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='crawl_logs'")
@@ -871,6 +956,132 @@ def upgrade_db():
 					content TEXT NOT NULL,
 					tool_calls TEXT,
 					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# ==================== 智能聊天子系统数据表 ====================
+
+		# 创建 im_conversations 表（会话表）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_conversations'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_conversations(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					type TEXT NOT NULL DEFAULT 'private',
+					name TEXT,
+					creator_id INTEGER,
+					avatar TEXT,
+					last_message TEXT,
+					last_message_at TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# 创建 im_conversation_members 表（会话成员表）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_conversation_members'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_conversation_members(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					conversation_id INTEGER NOT NULL,
+					user_id INTEGER NOT NULL,
+					role TEXT NOT NULL DEFAULT 'member',
+					join_at TEXT NOT NULL DEFAULT(datetime('now')),
+					UNIQUE(conversation_id, user_id)
+				)
+				"""
+			)
+
+		# 创建 im_messages 表（消息表）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_messages'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_messages(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					conversation_id INTEGER NOT NULL,
+					sender_id INTEGER NOT NULL,
+					type TEXT NOT NULL DEFAULT 'text',
+					content TEXT NOT NULL,
+					status TEXT NOT NULL DEFAULT 'sent',
+					is_read INTEGER NOT NULL DEFAULT 0,
+					client_msg_id TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+		else:
+			# 检查是否有 client_msg_id 字段
+			cursor2 = conn.execute("PRAGMA table_info(im_messages)")
+			cols = [r[1] for r in cursor2.fetchall()]
+			if 'client_msg_id' not in cols:
+				conn.execute("ALTER TABLE im_messages ADD COLUMN client_msg_id TEXT")
+
+		# 创建 im_unread_counts 表（未读消息计数表）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_unread_counts'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_unread_counts(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					conversation_id INTEGER NOT NULL,
+					user_id INTEGER NOT NULL,
+					count INTEGER NOT NULL DEFAULT 0,
+					UNIQUE(conversation_id, user_id)
+				)
+				"""
+			)
+
+		# 创建 im_friends 表（好友关系表）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_friends'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_friends(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					user_id INTEGER NOT NULL,
+					friend_id INTEGER NOT NULL,
+					remark TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now')),
+					UNIQUE(user_id, friend_id)
+				)
+				"""
+			)
+
+		# 创建 im_friend_requests 表（好友申请表）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_friend_requests'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_friend_requests(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					from_user_id INTEGER NOT NULL,
+					to_user_id INTEGER NOT NULL,
+					message TEXT,
+					status TEXT NOT NULL DEFAULT 'pending',
+					create_at TEXT NOT NULL DEFAULT(datetime('now')),
+					update_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# 创建 im_group_invites 表（群邀请表）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_group_invites'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_group_invites(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					group_id INTEGER NOT NULL,
+					inviter_id INTEGER NOT NULL,
+					invitee_id INTEGER NOT NULL,
+					status TEXT NOT NULL DEFAULT 'pending',
+					create_at TEXT NOT NULL DEFAULT(datetime('now')),
+					update_at TEXT NOT NULL DEFAULT(datetime('now'))
 				)
 				"""
 			)

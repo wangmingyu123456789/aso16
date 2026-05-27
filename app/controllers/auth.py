@@ -29,7 +29,7 @@ class LoginHandler(BaseHandler):
 			self.redirect("/auth/login?error="+urllib.parse.quote("用户名或密码填写错误"))
 			return
 		self.set_secure_cookie("username",username)
-		self.redirect("/chat")
+		self.redirect("/home")
 
 class RegisterHandler(BaseHandler):
 	def get(self):
