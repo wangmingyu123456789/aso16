@@ -1,5 +1,35 @@
-﻿{% extends "layout.html" %}
+{% extends "layout.html" %}
 {% block body %}
+<style>
+.layui-card{background:var(--bg-card)!important;border:1px solid var(--border-color)!important;}
+.layui-card-header{background:var(--bg-card)!important;border-bottom:1px solid var(--border-color)!important;color:var(--text-heading)!important;}
+.layui-card-body{background:var(--bg-card)!important;}
+.layui-table-view{background:var(--bg-card)!important;border-color:var(--border-color)!important;}
+.layui-table{background:var(--bg-card)!important;color:var(--text-primary)!important;}
+.layui-table thead{background:var(--bg-table-header)!important;}
+.layui-table thead th{background:var(--bg-table-header)!important;color:var(--text-secondary)!important;border-color:var(--border-color)!important;}
+.layui-table tbody td{background:var(--bg-card)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-table tbody tr:hover{background:var(--bg-table-row-hover)!important;}
+.layui-table-page{background:var(--bg-card)!important;border-color:var(--border-color)!important;color:var(--text-secondary)!important;}
+.layui-table-page a{color:var(--text-primary)!important;}
+.layui-table-page .layui-laypage .layui-laypage-curr .layui-laypage-em{background:#16b777!important;}
+.layui-table-page .layui-laypage a,.layui-table-page .layui-laypage span{background:var(--bg-card)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-table-page .layui-laypage input{background:#fff!important;color:#333!important;border-color:#e6e6e6!important;}
+.layui-table-page .layui-laypage button{background:#16b777!important;color:#fff!important;border-color:transparent!important;}
+.layui-table-view .layui-table td[data-field]{color:var(--text-primary)!important;}
+.layui-table-view .layui-table th[data-field]{color:var(--text-secondary)!important;}
+.layui-table-box{border-color:var(--border-color)!important;background:var(--bg-card)!important;}
+.layui-table-header{background:var(--bg-table-header)!important;border-color:var(--border-color)!important;}
+.layui-table-tool{background:var(--bg-card)!important;border-color:var(--border-color)!important;}
+.layui-input{background:var(--bg-input)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-input::placeholder{color:var(--text-placeholder)!important;}
+.layui-table-main{overflow-x:auto!important;}
+.layui-table-body{overflow-x:auto!important;}
+.layui-table-page .layui-laypage-limits select{background:var(--bg-input)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-table-page .layui-laypage-limits select option{background:var(--bg-card)!important;color:var(--text-primary)!important;}
+.layui-laypage-limits select{background:var(--bg-input)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-laypage-limits select option{background:var(--bg-card)!important;color:var(--text-primary)!important;}
+</style>
 <div class="page-header">
     <h3>接口管理</h3>
     <p>管理从互联网搜集的第三方 API，支持增删改查、在线测试，并为系统其他模块提供统一调用服务</p>
@@ -92,10 +122,17 @@ layui.use(['table','form','layer'], function(){
             {field:'total_calls', title:'调用次数', width:90, align:'center'},
             {field:'status', title:'状态', width:80, align:'center', templet:statusTpl},
             {field:'create_at', title:'创建时间', width:170, align:'center'},
-            {title:'操作', width:220, align:'center', templet:actionTpl, fixed:'right'}
+            {title:'操作', width:220, align:'center', templet:actionTpl}
         ]],
         skin: 'line',
-        where: { keyword: '' }
+        where: { keyword: '' },
+        done: function(){
+            setTimeout(function(){
+                document.documentElement.style.colorScheme = (localStorage.getItem('admin_theme') || 'dark');
+                var $ = layui.$;
+                $('.layui-laypage-limits select').css({'background':'#1a2332','color':'#fff','border-color':'rgba(255,255,255,0.1)'});
+            }, 100);
+        }
     });
 
     $('#btnSearch').on('click', function(){
@@ -210,12 +247,12 @@ layui.use(['table','form','layer'], function(){
             }catch(e){}
         }
         var html = '<div style="padding:20px;">' +
-            '<p style="margin-bottom:8px;color:#666;">接口：<b>' + escapeHtml(data.name) + '</b>（' + escapeHtml(data.code) + '）</p>' +
-            '<p style="margin-bottom:12px;font-size:12px;color:#999;word-break:break-all;">' + escapeHtml(data.request_example || data.api_url) + '</p>' +
+            '<p style="margin-bottom:8px;color:var(--text-secondary);">接口：<b>' + escapeHtml(data.name) + '</b>（' + escapeHtml(data.code) + '）</p>' +
+            '<p style="margin-bottom:12px;font-size:12px;color:var(--text-muted);word-break:break-all;">' + escapeHtml(data.request_example || data.api_url) + '</p>' +
             '<div class="layui-form-item"><label class="layui-form-label" style="width:80px;">参数 JSON</label>' +
             '<div class="layui-input-block" style="margin-left:100px;"><textarea id="testParams" class="layui-textarea" rows="4">' + escapeHtml(defaultParams) + '</textarea></div></div>' +
             '<button class="layui-btn layui-btn-sm" id="btnDoTest"><i class="layui-icon layui-icon-play"></i> 发送请求</button>' +
-            '<pre id="testResult" style="margin-top:16px;padding:12px;background:#f6f8fa;border-radius:6px;max-height:320px;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-all;">等待测试...</pre>' +
+            '<pre id="testResult" style="margin-top:16px;padding:12px;background:var(--bg-pre);border-radius:6px;max-height:320px;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-all;">等待测试...</pre>' +
             '</div>';
 
         layer.open({

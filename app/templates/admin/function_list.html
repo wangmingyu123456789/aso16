@@ -1,5 +1,33 @@
 {% extends "layout.html" %}
 {% block body %}
+<style>
+.layui-card{background:var(--bg-card)!important;border:1px solid var(--border-color)!important;}
+.layui-card-header{background:var(--bg-card)!important;border-bottom:1px solid var(--border-color)!important;color:var(--text-heading)!important;}
+.layui-card-body{background:var(--bg-card)!important;}
+.layui-table-view{background:var(--bg-card)!important;border-color:var(--border-color)!important;}
+.layui-table{background:var(--bg-card)!important;color:var(--text-primary)!important;}
+.layui-table thead{background:var(--bg-table-header)!important;}
+.layui-table thead th{background:var(--bg-table-header)!important;color:var(--text-secondary)!important;border-color:var(--border-color)!important;}
+.layui-table tbody td{background:var(--bg-card)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-table tbody tr:hover{background:var(--bg-table-row-hover)!important;}
+.layui-table-page{background:var(--bg-card)!important;border-color:var(--border-color)!important;color:var(--text-secondary)!important;}
+.layui-table-page a{color:var(--text-primary)!important;}
+.layui-table-page .layui-laypage .layui-laypage-curr .layui-laypage-em{background:var(--btn-primary-bg)!important;}
+.layui-table-page .layui-laypage a,.layui-table-page .layui-laypage span{background:var(--bg-card)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-table-page .layui-laypage input{background:var(--bg-input)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-table-page .layui-laypage button{background:var(--btn-primary-bg)!important;color:var(--btn-primary-text)!important;border-color:transparent!important;}
+.layui-table-view .layui-table td[data-field]{color:var(--text-primary)!important;}
+.layui-table-view .layui-table th[data-field]{color:var(--text-secondary)!important;}
+.layui-table-box{border-color:var(--border-color)!important;background:var(--bg-card)!important;}
+.layui-table-header{background:var(--bg-table-header)!important;border-color:var(--border-color)!important;}
+.layui-table-tool{background:var(--bg-card)!important;border-color:var(--border-color)!important;}
+.layui-input{background:var(--bg-input)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-input::placeholder{color:var(--text-placeholder)!important;}
+.layui-table-fixed-r{background:var(--bg-card)!important;}
+.layui-table-fixed-r .layui-table td{background:var(--bg-card)!important;color:var(--text-primary)!important;}
+.layui-table-main{overflow-x:auto!important;}
+.layui-table-body{overflow-x:auto!important;}
+</style>
 <div class="page-header">
     <h3>功能管理</h3>
     <p>管理系统菜单和功能模块，支持二级功能结构</p>
@@ -37,9 +65,9 @@ l.type = 'text/html'; l.id = 'levelTpl'; l.text = levelHtml;
 document.head.appendChild(l);
 
 var iconHtml = LB+'# if(d.icon){ '+RB+
-    '<i class="layui-icon '+LB+' d.icon '+RB+'" style="font-size:16px;color:#1e9fff;"></i> '+LB+' d.icon '+RB+
+    '<i class="layui-icon '+LB+' d.icon '+RB+'" style="font-size:16px;color:var(--status-info);"></i> '+LB+' d.icon '+RB+
     LB+'# } else { '+RB+
-    '<span style="color:#999;">无</span>'+
+    '<span style="color:var(--text-muted);">无</span>'+
     LB+'# } '+RB;
 var ic = document.createElement('script');
 ic.type = 'text/html'; ic.id = 'iconTpl'; ic.text = iconHtml;
@@ -72,7 +100,7 @@ layui.use(['table', 'layer', 'form'], function(){
             {field: 'sort_order', title: '排序', width: 80, sort: true},
             {field: 'status', title: '状态', width: 80, templet: '#statusTpl'},
             {field: 'create_at', title: '创建时间', width: 180},
-            {title: '操作', width: 180, toolbar: '#toolbar', fixed: 'right'}
+            {title: '操作', width: 180, toolbar: '#toolbar'}
         ]],
         skin: 'line'
     });

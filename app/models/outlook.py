@@ -206,9 +206,13 @@ class OutlookTaskRepository:
     @staticmethod
     def delete_task(task_id):
         """
-        删除任务及其关联的所有数据
+        删除任务及其关联的所有数据（含深度采集详情）
         """
         with get_connection() as conn:
+            conn.execute(
+                "DELETE FROM outlook_data_detail WHERE data_id IN (SELECT id FROM outlook_data WHERE task_id=?)",
+                (task_id,)
+            )
             conn.execute("DELETE FROM outlook_data WHERE task_id=?", (task_id,))
             conn.execute("DELETE FROM outlook_tasks WHERE id=?", (task_id,))
 
@@ -280,6 +284,7 @@ class OutlookDataRepository:
     def delete_data(data_id):
         try:
             with get_connection() as conn:
+                conn.execute("DELETE FROM outlook_data_detail WHERE data_id=?", (data_id,))
                 conn.execute("DELETE FROM outlook_data WHERE id=?", (data_id,))
                 return True
         except Exception:
@@ -289,8 +294,13 @@ class OutlookDataRepository:
     def delete_data_batch(data_ids):
         try:
             with get_connection() as conn:
+                detail_placeholders = ','.join(['?'] * len(data_ids))
                 conn.execute(
-                    f"DELETE FROM outlook_data WHERE id IN ({','.join(['?']*len(data_ids))})",
+                    f"DELETE FROM outlook_data_detail WHERE data_id IN ({detail_placeholders})",
+                    data_ids
+                )
+                conn.execute(
+                    f"DELETE FROM outlook_data WHERE id IN ({detail_placeholders})",
                     data_ids
                 )
                 return True
@@ -1174,7 +1184,26 @@ class CrawlLogRepository:
 				"SELECT * FROM crawl_logs ORDER BY id DESC LIMIT ? OFFSET ?",
 				(page_size, offset)
 			).fetchall()
-		return {"total": total, "data": [dict(r) for r in rows]}
+		results = []
+		for r in rows:
+			d = dict(r)
+			d['_seq'] = total - offset - results.__len__()
+			results.append(d)
+		return {"total": total, "data": results}
+
+	@staticmethod
+	def clear_all_logs():
+		with get_connection() as conn:
+			conn.execute("DELETE FROM crawl_logs")
+
+	@staticmethod
+	def get_stats():
+		with get_connection() as conn:
+			total = conn.execute("SELECT COUNT(*) as cnt FROM crawl_logs").fetchone()["cnt"]
+			success = conn.execute("SELECT COUNT(*) as cnt FROM crawl_logs WHERE status='completed'").fetchone()["cnt"]
+			running = conn.execute("SELECT COUNT(*) as cnt FROM crawl_logs WHERE status='running'").fetchone()["cnt"]
+			error = conn.execute("SELECT COUNT(*) as cnt FROM crawl_logs WHERE status='error'").fetchone()["cnt"]
+		return {"total": total, "success": success, "running": running, "error": error}
 
 
 class CrawlScheduleRepository:

@@ -130,7 +130,7 @@
         // 启动深度采集
         function startDeepCollect(dataIds){
             var layerIdx = layer.load(1, {shade:[0.3,'#000']});
-            $.post('/admin/outlook/deep/collect', {
+            $.post('/user/outlook/deep/collect', {
                 data_ids: dataIds.join(','),
                 _xsrf: getCsrfToken()
             }, function(res){
@@ -194,7 +194,7 @@
         function pollProgress(taskId){
             if(deepPollTimer) clearInterval(deepPollTimer);
             deepPollTimer = setInterval(function(){
-                $.get('/admin/outlook/deep/collect/status', {task_id: taskId}, function(res){
+                $.get('/user/outlook/deep/collect/status', {task_id: taskId}, function(res){
                     if(res.code !== 0 || !res.data) return;
                     var data = res.data;
                     var pct = Math.round((data.current / data.total) * 100);
@@ -232,7 +232,7 @@
 
         // 查看深度采集详情
         function viewDeepDetail(dataId){
-            $.get('/admin/outlook/deep/detail', {data_id: dataId}, function(res){
+            $.get('/user/outlook/deep/detail', {data_id: dataId}, function(res){
                 if(res.code !== 0){
                     layer.msg(res.msg, {icon:2});
                     return;
@@ -345,7 +345,7 @@
         var tableIns;
         tableIns = table.render({
             elem: '#dataTable',
-            url: '/admin/outlook/task/data/api',
+            url: '/user/outlook/task/data/api',
             where: {task_id: taskId},
             page: {
                 curr: 1,
@@ -420,7 +420,7 @@
         table.on('tool(dataTable)', function(obj){
             if(obj.event === 'del'){
                 layer.confirm('确定要删除该数据吗？', function(index){
-                    $.post('/admin/outlook/data/delete', {ids: obj.data.id, _xsrf: getCsrfToken()}, function(res){
+                    $.post('/user/outlook/data/delete', {ids: obj.data.id, _xsrf: getCsrfToken()}, function(res){
                         if(res.code === 0){ layer.msg('删除成功', {icon:1}); obj.del(); }
                         else { layer.msg(res.msg, {icon:2}); }
                     });

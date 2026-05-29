@@ -1,6 +1,5 @@
 {% extends "layout.html" %}
-{% block body %}
-<script>document.documentElement.setAttribute('data-theme','dark');document.documentElement.style.colorScheme='dark';document.querySelector('meta[name="color-scheme"]')&&document.querySelector('meta[name="color-scheme"]').setAttribute('content','dark');</script>
+{% block extra_style %}
 <style>
 @keyframes gradientMove{0%{background-position:0% 50%}25%{background-position:50% 100%}50%{background-position:100% 50%}75%{background-position:50% 0%}100%{background-position:0% 50%}}
 @keyframes float{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-30px) rotate(180deg)}}
@@ -23,7 +22,6 @@
 .sch-header .sch-actions{display:flex;gap:10px;}
 .sch-header .sch-actions button{padding:8px 20px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.8);font-size:13px;cursor:pointer;transition:all .3s;backdrop-filter:blur(10px);}
 .sch-header .sch-actions button:hover{border-color:rgba(0,212,255,0.4);background:rgba(0,212,255,0.1);color:#fff;box-shadow:0 0 15px rgba(0,212,255,0.2);}
-.sch-header .sch-actions button i{margin-right:4px;}
 .sch-header .sch-actions .btn-primary{background:linear-gradient(135deg,rgba(0,212,255,0.2),rgba(123,47,247,0.2));border-color:rgba(0,212,255,0.3);color:#fff;}
 .sch-header .sch-actions .btn-primary:hover{background:linear-gradient(135deg,rgba(0,212,255,0.4),rgba(123,47,247,0.4));box-shadow:0 0 25px rgba(0,212,255,0.3);}
 .sch-header .sch-actions .btn-danger{color:rgba(255,100,100,0.8);border-color:rgba(255,100,100,0.2);}
@@ -87,6 +85,9 @@
 .cron-input-item input{text-align:center;}
 .cron-input-item .cron-unit{color:#8899b5;font-size:12px;margin-left:4px;white-space:nowrap;}
 </style>
+{% end %}
+
+{% block body %}
 <div class="sch-wrap">
 <div class="sch-inner">
 <div class="sch-header">
@@ -119,6 +120,7 @@
 </form>
 </div>
 {% end %}
+
 {% block extra_script %}
 <script>
 layui.use(['form','layer','laypage'], function(){
@@ -155,7 +157,7 @@ layui.use(['form','layer','laypage'], function(){
 	}
 
 	function loadSources(cb){
-		$.get('/admin/outlook/schedule/api?action=sources',function(res){
+		$.get('/user/outlook/schedule/api?action=sources',function(res){
 			if(res.code===0&&res.data){
 				sourcesData=res.data;
 				var sel=$('select[name=source_id]');
@@ -186,7 +188,7 @@ layui.use(['form','layer','laypage'], function(){
 
 	function loadList(page){
 		currentPage=page||1;
-		$.get('/admin/outlook/schedule/api',{page:currentPage,page_size:pageSize},function(res){
+		$.get('/user/outlook/schedule/api',{page:currentPage,page_size:pageSize},function(res){
 			if(res.code===0){
 				var html='';
 				if(!res.data||res.data.length===0){
@@ -235,7 +237,7 @@ layui.use(['form','layer','laypage'], function(){
 	});
 
 	window.editSch=function(id){
-		$.get('/admin/outlook/schedule/api?action=detail&id='+id,function(res){
+		$.get('/user/outlook/schedule/api?action=detail&id='+id,function(res){
 			if(res.code===0&&res.data){
 				layerIdx=layer.open({type:1,title:'编辑定时任务',area:'580px',content:$('#formLayer')});
 				var d=res.data;
@@ -253,7 +255,7 @@ layui.use(['form','layer','laypage'], function(){
 
 	window.delSch=function(id){
 		layer.confirm('确定删除该定时任务？',function(idx){
-			$.ajax({url:'/admin/outlook/schedule/api?id='+id+'&_xsrf='+getCsrfToken(),type:'DELETE',success:function(r){
+			$.ajax({url:'/user/outlook/schedule/api?id='+id+'&_xsrf='+getCsrfToken(),type:'DELETE',success:function(r){
 				if(r.code===0){layer.msg('已删除');loadList(currentPage);}else{layer.msg(r.msg);}
 			}});layer.close(idx);
 		});
@@ -276,7 +278,7 @@ layui.use(['form','layer','laypage'], function(){
 		$('#schGrid .card-check:checked').each(function(){ ids.push($(this).val()); });
 		if(ids.length===0){ layer.msg('请至少选择一项'); return; }
 		layer.confirm('确定删除选中的 '+ids.length+' 个任务？',function(idx){
-			$.ajax({url:'/admin/outlook/schedule/api?ids='+ids.join(',')+'&_xsrf='+getCsrfToken(),type:'DELETE',success:function(r){
+			$.ajax({url:'/user/outlook/schedule/api?ids='+ids.join(',')+'&_xsrf='+getCsrfToken(),type:'DELETE',success:function(r){
 				if(r.code===0){layer.msg('批量删除成功');loadList(currentPage);}else{layer.msg(r.msg);}
 			}});layer.close(idx);
 		});
@@ -306,7 +308,7 @@ layui.use(['form','layer','laypage'], function(){
 		data.cron_expression=sch_minute+' '+sch_hour+' '+sch_day+' '+sch_month+' *';
 		data._xsrf=getCsrfToken();
 		var act=data.id?'edit':'add';
-		$.post('/admin/outlook/schedule/api?action='+act,data,function(r){
+		$.post('/user/outlook/schedule/api?action='+act,data,function(r){
 			if(r.code===0){ layer.msg(r.msg); layer.close(layerIdx); loadList(currentPage); }else{ layer.msg(r.msg); }
 		}).fail(function(xhr,status,err){
 			layer.msg('请求失败: '+status+(xhr.status?' ('+xhr.status+')':''));

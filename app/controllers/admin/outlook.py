@@ -3,7 +3,7 @@ import time
 import threading
 import tornado.web
 from app.controllers.admin.base import AdminBaseHandler
-from app.models.outlook import OutlookSourceRepository, OutlookDataRepository, OutlookTaskRepository, OutlookCollector, OutlookDeepCollectRepository
+from app.models.outlook import OutlookSourceRepository, OutlookDataRepository, OutlookTaskRepository, OutlookCollector, OutlookDeepCollectRepository, CrawlLogRepository
 from app.models.db import get_connection
 
 # 采集状态存储（内存中）
@@ -174,6 +174,7 @@ class AdminOutlookCollectHandler(AdminBaseHandler):
         url_offset = 0
         for source in selected_sources:
             step = page_size_step if page_size_step > 0 else source.get('page_size_step', 10)
+            log_id = CrawlLogRepository.create_log(task_id, source['id'], source['name'], keyword)
             print(f"[Collect] source={source['name']}, keyword={keyword}, pages={pages}, step={step}")
 
             # 更新当前源
@@ -200,16 +201,21 @@ class AdminOutlookCollectHandler(AdminBaseHandler):
                     set_collect_status(tid, current)
                 return callback
 
-            count = OutlookCollector.collect_with_status(
-                source, keyword, pages, step,
-                use_ai_expand=ai_expand,
-                use_ai_clean=ai_clean,
-                task_id=task_id,
-                status_callback=make_callback(task_id, url_offset)
-            )
-            total_results += count
+            try:
+                count = OutlookCollector.collect_with_status(
+                    source, keyword, pages, step,
+                    use_ai_expand=ai_expand,
+                    use_ai_clean=ai_clean,
+                    task_id=task_id,
+                    status_callback=make_callback(task_id, url_offset)
+                )
+                total_results += count
+                CrawlLogRepository.complete_log(log_id, total_count=count, saved_count=count)
+                print(f"[Collect] source={source['name']}, saved={count}")
+            except Exception as e:
+                CrawlLogRepository.fail_log(log_id, str(e)[:500])
+                print(f"[Collect] source={source['name']}, FAILED: {e}")
             url_offset += pages
-            print(f"[Collect] source={source['name']}, saved={count}")
 
         # 更新最终状态
         final_status = get_collect_status(task_id)
@@ -258,6 +264,7 @@ class AdminOutlookTaskDeleteHandler(AdminBaseHandler):
         except Exception:
             return self.write({"code": 1, "msg": "任务ID格式错误"})
         OutlookTaskRepository.delete_task(task_id)
+        clear_collect_status(task_id)
         return self.write({"code": 0, "msg": "删除成功"})
 
 class AdminOutlookTaskDataHandler(AdminBaseHandler):
@@ -341,7 +348,7 @@ class AdminOutlookDataDeleteHandler(AdminBaseHandler):
         except Exception:
             return self.write({"code": 1, "msg": "数据ID格式错误"})
 
-        if OutlookDataRepository.delete_data(ids):
+        if OutlookDataRepository.delete_data_batch(ids):
             return self.write({"code": 0, "msg": "删除成功"})
         return self.write({"code": 1, "msg": "删除失败"})
 

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{static_url('dist/layui-v2.13.6/layui-v2.13.6/layui/css/layui.css')}}">
+    <script src="{{static_url('dist/layui-v2.13.6/layui-v2.13.6/layui/layui.js')}}"></script>
+    <style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif;background:#0a0e1a;color:#e0e0e0;height:100vh;overflow:hidden}
+.app{display:flex;height:100vh}
+.sidebar{width:260px;background:#0d1321;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,0.06);flex-shrink:0}
+.sidebar-header{padding:20px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.sidebar-header .logo{font-size:18px;font-weight:700;color:#fff}
+.nav-list{flex:1;padding:16px 12px;overflow-y:auto}
+.nav-section-title{font-size:11px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;padding:8px 12px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;margin-bottom:4px;transition:all .2s;font-size:14px;color:rgba(255,255,255,0.6);text-decoration:none}
+.nav-item:hover{background:rgba(255,255,255,0.04);color:#fff}
+.nav-item.active{background:rgba(123,47,247,0.15);color:#a78bfa}
+.nav-item .nav-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.nav-item .nav-icon.home{background:rgba(0,212,255,0.15);color:#00d4ff}
+.nav-item .nav-icon.qa{background:rgba(0,212,255,0.15);color:#00d4ff}
+.nav-item .nav-icon.im{background:rgba(123,47,247,0.15);color:#a78bfa}
+.nav-item .nav-icon.collect{background:rgba(0,212,255,0.15);color:#00d4ff}
+.nav-item .nav-icon.warehouse{background:rgba(0,201,167,0.15);color:#00c9a7}
+.nav-item .nav-icon.schedule{background:rgba(255,152,0,0.15);color:#ff9800}
+.nav-item .nav-icon.log{background:rgba(255,107,107,0.15);color:#ff6b6b}
+.nav-item .nav-label{flex:1}
+.sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-start}
+.settings-box{width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s;font-size:16px;color:rgba(255,255,255,0.35);flex-shrink:0}
+.settings-box:hover{background:rgba(123,47,247,0.12);border-color:rgba(123,47,247,0.3);color:#a78bfa}
+.nav-settings-row{display:flex;align-items:center;gap:10px;padding:6px 12px 10px}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:999}
+.modal-overlay.show{display:flex}
+.modal-box{background:#1a1f35;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:32px 28px 24px;width:440px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.5);animation:modalIn .3s ease}
+@keyframes modalIn{from{opacity:0;transform:translateY(30px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal-box .modal-title{font-size:17px;color:#fff;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.modal-box .modal-title .icon{font-size:20px}
+.modal-box .modal-desc{font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:20px}
+.modal-box .option-group{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.modal-box .option-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.08);cursor:pointer;transition:all .2s;background:rgba(255,255,255,0.02)}
+.modal-box .option-item:hover{border-color:rgba(123,47,247,0.3);background:rgba(123,47,247,0.05)}
+.modal-box .option-item.selected{border-color:rgba(123,47,247,0.5);background:rgba(123,47,247,0.08)}
+.modal-box .option-radio{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.modal-box .option-item.selected .option-radio{border-color:#7b2ff7;background:#7b2ff7}
+.modal-box .option-item.selected .option-radio::after{content:'';width:6px;height:6px;border-radius:50%;background:#fff}
+.modal-box .option-info{flex:1}
+.modal-box .option-label{font-size:14px;color:#e0e0e0;font-weight:500}
+.modal-box .option-hint{font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px}
+.modal-box .btn-save{width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#7b2ff7,#00d4ff);color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.modal-box .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.content-header{padding:16px 24px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;min-height:57px}
+.content-header h3{font-size:15px;color:#fff;font-weight:500}
+.user-bar{display:flex;align-items:center;gap:12px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#7b2ff7,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0}
+.user-name{font-size:13px;color:rgba(255,255,255,0.7);font-weight:500}
+.user-divider{width:1px;height:16px;background:rgba(255,255,255,0.1)}
+.btn-logout{padding:6px 16px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;transition:all .2s;text-decoration:none;white-space:nowrap}
+.btn-logout:hover{background:rgba(255,77,79,0.1);border-color:rgba(255,77,79,0.3);color:#ff4d4f}
+.content-area{flex:1;overflow-y:auto}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.15)}
+</style>
+{% block extra_style %}{% end %}
+</head>
+<body>
+<div class="app">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">用户侧</div>
+        </div>
+        <div class="nav-list">
+            <div class="nav-section-title">功能模块</div>
+            <a href="/home" class="nav-item{% if current_page == 'home' %} active{% end %}" data-page="home">
+                <div class="nav-icon home">🏠</div>
+                <span class="nav-label">首页</span>
+            </a>
+            <a href="/qa" class="nav-item" id="navQA">
+                <div class="nav-icon qa">💬</div>
+                <span class="nav-label">智能问数</span>
+            </a>
+            <a href="/im" class="nav-item" id="navIM">
+                <div class="nav-icon im">👥</div>
+                <span class="nav-label">智能聊天</span>
+            </a>
+            <div class="nav-section-title" style="margin-top:16px">瞭望系统</div>
+            <a href="/user/outlook/collect" class="nav-item{% if current_page == 'outlook_collect' %} active{% end %}" data-page="outlook_collect">
+                <div class="nav-icon collect">📡</div>
+                <span class="nav-label">瞭望采集</span>
+            </a>
+            <a href="/user/outlook/data" class="nav-item{% if current_page == 'outlook_data' %} active{% end %}" data-page="outlook_data">
+                <div class="nav-icon warehouse">🗄️</div>
+                <span class="nav-label">数据仓库</span>
+            </a>
+            <a href="/user/outlook/schedule" class="nav-item{% if current_page == 'outlook_schedule' %} active{% end %}" data-page="outlook_schedule">
+                <div class="nav-icon schedule">⏰</div>
+                <span class="nav-label">定时采集</span>
+            </a>
+            <a href="/user/outlook/log" class="nav-item{% if current_page == 'outlook_log' %} active{% end %}" data-page="outlook_log">
+                <div class="nav-icon log">📋</div>
+                <span class="nav-label">采集日志</span>
+            </a>
+        </div>
+        <div class="sidebar-footer">
+            <div class="settings-box" id="settingsBtn" title="页面跳转设置">⚙</div>
+        </div>
+    </div>
+
+    <!-- 设置模态框 -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-box">
+            <div class="modal-title"><span class="icon">⚙</span>页面跳转设置</div>
+            <div class="modal-desc">选择"智能问数"和"智能聊天"的打开方式</div>
+            <div class="option-group">
+                <div class="option-item" data-mode="new_tab">
+                    <div class="option-radio"></div>
+                    <div class="option-info">
+                        <div class="option-label">新开页面</div>
+                        <div class="option-hint">在新标签页中打开</div>
+                    </div>
+                </div>
+                <div class="option-item" data-mode="inline">
+                    <div class="option-radio"></div>
+                    <div class="option-info">
+                        <div class="option-label">本页面跳转</div>
+                        <div class="option-hint">在当前页面打开，页面左上角会有返回首页按钮</div>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-save" id="btnSaveSettings">保存设置</button>
+        </div>
+    </div>
+    <div class="main">
+        <div class="content-header">
+            <h3>{{ title }}</h3>
+            <div class="user-bar">
+                <div class="user-avatar">{{ username[0] }}</div>
+                <span class="user-name">{{ username }}</span>
+                <div class="user-divider"></div>
+                <a href="javascript:logout()" class="btn-logout">退出</a>
+            </div>
+        </div>
+        <div class="content-area">
+            {% block body %}{% end %}
+        </div>
+    </div>
+</div>
+<script>
+function logout(){if(!confirm('确定要退出登录吗？'))return;var xhr=new XMLHttpRequest();xhr.open('POST','/auth/logout',true);xhr.onload=function(){window.location.href='/auth/login'};xhr.send()}
+
+(function(){
+    var navMode = localStorage.getItem('user_nav_mode') || 'new_tab';
+
+    function applyNavMode(mode){
+        var qaNav = document.getElementById('navQA');
+        var imNav = document.getElementById('navIM');
+        if (mode === 'new_tab') {
+            if (qaNav) { qaNav.setAttribute('target', '_blank'); qaNav.href = '/qa'; }
+            if (imNav) { imNav.setAttribute('target', '_blank'); imNav.href = '/im'; }
+        } else {
+            if (qaNav) { qaNav.removeAttribute('target'); qaNav.href = '/qa?from=home'; }
+            if (imNav) { imNav.removeAttribute('target'); imNav.href = '/im?from=home'; }
+        }
+    }
+
+    applyNavMode(navMode);
+    var selectedMode = navMode;
+
+    document.getElementById('settingsBtn').addEventListener('click', function(){
+        var modal = document.getElementById('settingsModal');
+        modal.classList.add('show');
+        var items = modal.querySelectorAll('.option-item');
+        items.forEach(function(item){
+            item.classList.remove('selected');
+            if (item.getAttribute('data-mode') === selectedMode) item.classList.add('selected');
+        });
+    });
+
+    document.getElementById('settingsModal').addEventListener('click', function(e){
+        if (e.target === this) this.classList.remove('show');
+    });
+
+    document.querySelectorAll('#settingsModal .option-item').forEach(function(item){
+        item.addEventListener('click', function(){
+            document.querySelectorAll('#settingsModal .option-item').forEach(function(o){ o.classList.remove('selected'); });
+            this.classList.add('selected');
+            selectedMode = this.getAttribute('data-mode');
+        });
+    });
+
+    document.getElementById('btnSaveSettings').addEventListener('click', function(){
+        localStorage.setItem('user_nav_mode', selectedMode);
+        applyNavMode(selectedMode);
+        document.getElementById('settingsModal').classList.remove('show');
+    });
+})();
+</script>
+{% block extra_script %}{% end %}
+</body>
+</html>

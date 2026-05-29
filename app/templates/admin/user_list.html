@@ -1,5 +1,35 @@
 {% extends "layout.html" %}
 {% block body %}
+<style>
+.layui-card{background:var(--bg-card)!important;border:1px solid var(--border-color)!important;}
+.layui-card-header{background:var(--bg-card)!important;border-bottom:1px solid var(--border-color)!important;color:var(--text-heading)!important;}
+.layui-card-body{background:var(--bg-card)!important;}
+.layui-table-view{background:var(--bg-card)!important;border-color:var(--border-color)!important;}
+.layui-table{background:var(--bg-card)!important;color:var(--text-primary)!important;}
+.layui-table thead{background:var(--bg-table-header)!important;}
+.layui-table thead th{background:var(--bg-table-header)!important;color:var(--text-secondary)!important;border-color:var(--border-color)!important;}
+.layui-table tbody td{background:var(--bg-card)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-table tbody tr:hover{background:var(--bg-table-row-hover)!important;}
+.layui-table-page{background:var(--bg-card)!important;border-color:var(--border-color)!important;color:var(--text-secondary)!important;}
+.layui-table-page a{color:var(--text-primary)!important;}
+.layui-table-page .layui-laypage .layui-laypage-curr .layui-laypage-em{background:#16b777!important;}
+.layui-table-page .layui-laypage a,.layui-table-page .layui-laypage span{background:var(--bg-card)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-table-page .layui-laypage input{background:#fff!important;color:#333!important;border-color:#e6e6e6!important;}
+.layui-table-page .layui-laypage button{background:#16b777!important;color:#fff!important;border-color:transparent!important;}
+.layui-table-view .layui-table td[data-field]{color:var(--text-primary)!important;}
+.layui-table-view .layui-table th[data-field]{color:var(--text-secondary)!important;}
+.layui-table-box{border-color:var(--border-color)!important;background:var(--bg-card)!important;}
+.layui-table-header{background:var(--bg-table-header)!important;border-color:var(--border-color)!important;}
+.layui-table-tool{background:var(--bg-card)!important;border-color:var(--border-color)!important;}
+.layui-input{background:var(--bg-input)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-input::placeholder{color:var(--text-placeholder)!important;}
+.layui-table-page select{background:var(--bg-input)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-table-page select option{background:var(--bg-card)!important;color:var(--text-primary)!important;}
+.layui-table-page .layui-laypage-limits select{background:var(--bg-input)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-table-page .layui-laypage-limits select option{background:var(--bg-card)!important;color:var(--text-primary)!important;}
+.layui-laypage-limits select{background:var(--bg-input)!important;color:var(--text-primary)!important;border-color:var(--border-color)!important;}
+.layui-laypage-limits select option{background:var(--bg-card)!important;color:var(--text-primary)!important;}
+</style>
 <div class="page-header">
     <h3>用户管理</h3>
     <p>管理系统所有用户，支持新增、编辑、删除、批量操作等功能</p>
@@ -67,7 +97,7 @@ var statusTpl = function(d){
 var actionTpl = function(d){
     if(d.username === 'admin'){
         return '<a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i> 修改密码</a>' +
-            '<span style="color:#999;font-size:12px;margin-left:8px;">超级管理员</span>';
+            '<span style="color:var(--text-muted);font-size:12px;margin-left:8px;">超级管理员</span>';
     }
     return '<a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i> 编辑</a>' +
         '<a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="delete"><i class="layui-icon layui-icon-delete"></i> 删除</a>';
@@ -115,9 +145,10 @@ layui.use(['table','form','layer'], function(){
             skin: 'line',
             done: function(res, page, count){
                 currentPage = page;
-                // 将分页箭头替换为文字
                 setTimeout(function(){
                     var $ = layui.$;
+                    document.documentElement.style.colorScheme = (localStorage.getItem('admin_theme') || 'dark');
+                    $('.layui-laypage-limits select').css({'background':'#1a2332','color':'#fff','border-color':'rgba(255,255,255,0.1)'});
                     $('.layui-laypage .layui-laypage-prev').each(function(){
                         if($(this).text().trim() === '' || /[\u2039\u203A‹›\u00ab\u00bb]/.test($(this).text())){
                             $(this).html('上一页');

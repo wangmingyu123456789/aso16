@@ -426,7 +426,7 @@ layui.use(['layer','form'], function(){
     var $ = layui.$;
 
     function loadSources(){
-        $.get('/admin/outlook/sources/api', function(res){
+        $.get('/user/outlook/sources/api', function(res){
             if(res.code === 0){
                 allSources = res.data;
                 renderSourcesMini();
@@ -512,7 +512,7 @@ layui.use(['layer','form'], function(){
 
     window.deleteSource = function(id){
         layer.confirm('确定要删除该采集源吗？', {skin:'dark-layer'}, function(index){
-            $.post('/admin/outlook/sources/delete', {id: id, _xsrf: getCsrfToken()}, function(res){
+            $.post('/user/outlook/sources/delete', {id: id, _xsrf: getCsrfToken()}, function(res){
                 if(res.code === 0){ layer.msg('删除成功', {icon:1}); loadSources(); }
                 else { layer.msg(res.msg, {icon:2}); }
             });
@@ -567,7 +567,7 @@ layui.use(['layer','form'], function(){
             success: function(){
                 form.render();
                 form.on('submit(submitSource)', function(data){
-                    var url = isEdit ? '/admin/outlook/sources/edit' : '/admin/outlook/sources/add';
+                    var url = isEdit ? '/user/outlook/sources/edit' : '/user/outlook/sources/add';
                     $.post(url, data.field, function(res){
                         if(res.code === 0){ layer.msg(res.msg, {icon:1}); layer.closeAll(); loadSources(); }
                         else { layer.msg(res.msg, {icon:2}); }
@@ -610,7 +610,7 @@ layui.use(['layer','form'], function(){
             var sid = selectedSources[idx];
             idx++;
             $.ajax({
-                url: '/admin/outlook/collect/do',
+                url: '/user/outlook/collect/do',
                 type: 'POST',
                 data: {
                     source_id: sid, keyword: keyword, pages: pages,

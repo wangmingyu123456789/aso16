@@ -1,6 +1,5 @@
 {% extends "layout.html" %}
-{% block body %}
-<script>document.documentElement.setAttribute('data-theme','dark');document.documentElement.style.colorScheme='dark';document.querySelector('meta[name="color-scheme"]')&&document.querySelector('meta[name="color-scheme"]').setAttribute('content','dark');</script>
+{% block extra_style %}
 <style>
 .warehouse-page{
     position:relative;min-height:calc(100vh - 160px);
@@ -222,7 +221,9 @@
 .page-btn.disabled{opacity:.3;cursor:not-allowed}
 .page-info{color:rgba(255,255,255,.4);font-size:12px}
 </style>
+{% end %}
 
+{% block body %}
 <div class="warehouse-page">
     <div class="warehouse-bg"></div>
     <div class="warehouse-grid"></div>
@@ -267,7 +268,9 @@
         </div>
     </div>
 </div>
+{% end %}
 
+{% block extra_script %}
 <script src="/static/dist/layui-v2.13.6/layui-v2.13.6/layui/layui.js"></script>
 <script>
 layui.use(['layer'], function(){
@@ -292,7 +295,7 @@ layui.use(['layer'], function(){
     }
 
     function loadStats(){
-        $.get('/admin/outlook/tasks/api', {page: 1, limit: 1000}, function(res){
+        $.get('/user/outlook/tasks/api', {page: 1, limit: 1000}, function(res){
             if(res.code === 0){
                 totalTasks = res.count;
                 var dataCount = 0;
@@ -330,7 +333,7 @@ layui.use(['layer'], function(){
     window.loadTasks = function(page){
         if(page) currentPage = page;
         var keyword = $.trim($('#searchKeyword').val());
-        $.get('/admin/outlook/tasks/api', {page: currentPage, limit: 20, keyword: keyword}, function(res){
+        $.get('/user/outlook/tasks/api', {page: currentPage, limit: 20, keyword: keyword}, function(res){
             if(res.code === 0){
                 totalTasks = res.count;
                 if(res.data.length === 0){
@@ -349,7 +352,9 @@ layui.use(['layer'], function(){
 
     function renderTaskRow(task){
         var aiTags = '';
-        if(task.ai_expand && task.ai_clean){
+        if(task.has_deep_collect){
+            aiTags = '<span class="status-ai"><i class="layui-icon layui-icon-star-fill"></i> 深度采集</span>';
+        } else if(task.ai_expand && task.ai_clean){
             aiTags = '<span class="status-ai"><i class="layui-icon layui-icon-star-fill"></i> 扩词+清洗</span>';
         } else if(task.ai_expand){
             aiTags = '<span class="status-ai"><i class="layui-icon layui-icon-star"></i> AI扩词</span>';
@@ -359,11 +364,9 @@ layui.use(['layer'], function(){
             aiTags = '<span style="color:rgba(255,255,255,.2)">无</span>';
         }
 
-        // UTC时间转北京时间 (+8小时)
         var displayTime = task.create_at || '';
         if(displayTime){
             try {
-                // 解析UTC时间，然后+8小时
                 var parts = displayTime.split(' ');
                 var dateParts = parts[0].split('-');
                 var timeParts = parts[1].split(':');
@@ -401,7 +404,7 @@ layui.use(['layer'], function(){
 
     window.deleteTask = function(taskId){
         layer.confirm('确定要删除该采集任务吗？<br><span style="color:#ff4444;">删除后该任务的所有数据（包括数据库记录）将不可恢复！</span>', {icon:0, title:'确认删除'}, function(index){
-            $.post('/admin/outlook/task/delete', {task_id: taskId, _xsrf: getCsrfToken()}, function(res){
+            $.post('/user/outlook/task/delete', {task_id: taskId, _xsrf: getCsrfToken()}, function(res){
                 if(res.code === 0){
                     layer.msg('删除成功', {icon:1});
                     loadTasks(currentPage);
@@ -448,7 +451,7 @@ layui.use(['layer'], function(){
             type: 2,
             title: false,
             area: ['95%', '90%'],
-            content: '/admin/outlook/task/data?task_id=' + taskId,
+            content: '/user/outlook/task/data?task_id=' + taskId,
             shadeClose: true
         });
     };

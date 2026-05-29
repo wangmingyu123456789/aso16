@@ -1,0 +1,376 @@
+{% extends "layout.html" %}
+{% block extra_style %}
+<style>
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+.log-page{
+    margin:-24px;padding:24px;
+    background:linear-gradient(135deg,#050810 0%,#0a0e1a 50%,#050810 100%);
+    min-height:calc(100vh - 160px);
+}
+
+.log-header{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:20px 28px;margin-bottom:20px;
+    background:linear-gradient(135deg,rgba(0,212,255,0.05) 0%,rgba(123,47,247,0.05) 100%);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:16px;
+    animation:fadeInUp 0.5s ease-out;
+}
+.log-header-left{display:flex;align-items:center;gap:14px;}
+.log-header-icon{
+    width:44px;height:44px;border-radius:12px;
+    background:linear-gradient(135deg,rgba(255,107,107,0.15),rgba(255,107,107,0.05));
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;
+}
+.log-header-title{font-size:20px;font-weight:700;color:#fff;letter-spacing:2px;}
+.log-header-sub{font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px;}
+
+.log-header-actions{display:flex;gap:12px;align-items:center;}
+.log-btn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:10px 20px;border-radius:10px;font-size:13px;font-weight:500;
+    cursor:pointer;transition:all 0.3s;border:none;
+}
+.log-btn.primary{
+    background:linear-gradient(135deg,#00d4ff,#7b2ff7);color:#fff;
+    box-shadow:0 4px 16px rgba(0,212,255,0.2);
+}
+.log-btn.primary:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,212,255,0.3);}
+.log-btn.secondary{
+    background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);
+}
+.log-btn.secondary:hover{border-color:rgba(0,212,255,0.3);color:#00d4ff;}
+.log-btn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;}
+
+.auto-refresh-toggle{
+    display:flex;align-items:center;gap:8px;
+    padding:8px 16px;border-radius:8px;
+    background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);
+    color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;transition:all 0.3s;
+}
+.auto-refresh-toggle:hover{border-color:rgba(0,212,255,0.3);color:#00d4ff;}
+.auto-refresh-toggle input{accent-color:#00d4ff;margin:0;}
+
+.log-stats{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;
+    animation:fadeInUp 0.5s ease-out 0.1s both;
+}
+.log-stat-card{
+    background:rgba(255,255,255,0.02);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:14px;padding:20px;
+    position:relative;overflow:hidden;
+    transition:all 0.3s;
+}
+.log-stat-card:hover{border-color:rgba(0,212,255,0.2);transform:translateY(-2px);}
+.log-stat-card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    border-radius:2px 2px 0 0;
+}
+.log-stat-card.total::before{background:linear-gradient(90deg,#00d4ff,#7b2ff7);}
+.log-stat-card.success::before{background:linear-gradient(90deg,#10b981,#059669);}
+.log-stat-card.running::before{background:linear-gradient(90deg,#f59e0b,#d97706);}
+.log-stat-card.error::before{background:linear-gradient(90deg,#ef4444,#dc2626);}
+.log-stat-label{font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:1px;margin-bottom:8px;}
+.log-stat-value{font-size:28px;font-weight:800;color:#fff;}
+.log-stat-card.success .log-stat-value{color:#10b981;}
+.log-stat-card.running .log-stat-value{color:#f59e0b;}
+.log-stat-card.error .log-stat-value{color:#ef4444;}
+.log-stat-icon{
+    position:absolute;right:16px;top:50%;transform:translateY(-50%);
+    width:40px;height:40px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;opacity:0.3;
+}
+
+.log-filter{
+    display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;
+    animation:fadeInUp 0.5s ease-out 0.15s both;
+}
+.log-filter-input{
+    flex:1;min-width:200px;height:42px;padding:0 16px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:10px;color:#fff;font-size:13px;
+    outline:none;transition:all 0.3s;
+}
+.log-filter-input:focus{border-color:rgba(0,212,255,0.4);box-shadow:0 0 20px rgba(0,212,255,0.1);}
+.log-filter-input::placeholder{color:rgba(255,255,255,0.25);}
+.log-filter-select{
+    height:42px;padding:0 16px;min-width:140px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:10px;color:#fff;font-size:13px;
+    outline:none;cursor:pointer;
+    appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 12px center;
+}
+.log-filter-select option{background:#1a1a2e;color:#fff;}
+
+.log-table-container{
+    background:rgba(255,255,255,0.02);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:16px;overflow:hidden;
+    animation:fadeInUp 0.5s ease-out 0.2s both;
+}
+
+.log-status-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;
+    letter-spacing:0.5px;
+}
+.log-status-badge .dot{width:6px;height:6px;border-radius:50%;}
+.log-status-badge.running{background:rgba(245,158,11,0.1);color:#f59e0b;}
+.log-status-badge.running .dot{background:#f59e0b;animation:pulse 1.2s infinite;}
+.log-status-badge.completed{background:rgba(16,185,129,0.1);color:#10b981;}
+.log-status-badge.completed .dot{background:#10b981;}
+.log-status-badge.error{background:rgba(239,68,68,0.1);color:#ef4444;}
+.log-status-badge.error .dot{background:#ef4444;}
+
+.log-err-msg{
+    max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    color:rgba(239,68,68,0.8);font-size:12px;
+}
+
+.log-detail-btn{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:5px 12px;border-radius:6px;font-size:11px;
+    background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);
+    color:#00d4ff;cursor:pointer;transition:all 0.3s;
+}
+.log-detail-btn:hover{background:rgba(0,212,255,0.2);transform:scale(1.05);}
+.log-detail-btn svg{width:12px;height:12px;stroke:currentColor;stroke-width:2;fill:none;}
+
+.layui-table-view{background:transparent !important;}
+.layui-table-view .layui-table{background:transparent !important;color:rgba(255,255,255,0.7) !important;}
+.layui-table-view .layui-table tbody tr:hover{background:rgba(0,212,255,0.03) !important;}
+.layui-table-view .layui-table td,.layui-table-view .layui-table th{
+    border-color:rgba(255,255,255,0.04) !important;
+    padding:12px 10px !important;
+}
+.layui-table-view .layui-table th{
+    background:rgba(0,212,255,0.03) !important;
+    color:rgba(255,255,255,0.5) !important;
+    font-weight:600 !important;
+    font-size:12px !important;
+    letter-spacing:0.5px !important;
+}
+.layui-table-view .layui-table td{font-size:13px !important;}
+.layui-laypage{background:transparent !important;}
+.layui-laypage a,.layui-laypage span{
+    background:rgba(255,255,255,0.03) !important;
+    border:1px solid rgba(255,255,255,0.06) !important;
+    color:rgba(255,255,255,0.5) !important;
+    border-radius:6px !important;
+}
+.layui-laypage a:hover{color:#00d4ff !important;border-color:rgba(0,212,255,0.3) !important;}
+.layui-laypage .layui-laypage-curr .layui-laypage-em{background:linear-gradient(135deg,#00d4ff,#7b2ff7) !important;border-radius:6px !important;}
+.layui-laypage .layui-laypage-curr em{color:#fff !important;}
+
+@media(max-width:1024px){.log-stats{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:640px){.log-stats{grid-template-columns:1fr;}.log-header{flex-direction:column;gap:16px;}}
+</style>
+{% end %}
+
+{% block body %}
+<div class="log-page">
+    <div class="log-header">
+        <div class="log-header-left">
+            <div class="log-header-icon">📋</div>
+            <div>
+                <div class="log-header-title">采集日志</div>
+                <div class="log-header-sub">Crawl Log Monitor - 实时追踪采集任务状态</div>
+            </div>
+        </div>
+        <div class="log-header-actions">
+            <label class="auto-refresh-toggle">
+                <input type="checkbox" id="autoRefresh" checked>
+                <span>自动刷新(10s)</span>
+            </label>
+            <button class="log-btn secondary" id="btnRefresh">
+                <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+                刷新
+            </button>
+            <button class="log-btn primary" id="btnClearLog">
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                清空日志
+            </button>
+        </div>
+    </div>
+
+    <div class="log-stats">
+        <div class="log-stat-card total">
+            <div class="log-stat-label">总任务数</div>
+            <div class="log-stat-value" id="statTotal">0</div>
+            <div class="log-stat-icon">📊</div>
+        </div>
+        <div class="log-stat-card success">
+            <div class="log-stat-label">成功完成</div>
+            <div class="log-stat-value" id="statSuccess">0</div>
+            <div class="log-stat-icon">✅</div>
+        </div>
+        <div class="log-stat-card running">
+            <div class="log-stat-label">进行中</div>
+            <div class="log-stat-value" id="statRunning">0</div>
+            <div class="log-stat-icon">⏳</div>
+        </div>
+        <div class="log-stat-card error">
+            <div class="log-stat-label">失败任务</div>
+            <div class="log-stat-value" id="statError">0</div>
+            <div class="log-stat-icon">❌</div>
+        </div>
+    </div>
+
+    <div class="log-filter">
+        <input type="text" class="log-filter-input" id="filterKeyword" placeholder="搜索关键词 / 采集源...">
+        <select class="log-filter-select" id="filterStatus">
+            <option value="">全部状态</option>
+            <option value="completed">已完成</option>
+            <option value="running">进行中</option>
+            <option value="error">失败</option>
+        </select>
+        <button class="log-btn primary" id="btnFilter" style="height:42px;">
+            <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            筛选
+        </button>
+    </div>
+
+    <div class="log-table-container">
+        <table id="logTable" lay-filter="logTable"></table>
+    </div>
+</div>
+{% end %}
+
+{% block extra_script %}
+<script>
+layui.use(['table','layer'], function(){
+    var table=layui.table, layer=layui.layer, $=layui.$;
+    var autoTimer=null;
+
+    var tIns=table.render({
+        elem:'#logTable', url:'/user/outlook/log/api', page:true, limit:20,
+        cols:[[
+            {field:'_seq', title:'ID', width:70, align:'center'},
+            {field:'source_name', title:'采集源', width:130},
+            {field:'keyword', title:'关键词', width:120},
+            {field:'start_time', title:'开始时间', width:170},
+            {field:'end_time', title:'结束时间', width:170},
+            {field:'total_count', title:'获取数', width:90, sort:true, align:'center'},
+            {field:'saved_count', title:'保存数', width:90, sort:true, align:'center'},
+            {field:'status', title:'状态', width:110, align:'center', templet:function(d){
+                var cls = d.status || 'error';
+                var txt = d.status === 'completed' ? '已完成' : d.status === 'running' ? '进行中' : '失败';
+                return '<span class="log-status-badge '+cls+'"><span class="dot"></span>'+txt+'</span>';
+            }},
+            {field:'error_msg', title:'错误信息', minWidth:180, templet:function(d){
+                return d.error_msg ? '<span class="log-err-msg" title="'+d.error_msg+'">'+d.error_msg+'</span>' : '<span style="color:rgba(255,255,255,0.2)">-</span>';
+            }},
+            {fixed:'right', title:'操作', width:100, align:'center', templet:function(d){
+                return '<button class="log-detail-btn" onclick="showLogDetail('+d.id+')"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>详情</button>';
+            }}
+        ]]
+    });
+
+    tIns.on('done', function(res, curr, count){
+        $('#statTotal').text(count);
+        var success=0, running=0, error=0;
+        if(res.data){
+            res.data.forEach(function(d){
+                if(d.status==='completed') success++;
+                else if(d.status==='running') running++;
+                else error++;
+            });
+        }
+        $('#statSuccess').text(success);
+        $('#statRunning').text(running);
+        $('#statError').text(error);
+    });
+
+    function doRefresh(){ tIns.reload({page:{curr:1}}); }
+
+    $('#btnRefresh').on('click', doRefresh);
+
+    $('#btnFilter').on('click', function(){
+        var kw = $('#filterKeyword').val();
+        var st = $('#filterStatus').val();
+        var where = {};
+        if(kw) where.keyword = kw;
+        if(st) where.status = st;
+        tIns.reload({where:where, page:{curr:1}});
+    });
+
+    $('#filterKeyword').on('keypress', function(e){
+        if(e.keyCode===13) $('#btnFilter').click();
+    });
+
+    $('#btnClearLog').on('click', function(){
+        layer.confirm('确定要清空所有采集日志吗？此操作不可恢复。', {icon:3, title:'确认清空', skin:'layui-layer-lan'}, function(idx){
+            $.post('/user/outlook/log/clear', {_xsrf: getCsrfToken()}, function(res){
+                if(res.code === 0){ layer.msg('日志已清空', {icon:1}); doRefresh(); }
+                else { layer.msg(res.msg, {icon:2}); }
+            });
+            layer.close(idx);
+        });
+    });
+
+    window.showLogDetail = function(id){
+        $.get('/user/outlook/log/api', {page:1, limit:1000}, function(res){
+            if(res.code === 0){
+                var log = null;
+                for(var i=0;i<res.data.length;i++){
+                    if(res.data[i].id === id){ log = res.data[i]; break; }
+                }
+                if(!log){ layer.msg('未找到日志详情', {icon:2}); return; }
+                var html = '<div style="padding:20px;font-size:13px;line-height:2;">' +
+                    '<div style="display:grid;grid-template-columns:100px 1fr;gap:8px;">' +
+                    '<span style="color:rgba(255,255,255,0.4)">任务ID</span><span style="color:#fff">'+(log.task_id||'-')+'</span>' +
+                    '<span style="color:rgba(255,255,255,0.4)">采集源</span><span style="color:#fff">'+(log.source_name||'-')+'</span>' +
+                    '<span style="color:rgba(255,255,255,0.4)">关键词</span><span style="color:#fff">'+(log.keyword||'-')+'</span>' +
+                    '<span style="color:rgba(255,255,255,0.4)">开始时间</span><span style="color:#fff">'+(log.start_time||'-')+'</span>' +
+                    '<span style="color:rgba(255,255,255,0.4)">结束时间</span><span style="color:#fff">'+(log.end_time||'-')+'</span>' +
+                    '<span style="color:rgba(255,255,255,0.4)">获取数量</span><span style="color:#00d4ff">'+(log.total_count||0)+'</span>' +
+                    '<span style="color:rgba(255,255,255,0.4)">保存数量</span><span style="color:#10b981">'+(log.saved_count||0)+'</span>' +
+                    '<span style="color:rgba(255,255,255,0.4)">状态</span><span>'+(log.status||'-')+'</span>' +
+                    (log.error_msg ? '<span style="color:rgba(255,255,255,0.4)">错误信息</span><span style="color:#ef4444;word-break:break-all;">'+log.error_msg+'</span>' : '') +
+                    '</div></div>';
+                layer.open({type:1, title:'日志详情 #'+id, area:['500px','auto'], content:html, skin:'layui-layer-lan'});
+            }
+        });
+    };
+
+    function getCsrfToken(){
+        var cookies = document.cookie.split(';');
+        for(var i=0;i<cookies.length;i++){
+            var c = cookies[i].trim();
+            if(c.indexOf('_xsrf=') === 0) return decodeURIComponent(c.substring(6));
+        }
+        return '';
+    }
+
+    function startAuto(){
+        clearInterval(autoTimer);
+        autoTimer=setInterval(function(){ tIns.reload(); }, 10000);
+    }
+    function stopAuto(){
+        clearInterval(autoTimer); autoTimer=null;
+    }
+    $('#autoRefresh').on('change', function(){
+        this.checked ? startAuto() : stopAuto();
+    });
+    if($('#autoRefresh').is(':checked')) startAuto();
+
+    document.addEventListener("visibilitychange", function(){
+        if(!$('#autoRefresh').is(':checked')) return;
+        if(document.hidden){ stopAuto(); }
+        else { startAuto(); }
+    });
+    window.addEventListener("beforeunload", stopAuto);
+});
+</script>
+{% end %}

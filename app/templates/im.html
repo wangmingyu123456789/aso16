@@ -12,7 +12,8 @@
         /* === 左侧面板 === */
         .sidebar{width:280px;background:#182032;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,0.08);flex-shrink:0}
         .sidebar-header{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06)}
-        .sidebar-header .logo{font-size:18px;font-weight:700;color:#fff;margin-bottom:12px}
+        .sidebar-header .logo-row{display:flex;align-items:center;margin-bottom:12px}
+        .sidebar-header .logo{font-size:18px;font-weight:700;color:#fff}
 
         /* 搜索框 */
         .search-box{position:relative}
@@ -73,6 +74,9 @@
         .chat-header{padding:16px 24px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;min-height:57px}
         .chat-header .chat-title{font-size:15px;color:#fff;font-weight:500}
         .chat-header .chat-members{font-size:12px;color:rgba(255,255,255,0.3)}
+
+        .back-home-btn{display:none;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.5);font-size:13px;cursor:pointer;text-decoration:none;transition:all .2s;margin-left:10px}
+        .back-home-btn:hover{background:rgba(123,47,247,0.1);border-color:rgba(123,47,247,0.3);color:#a78bfa}
 
         /* === 右上角用户区 === */
         .user-bar{display:flex;align-items:center;gap:12px}
@@ -346,7 +350,10 @@
     <!-- 左侧面板 -->
     <div class="sidebar">
         <div class="sidebar-header">
-            <div class="logo">智能聊天</div>
+            <div class="logo-row">
+                <div class="logo">智能聊天</div>
+                <a href="/home" class="back-home-btn" id="backHomeBtn">← 返回首页</a>
+            </div>
             <div class="search-box">
                 <span class="search-icon">&#128269;</span>
                 <input type="text" id="searchInput" placeholder="搜索好友或群聊" autocomplete="off">
@@ -1935,6 +1942,13 @@ function removeFriend(friendId, friendName) {
     });
     });
 }
+
+(function(){
+    if (window.location.search.indexOf('from=home') !== -1) {
+        var btn = document.getElementById('backHomeBtn');
+        if (btn) btn.style.display = 'flex';
+    }
+})();
 </script>
 </body>
 </html>

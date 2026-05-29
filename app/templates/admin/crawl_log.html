@@ -2,12 +2,12 @@
 {% block body %}
 <style>
 .log-wrap { margin:-24px; }
-.log-toolbar { display:flex; justify-content:space-between; align-items:center; padding:16px 24px; background:linear-gradient(135deg,#0a1628 0%,#1a2a4a 100%); border-radius:8px 8px 0 0; }
-.log-toolbar h2 { color:#e8edf5; margin:0; font-size:18px; font-weight:600; display:flex; align-items:center; gap:10px; }
-.log-toolbar h2 i { color:#4fc3f7; font-size:22px; }
+.log-toolbar { display:flex; justify-content:space-between; align-items:center; padding:16px 24px; background:var(--bg-surface); border-radius:8px 8px 0 0; }
+.log-toolbar h2 { color:var(--text-primary); margin:0; font-size:18px; font-weight:600; display:flex; align-items:center; gap:10px; }
+.log-toolbar h2 i { color:var(--status-info); font-size:22px; }
 .log-toolbar .log-actions { display:flex; gap:10px; align-items:center; }
-.log-toolbar .auto-refresh { color:#8899bb; font-size:12px; display:flex; align-items:center; gap:6px; cursor:pointer; }
-.log-toolbar .auto-refresh input { accent-color:#4fc3f7; margin:0; }
+.log-toolbar .auto-refresh { color:var(--text-secondary); font-size:12px; display:flex; align-items:center; gap:6px; cursor:pointer; }
+.log-toolbar .auto-refresh input { accent-color:var(--status-info); margin:0; }
 .log-table-wrap { padding:0 24px 24px; }
 #logTable { margin:0; }
 .log-status-badge { display:inline-block; padding:3px 12px; border-radius:12px; font-size:12px; font-weight:600; }
@@ -26,6 +26,7 @@
 <div class="log-actions">
 <label class="auto-refresh"><input type="checkbox" id="autoRefresh" checked> 自动刷新(10s)</label>
 <button class="layui-btn layui-btn-sm" id="btnRefresh"><i class="layui-icon layui-icon-refresh"></i> 刷新</button>
+<button class="layui-btn layui-btn-sm layui-btn-danger" id="btnClearLog">清空</button>
 </div>
 </div>
 <div class="log-table-wrap">
@@ -35,15 +36,14 @@
 {% end %}
 {% block extra_script %}
 <script>
-layui.use(['table'], function(){
-	var table=layui.table, $=layui.$;
+layui.use(['table','layer'], function(){
+	var table=layui.table, layer=layui.layer, $=layui.$;
 	var autoTimer=null;
 
 	var tIns=table.render({
 		elem:'#logTable', url:'/admin/outlook/log/api', page:true, limit:20, skin:'line',
 		cols:[[
-			{field:'id', title:'ID', width:70, sort:true},
-			{field:'task_id', title:'任务ID', width:80},
+			{field:'_seq', title:'ID', width:70, align:'center'},
 			{field:'source_name', title:'采集源', width:140},
 			{field:'keyword', title:'关键词', width:110},
 			{field:'start_time', title:'开始时间', width:165},
@@ -51,7 +51,8 @@ layui.use(['table'], function(){
 			{field:'total_count', title:'获取数', width:80, sort:true},
 			{field:'saved_count', title:'保存数', width:80, sort:true},
 			{field:'status', title:'状态', width:110, templet:function(d){
-				return '<span class="log-status-badge '+d.status+'">' + d.status + '</span>';
+				var txt = d.status==='completed'?'已完成':d.status==='running'?'进行中':'失败';
+				return '<span class="log-status-badge '+d.status+'">' + txt + '</span>';
 			}},
 			{field:'error_msg', title:'错误信息', minWidth:200, templet:function(d){
 				return d.error_msg ? '<span class="log-err-txt" title="'+d.error_msg+'">'+d.error_msg+'</span>' : '-';
@@ -82,6 +83,16 @@ layui.use(['table'], function(){
 		else { startAuto(); }
 	});
 	window.addEventListener("beforeunload", stopAuto);
+
+	$('#btnClearLog').on('click', function(){
+		layer.confirm('确定要清空所有采集日志吗？此操作不可恢复。', {icon:3, title:'确认清空'}, function(idx){
+			$.post('/admin/outlook/log/clear', function(res){
+				if(res.code === 0){ layer.msg('日志已清空', {icon:1}); doRefresh(); }
+				else { layer.msg(res.msg, {icon:2}); }
+			});
+			layer.close(idx);
+		});
+	});
 });
 </script>
 {% end %}

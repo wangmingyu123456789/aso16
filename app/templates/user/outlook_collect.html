@@ -23,10 +23,10 @@
     background:linear-gradient(135deg,#050a14 0%,#0a1228 15%,#101838 30%,#1a1048 45%,#251560 55%,#1a1048 65%,#101838 80%,#0a1228 90%,#050a14 100%);
     background-size:600% 600%;
     animation:gradientMove 30s ease infinite;
-    min-height:calc(100vh - 140px);
+    min-height:100%;
     padding:32px 24px 60px;
     overflow:hidden;
-    margin:-24px;
+    margin:0;
     border-radius:0;
 }
 .outlook-collect-page::before{
@@ -627,7 +627,7 @@
                 <div class="result-label">采 集 完 成</div>
                 <div class="result-number" id="resultCount">0</div>
                 <div class="result-text">条数据已成功采集到数据库</div>
-                <a href="/admin/outlook/data" class="result-action">
+                <a href="/user/outlook/data" class="result-action">
                     查看数据仓库
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </a>
@@ -757,7 +757,7 @@ layui.use(['layer'], function(){
         clearStatusPolling();
         statusCheckInterval = setInterval(function(){
             if(!currentTaskId) return;
-            $.get('/admin/outlook/status/api', {task_id: currentTaskId}, function(res){
+            $.get('/user/outlook/status/api', {task_id: currentTaskId}, function(res){
                 if(res.code === 0 && res.data) updateMonitorStatus(res.data);
             });
         }, 1000);
@@ -789,7 +789,7 @@ layui.use(['layer'], function(){
         $('#loadingWrap').addClass('active');
         $('#resultPanel').removeClass('active').hide();
 
-        $.post('/admin/outlook/collect/do', {
+        $.post('/user/outlook/collect/do', {
             keyword: keyword, sources: sources.join(','), pages: pages,
             page_size_step: step, ai_expand: aiExpand, ai_clean: aiClean,
             _xsrf: getCsrfToken()
@@ -885,7 +885,7 @@ layui.use(['layer'], function(){
         if(taskId) currentTaskId = taskId;
         var params = {page: dataPage, limit: DATA_PAGE_SIZE};
         if(currentTaskId) params.task_id = currentTaskId;
-        $.get('/admin/outlook/latest/data/api', params, function(res){
+        $.get('/user/outlook/latest/data/api', params, function(res){
             if(res.code === 0){
                 dataTotal = res.count;
                 currentTaskKeyword = res.task_keyword || "";
@@ -978,7 +978,7 @@ layui.use(['layer'], function(){
     var allSources = [];
 
     function loadSources(){
-        $.get('/admin/outlook/sources/api', function(res){
+        $.get('/user/outlook/sources/api', function(res){
             if(res.code === 0){
                 allSources = res.data;
                 renderSourceList();
@@ -1040,7 +1040,7 @@ layui.use(['layer'], function(){
 
     window.deleteSource = function(id){
         layer.confirm('确定要删除该采集源吗？', {skin:'layui-layer-lan'}, function(index){
-            $.post('/admin/outlook/sources/delete', {id: id, _xsrf: getCsrfToken()}, function(res){
+            $.post('/user/outlook/sources/delete', {id: id, _xsrf: getCsrfToken()}, function(res){
                 if(res.code === 0){ layer.msg('删除成功', {icon:1}); loadSources(); }
                 else { layer.msg(res.msg, {icon:2}); }
             });
@@ -1236,7 +1236,7 @@ layui.use(['layer'], function(){
                         description: $('textarea[name="description"]').val()
                     };
                     if(isEdit) formData.id = $('input[name="id"]').val();
-                    var url = isEdit ? '/admin/outlook/sources/edit' : '/admin/outlook/sources/add';
+                    var url = isEdit ? '/user/outlook/sources/edit' : '/user/outlook/sources/add';
                     $.post(url, formData, function(res){
                         if(res.code === 0){ layer.msg(res.msg, {icon:1}); layer.closeAll(); loadSources(); }
                         else { layer.msg(res.msg, {icon:2}); }

@@ -16,9 +16,11 @@ from app.controllers.admin.permission import AdminPermissionListHandler,AdminPer
 from app.controllers.admin.model import AdminModelListHandler,AdminModelApiHandler,AdminModelAddHandler,AdminModelEditHandler,AdminModelDeleteHandler,AdminModelSetDefaultHandler,AdminModelChatTestHandler,AdminModelChatStreamHandler
 from app.controllers.admin.outlook import AdminOutlookRedirectHandler,AdminOutlookSourceListHandler,AdminOutlookSourceApiHandler,AdminOutlookSourceAddHandler,AdminOutlookSourceEditHandler,AdminOutlookSourceDeleteHandler,AdminOutlookCollectHandler,AdminOutlookDataListHandler,AdminOutlookDataApiHandler,AdminOutlookDataDeleteHandler,AdminOutlookCollectPageHandler,AdminOutlookTaskApiHandler,AdminOutlookTaskDeleteHandler,AdminOutlookTaskDataHandler,AdminOutlookTaskDataApiHandler,AdminOutlookLatestDataApiHandler,AdminOutlookStatusApiHandler,AdminOutlookDeepCollectHandler,AdminOutlookDeepCollectStatusHandler,AdminOutlookDeepDetailHandler
 from app.controllers.admin.api_mgmt import AdminApiListHandler,AdminApiListApiHandler,AdminApiAddHandler,AdminApiEditHandler,AdminApiDeleteHandler,AdminApiTestHandler,AdminApiServiceHandler
-from app.controllers.admin.watch import AdminCrawlLogHandler,AdminCrawlLogApiHandler,AdminCrawlScheduleHandler,AdminCrawlScheduleApiHandler
+from app.controllers.admin.watch import AdminCrawlLogHandler,AdminCrawlLogApiHandler,AdminCrawlScheduleHandler,AdminCrawlScheduleApiHandler,AdminCrawlLogClearHandler
+from app.controllers.user.outlook import UserOutlookCollectPageHandler,UserOutlookCollectHandler,UserOutlookStatusApiHandler,UserOutlookLatestDataApiHandler,UserOutlookDataListHandler,UserOutlookDataApiHandler,UserOutlookTaskApiHandler,UserOutlookTaskDeleteHandler,UserOutlookTaskDataHandler,UserOutlookTaskDataApiHandler,UserOutlookDeepCollectHandler,UserOutlookDeepCollectStatusHandler,UserOutlookDeepDetailHandler,UserOutlookSourceApiHandler,UserOutlookSourceAddHandler,UserOutlookSourceEditHandler,UserOutlookSourceDeleteHandler,UserOutlookDataDeleteHandler,UserCrawlLogHandler,UserCrawlLogApiHandler,UserCrawlLogClearHandler,UserCrawlScheduleHandler,UserCrawlScheduleApiHandler
 from app.controllers.admin.assistant import AdminAssistantConfigHandler,AdminAssistantApiHandler,AdminAssistantChatHandler,AdminAssistantUsageHandler,AdminChatSendHandler,AdminChatHistoryHandler,AdminChatClearHandler
-from app.controllers.dashboard import DashboardPageHandler,DashboardStatsHandler,DashboardComponentsHandler,DashboardComponentAPIHandler
+from app.controllers.admin.settings import AdminSettingsHandler
+from app.controllers.dashboard import DashboardPageHandler,DashboardStatsHandler
 from app.controllers.chat import ChatPageHandler,ChatStreamHandler,ChatAssistantsHandler,ChatHistoryHandler,ChatModelsHandler
 from app.controllers.im import IMPageHandler,IMConversationsHandler,IMHistoryHandler,IMSendHandler,IMCreatePrivateHandler,IMAssistantChatHandler,IMCreateGroupHandler,IMMembersHandler,IMUsersHandler,IMAssistantsHandler,IMSearchHandler,IMMarkReadHandler,IMFriendsHandler,IMFriendRequestHandler,IMRemoveFriendHandler,IMGroupsHandler,IMGroupManageHandler,IMFileUploadHandler,IMFileDownloadHandler
 from app.controllers.im_ws import IMWebSocketHandler
@@ -181,6 +183,7 @@ def make_app():
 			# 定时采集
 			(r"/admin/outlook/log",AdminCrawlLogHandler),
 			(r"/admin/outlook/log/api",AdminCrawlLogApiHandler),
+			(r"/admin/outlook/log/clear",AdminCrawlLogClearHandler),
 			(r"/admin/outlook/schedule",AdminCrawlScheduleHandler),
 			(r"/admin/outlook/schedule/api",AdminCrawlScheduleApiHandler),
 
@@ -193,11 +196,37 @@ def make_app():
 			(r"/api/admin/chat/history",AdminChatHistoryHandler),
 			(r"/api/admin/chat/clear",AdminChatClearHandler),
 
+			# 系统设置
+			(r"/admin/settings",AdminSettingsHandler),
+
 			# 数智大屏
 			(r"/dashboard",DashboardPageHandler),
-			(r"/admin/dashboard/components",DashboardComponentsHandler),
 			(r"/api/dashboard/stats",DashboardStatsHandler),
-			(r"/api/dashboard/components",DashboardComponentAPIHandler),
+
+			# 用户侧-瞭望系统
+			(r"/user/outlook/collect",UserOutlookCollectPageHandler),
+			(r"/user/outlook/collect/do",UserOutlookCollectHandler),
+			(r"/user/outlook/status/api",UserOutlookStatusApiHandler),
+			(r"/user/outlook/latest/data/api",UserOutlookLatestDataApiHandler),
+			(r"/user/outlook/data",UserOutlookDataListHandler),
+			(r"/user/outlook/data/api",UserOutlookDataApiHandler),
+			(r"/user/outlook/data/delete",UserOutlookDataDeleteHandler),
+			(r"/user/outlook/tasks/api",UserOutlookTaskApiHandler),
+			(r"/user/outlook/task/data",UserOutlookTaskDataHandler),
+			(r"/user/outlook/task/data/api",UserOutlookTaskDataApiHandler),
+			(r"/user/outlook/task/delete",UserOutlookTaskDeleteHandler),
+			(r"/user/outlook/deep/collect",UserOutlookDeepCollectHandler),
+			(r"/user/outlook/deep/collect/status",UserOutlookDeepCollectStatusHandler),
+			(r"/user/outlook/deep/detail",UserOutlookDeepDetailHandler),
+			(r"/user/outlook/sources/api",UserOutlookSourceApiHandler),
+			(r"/user/outlook/sources/add",UserOutlookSourceAddHandler),
+			(r"/user/outlook/sources/edit",UserOutlookSourceEditHandler),
+			(r"/user/outlook/sources/delete",UserOutlookSourceDeleteHandler),
+			(r"/user/outlook/log",UserCrawlLogHandler),
+			(r"/user/outlook/log/api",UserCrawlLogApiHandler),
+			(r"/user/outlook/log/clear",UserCrawlLogClearHandler),
+			(r"/user/outlook/schedule",UserCrawlScheduleHandler),
+			(r"/user/outlook/schedule/api",UserCrawlScheduleApiHandler),
 
 			(r"/@vite/client",ViteClientHandler),
 			(r"/@vite/env",ViteEnvHandler),

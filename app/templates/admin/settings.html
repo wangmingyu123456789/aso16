@@ -1,0 +1,249 @@
+{% extends "layout.html" %}
+
+{% block body %}
+<div class="page-header">
+    <h3>系统设置</h3>
+    <p>管理系统主题、基础配置等</p>
+</div>
+
+<div class="settings-container">
+    <div class="settings-section">
+        <div class="settings-section-title">
+            <i class="layui-icon layui-icon-theme"></i>
+            主题设置
+        </div>
+        <div class="settings-section-desc">选择系统界面主题，实时预览效果</div>
+        
+        <div class="theme-options">
+            <div class="theme-option active" data-theme-value="dark" onclick="switchTheme('dark')">
+                <div class="theme-option-preview theme-option-preview-dark"></div>
+                <div class="theme-option-title">深色模式</div>
+                <div class="theme-option-desc">沉浸式深色背景，适合夜间使用</div>
+            </div>
+            <div class="theme-option" data-theme-value="light" onclick="switchTheme('light')">
+                <div class="theme-option-preview theme-option-preview-light"></div>
+                <div class="theme-option-title">浅色模式</div>
+                <div class="theme-option-desc">清爽浅色背景，适合日间使用</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .settings-container {
+        max-width: 800px;
+    }
+    
+    .settings-section {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: var(--shadow-card);
+    }
+    
+    .settings-section-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-heading);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .settings-section-title i {
+        color: var(--accent);
+    }
+    
+    .settings-section-desc {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+    }
+    
+    .theme-options {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+    
+    .theme-option {
+        position: relative;
+        padding: 20px;
+        background: var(--bg-card);
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .theme-option:hover {
+        border-color: var(--accent);
+        box-shadow: var(--shadow-glow);
+        transform: translateY(-2px);
+    }
+    
+    .theme-option.active {
+        border-color: var(--accent);
+        background: var(--status-info-bg);
+    }
+    
+    .theme-option.active::after {
+        content: '✓';
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 24px;
+        height: 24px;
+        background: var(--accent);
+        color: #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    
+    .theme-option-preview {
+        width: 100%;
+        height: 100px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        overflow: hidden;
+    }
+    
+    .theme-option-preview-dark {
+        background: linear-gradient(135deg, #0a0e1a 0%, #111827 50%, #1a2332 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+    }
+    
+    .theme-option-preview-dark::before {
+        content: '';
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        height: 20px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+    }
+    
+    .theme-option-preview-dark::after {
+        content: '';
+        position: absolute;
+        top: 40px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 4px;
+    }
+    
+    .theme-option-preview-light {
+        background: linear-gradient(135deg, #f0f2f5 0%, #ffffff 50%, #f8f9fa 100%);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        position: relative;
+    }
+    
+    .theme-option-preview-light::before {
+        content: '';
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        height: 20px;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 4px;
+    }
+    
+    .theme-option-preview-light::after {
+        content: '';
+        position: absolute;
+        top: 40px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        background: rgba(0, 0, 0, 0.03);
+        border-radius: 4px;
+    }
+    
+    .theme-option-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-heading);
+        margin-bottom: 4px;
+    }
+    
+    .theme-option-desc {
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+    
+    .theme-switch-success {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background: var(--status-success-bg);
+        border: 1px solid var(--status-success-border);
+        border-radius: 8px;
+        color: var(--status-success);
+        font-size: 14px;
+        z-index: 9999;
+        animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
+
+<script>
+    function switchTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = theme;
+        localStorage.setItem('admin_theme', theme);
+        document.querySelector('meta[name="color-scheme"]').setAttribute('content', theme);
+        
+        document.querySelectorAll('.theme-option').forEach(function(el) {
+            el.classList.remove('active');
+        });
+        document.querySelector('.theme-option[data-theme-value="' + theme + '"]').classList.add('active');
+        
+        showSuccessMessage('主题已切换为' + (theme === 'dark' ? '深色模式' : '浅色模式'));
+    }
+    
+    function showSuccessMessage(msg) {
+        var div = document.createElement('div');
+        div.className = 'theme-switch-success';
+        div.textContent = msg;
+        document.body.appendChild(div);
+        
+        setTimeout(function() {
+            div.style.animation = 'slideIn 0.3s ease reverse';
+            setTimeout(function() {
+                div.remove();
+            }, 300);
+        }, 2000);
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        var currentTheme = localStorage.getItem('admin_theme') || 'dark';
+        document.querySelectorAll('.theme-option').forEach(function(el) {
+            el.classList.remove('active');
+        });
+        document.querySelector('.theme-option[data-theme-value="' + currentTheme + '"]').classList.add('active');
+    });
+</script>
+{% end %}
