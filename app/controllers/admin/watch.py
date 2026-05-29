@@ -28,6 +28,13 @@ class AdminCrawlLogClearHandler(AdminBaseHandler):
 		CrawlLogRepository.clear_all_logs()
 		self.write({"code": 0, "msg": "日志已清空"})
 
+class AdminCrawlLogStatsHandler(AdminBaseHandler):
+	@tornado.web.authenticated
+	def get(self):
+		stats = CrawlLogRepository.get_stats()
+		self.set_header("Content-Type", "application/json")
+		self.write({"code": 0, "data": stats})
+
 
 class AdminCrawlScheduleHandler(AdminBaseHandler):
 	@tornado.web.authenticated

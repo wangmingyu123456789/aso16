@@ -1,33 +1,87 @@
 {% extends "layout.html" %}
 {% block body %}
 <style>
-.log-wrap { margin:-24px; }
-.log-toolbar { display:flex; justify-content:space-between; align-items:center; padding:16px 24px; background:var(--bg-surface); border-radius:8px 8px 0 0; }
-.log-toolbar h2 { color:var(--text-primary); margin:0; font-size:18px; font-weight:600; display:flex; align-items:center; gap:10px; }
-.log-toolbar h2 i { color:var(--status-info); font-size:22px; }
-.log-toolbar .log-actions { display:flex; gap:10px; align-items:center; }
-.log-toolbar .auto-refresh { color:var(--text-secondary); font-size:12px; display:flex; align-items:center; gap:6px; cursor:pointer; }
-.log-toolbar .auto-refresh input { accent-color:var(--status-info); margin:0; }
-.log-table-wrap { padding:0 24px 24px; }
-#logTable { margin:0; }
-.log-status-badge { display:inline-block; padding:3px 12px; border-radius:12px; font-size:12px; font-weight:600; }
-.log-status-badge.running { background:#fff3e0; color:#e65100; }
-.log-status-badge.running::before { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:#e65100; margin-right:6px; animation:logPulse 1.2s infinite; }
-.log-status-badge.completed { background:#e8f5e9; color:#2e7d32; }
-.log-status-badge.completed::before { content:'✓ '; }
-.log-status-badge.error { background:#ffebee; color:#c62828; }
-.log-status-badge.error::before { content:'✗ '; }
-@keyframes logPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.5)} }
-.log-err-txt { max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#e53935; font-size:12px; display:inline-block; }
+@keyframes fadeInUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.log-wrap{margin:-24px;background:var(--bg-primary);min-height:calc(100vh - 140px);padding:20px}
+.log-header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;margin-bottom:16px;animation:fadeInUp .4s ease-out}
+.log-header h2{color:var(--text-heading);margin:0;font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px;letter-spacing:1px}
+.log-header h2 i{color:var(--accent);font-size:22px}
+.log-actions{display:flex;gap:10px;align-items:center}
+.auto-refresh{color:var(--text-muted);font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer}
+.auto-refresh input{accent-color:var(--accent)}
+.log-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;animation:fadeInUp .4s ease-out .05s both}
+.stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;transition:all .3s}
+.stat-card:hover{transform:translateY(-2px);border-color:rgba(0,212,255,0.15)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0}
+.stat-card.total::before{background:linear-gradient(90deg,#00d4ff,#7b2ff7)}
+.stat-card.success::before{background:linear-gradient(90deg,#10b981,#059669)}
+.stat-card.running::before{background:linear-gradient(90deg,#f59e0b,#d97706)}
+.stat-card.error::before{background:linear-gradient(90deg,#ef4444,#dc2626)}
+.stat-card .stat-label{font-size:11px;color:var(--text-muted);letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase}
+.stat-card .stat-value{font-size:26px;font-weight:800;color:var(--text-heading);font-family:'SF Mono',Consolas,monospace}
+.stat-card.success .stat-value{color:#10b981}
+.stat-card.running .stat-value{color:#f59e0b}
+.stat-card.error .stat-value{color:#ef4444}
+.stat-card .stat-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:24px;opacity:0.08}
+.log-table-wrap{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;overflow:hidden;animation:fadeInUp .4s ease-out .1s both}
+.log-status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.log-status-badge .dot{width:5px;height:5px;border-radius:50%}
+.log-status-badge.running{background:var(--status-warning-bg);color:var(--status-warning)}
+.log-status-badge.running .dot{background:var(--status-warning);animation:pulse 1.2s infinite}
+.log-status-badge.completed{background:var(--status-success-bg);color:var(--status-success)}
+.log-status-badge.completed .dot{background:var(--status-success)}
+.log-status-badge.error{background:var(--status-error-bg);color:var(--status-error)}
+.log-status-badge.error .dot{background:var(--status-error)}
+.log-err-txt{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--status-error);font-size:12px;display:inline-block}
+
+.layui-table-view,.layui-table-box,.layui-table-header,.layui-table-body,.layui-table-tool,.layui-table-fixed,.layui-table-fixed-r,.layui-table-main,.layui-table-page,.layui-table-total,.layui-table-view .layui-table,.layui-table-view .layui-table td,.layui-table-view .layui-table th{border-color:rgba(255,255,255,0.04)!important}
+.layui-table-view .layui-table{background:transparent!important;color:var(--text-primary)!important}
+.layui-table-view .layui-table tbody tr:hover{background:var(--bg-table-row-hover)!important}
+.layui-table-view .layui-table td,.layui-table-view .layui-table th{padding:10px 8px!important}
+.layui-table-view .layui-table th{background:var(--bg-table-header)!important;color:var(--text-secondary)!important;font-weight:600!important;font-size:11px!important;letter-spacing:1px!important}
+.layui-table-view .layui-table td{font-size:13px!important}
+
+.layui-table-page{background:var(--bg-card)!important;color:var(--text-secondary)!important}
+.layui-table-page a{color:var(--text-primary)!important}
+.layui-table-page .layui-laypage .layui-laypage-curr .layui-laypage-em{background:linear-gradient(135deg,#10b981,#16b777)!important}
+.layui-table-page .layui-laypage a,.layui-table-page .layui-laypage span{background:var(--bg-card)!important;color:var(--text-primary)!important}
+.layui-table-page .layui-laypage input{background:var(--bg-input)!important;color:var(--text-primary)!important}
+.layui-table-page .layui-laypage button{background:linear-gradient(135deg,#10b981,#16b777)!important;color:#fff!important;border-color:transparent!important}
+.layui-laypage select{background:var(--bg-input)!important;color:var(--text-primary)!important;border-radius:6px!important}
+.layui-laypage select option{background:var(--bg-card)!important;color:var(--text-primary)!important}
+#btnRefresh{background:var(--btn-secondary-bg)!important;border:1px solid var(--btn-secondary-border)!important;color:var(--btn-secondary-text)!important}
+#btnRefresh:hover{background:var(--btn-secondary-bg-hover)!important}
+
+[data-theme="light"] .log-table-wrap{box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+[data-theme="light"] .stat-card{border:1px solid var(--border-color);box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+[data-theme="light"] .stat-card .stat-icon{opacity:0.05}
+[data-theme="light"] .stat-card.success .stat-value{color:#059669}
+[data-theme="light"] .stat-card.running .stat-value{color:#d97706}
+[data-theme="light"] .stat-card.error .stat-value{color:#d9534f}
+[data-theme="light"] .log-err-txt{color:#d9534f}
+[data-theme="light"] .layui-table-view,.layui-table-box,.layui-table-header,.layui-table-body,.layui-table-tool,.layui-table-fixed,.layui-table-fixed-r,.layui-table-main,.layui-table-page,.layui-table-total,.layui-table-view .layui-table,.layui-table-view .layui-table td,.layui-table-view .layui-table th{border-color:rgba(0,0,0,0.06)!important}
+[data-theme="light"] .log-status-badge.running{background:rgba(217,119,6,0.08);color:#d97706}
+[data-theme="light"] .log-status-badge.running .dot{background:#d97706}
+[data-theme="light"] .log-status-badge.completed{background:rgba(5,150,105,0.08);color:#059669}
+[data-theme="light"] .log-status-badge.completed .dot{background:#059669}
+[data-theme="light"] .log-status-badge.error{background:rgba(217,83,79,0.08);color:#d9534f}
+[data-theme="light"] .log-status-badge.error .dot{background:#d9534f}
 </style>
 <div class="log-wrap">
-<div class="log-toolbar">
+<div class="log-header">
 <h2><i class="layui-icon layui-icon-file"></i>采集日志</h2>
 <div class="log-actions">
 <label class="auto-refresh"><input type="checkbox" id="autoRefresh" checked> 自动刷新(10s)</label>
 <button class="layui-btn layui-btn-sm" id="btnRefresh"><i class="layui-icon layui-icon-refresh"></i> 刷新</button>
 <button class="layui-btn layui-btn-sm layui-btn-danger" id="btnClearLog">清空</button>
 </div>
+</div>
+<div class="log-stats">
+<div class="stat-card total"><div class="stat-label">总任务数</div><div class="stat-value" id="statTotal">-</div><div class="stat-icon">📊</div></div>
+<div class="stat-card success"><div class="stat-label">成功完成</div><div class="stat-value" id="statSuccess">-</div><div class="stat-icon">✅</div></div>
+<div class="stat-card running"><div class="stat-label">进行中</div><div class="stat-value" id="statRunning">-</div><div class="stat-icon">⏳</div></div>
+<div class="stat-card error"><div class="stat-label">失败任务</div><div class="stat-value" id="statError">-</div><div class="stat-icon">❌</div></div>
 </div>
 <div class="log-table-wrap">
 <table id="logTable" lay-filter="logTable"></table>
@@ -37,62 +91,79 @@
 {% block extra_script %}
 <script>
 layui.use(['table','layer'], function(){
-	var table=layui.table, layer=layui.layer, $=layui.$;
-	var autoTimer=null;
+var table=layui.table, layer=layui.layer, $=layui.$;
+var autoTimer=null;
 
-	var tIns=table.render({
-		elem:'#logTable', url:'/admin/outlook/log/api', page:true, limit:20, skin:'line',
-		cols:[[
-			{field:'_seq', title:'ID', width:70, align:'center'},
-			{field:'source_name', title:'采集源', width:140},
-			{field:'keyword', title:'关键词', width:110},
-			{field:'start_time', title:'开始时间', width:165},
-			{field:'end_time', title:'结束时间', width:165},
-			{field:'total_count', title:'获取数', width:80, sort:true},
-			{field:'saved_count', title:'保存数', width:80, sort:true},
-			{field:'status', title:'状态', width:110, templet:function(d){
-				var txt = d.status==='completed'?'已完成':d.status==='running'?'进行中':'失败';
-				return '<span class="log-status-badge '+d.status+'">' + txt + '</span>';
-			}},
-			{field:'error_msg', title:'错误信息', minWidth:200, templet:function(d){
-				return d.error_msg ? '<span class="log-err-txt" title="'+d.error_msg+'">'+d.error_msg+'</span>' : '-';
-			}},
-			{field:'create_at', title:'创建时间', width:165}
-		]]
-	});
+function loadStats(){
+$.get('/admin/outlook/log/stats', function(res){
+if(res.code===0&&res.data){
+$('#statTotal').text(res.data.total);
+$('#statSuccess').text(res.data.success);
+$('#statRunning').text(res.data.running);
+$('#statError').text(res.data.error);
+}
+});
+}
 
-	function doRefresh(){ tIns.reload({page:{curr:1}}); }
+var tIns=table.render({
+elem:'#logTable', url:'/admin/outlook/log/api', page:true, limit:20, skin:'line',
+cols:[[
+{field:'_seq', title:'ID', width:60, align:'center'},
+{field:'source_name', title:'采集源', width:130},
+{field:'keyword', title:'关键词', width:100},
+{field:'start_time', title:'开始时间', width:160, templet:function(d){return fmt(d.start_time)}},
+{field:'end_time', title:'结束时间', width:160, templet:function(d){return fmt(d.end_time)}},
+{field:'total_count', title:'获取数', width:80, sort:true, align:'center'},
+{field:'saved_count', title:'保存数', width:80, sort:true, align:'center'},
+{field:'status', title:'状态', width:100, align:'center', templet:function(d){
+var txt = d.status==='completed'?'已完成':d.status==='running'?'进行中':'失败';
+return '<span class="log-status-badge '+d.status+'"><span class="dot"></span>'+txt+'</span>';
+}},
+{field:'error_msg', title:'错误信息', minWidth:180, templet:function(d){
+return d.error_msg ? '<span class="log-err-txt" title="'+d.error_msg+'">'+d.error_msg+'</span>' : '<span style="color:rgba(255,255,255,0.12)">-</span>';
+}},
+{field:'create_at', title:'创建时间', width:160, templet:function(d){return fmt(d.create_at)}}
+]]
+});
 
-	$('#btnRefresh').on('click', doRefresh);
+function fmt(v){
+if(!v) return '-';
+try{
+var parts=v.split(' ');
+var dp=parts[0].split('-');
+var tp=parts[1].split(':');
+var utc=new Date(Date.UTC(parseInt(dp[0]),parseInt(dp[1])-1,parseInt(dp[2]),parseInt(tp[0]),parseInt(tp[1]),parseInt(tp[2])));
+utc.setHours(utc.getHours()+8);
+var y=utc.getUTCFullYear();
+var m=String(utc.getUTCMonth()+1).padStart(2,'0');
+var day=String(utc.getUTCDate()).padStart(2,'0');
+var h=String(utc.getUTCHours()).padStart(2,'0');
+var min=String(utc.getUTCMinutes()).padStart(2,'0');
+var s=String(utc.getUTCSeconds()).padStart(2,'0');
+return y+'-'+m+'-'+day+' '+h+':'+min+':'+s;
+}catch(e){return v;}
+}
 
-	function startAuto(){
-		clearInterval(autoTimer);
-		autoTimer=setInterval(function(){ tIns.reload(); }, 10000);
-	}
-	function stopAuto(){
-		clearInterval(autoTimer); autoTimer=null;
-	}
-	$('#autoRefresh').on('change', function(){
-		this.checked ? startAuto() : stopAuto();
-	});
-	if($('#autoRefresh').is(':checked')) startAuto();
+function doRefresh(){ tIns.reload({page:{curr:1}}); loadStats(); }
+$('#btnRefresh').on('click', doRefresh);
 
-	document.addEventListener("visibilitychange", function(){
-		if(!$('#autoRefresh').is(':checked')) return;
-		if(document.hidden){ stopAuto(); }
-		else { startAuto(); }
-	});
-	window.addEventListener("beforeunload", stopAuto);
+function startAuto(){clearInterval(autoTimer);autoTimer=setInterval(function(){tIns.reload();loadStats();},10000)}
+function stopAuto(){clearInterval(autoTimer);autoTimer=null}
+$('#autoRefresh').on('change',function(){this.checked?startAuto():stopAuto()});
+if($('#autoRefresh').is(':checked'))startAuto();
+document.addEventListener("visibilitychange",function(){if(!$('#autoRefresh').is(':checked'))return;document.hidden?stopAuto():startAuto()});
+window.addEventListener("beforeunload",stopAuto);
 
-	$('#btnClearLog').on('click', function(){
-		layer.confirm('确定要清空所有采集日志吗？此操作不可恢复。', {icon:3, title:'确认清空'}, function(idx){
-			$.post('/admin/outlook/log/clear', function(res){
-				if(res.code === 0){ layer.msg('日志已清空', {icon:1}); doRefresh(); }
-				else { layer.msg(res.msg, {icon:2}); }
-			});
-			layer.close(idx);
-		});
-	});
+$('#btnClearLog').on('click',function(){
+layer.confirm('确定要清空所有采集日志吗？此操作不可恢复。',{icon:3,title:'确认清空'},function(idx){
+$.post('/admin/outlook/log/clear',function(res){
+if(res.code===0){layer.msg('日志已清空',{icon:1});doRefresh()}else{layer.msg(res.msg,{icon:2})}
+});
+layer.close(idx);
+});
+});
+
+loadStats();
 });
 </script>
 {% end %}

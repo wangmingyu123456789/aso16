@@ -6,7 +6,7 @@
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 
 .log-page{
-    margin:-24px;padding:24px;
+    padding:16px;
     background:linear-gradient(135deg,#050810 0%,#0a0e1a 50%,#050810 100%);
     min-height:calc(100vh - 160px);
 }
@@ -147,31 +147,21 @@
 .log-detail-btn:hover{background:rgba(0,212,255,0.2);transform:scale(1.05);}
 .log-detail-btn svg{width:12px;height:12px;stroke:currentColor;stroke-width:2;fill:none;}
 
-.layui-table-view{background:transparent !important;}
-.layui-table-view .layui-table{background:transparent !important;color:rgba(255,255,255,0.7) !important;}
-.layui-table-view .layui-table tbody tr:hover{background:rgba(0,212,255,0.03) !important;}
-.layui-table-view .layui-table td,.layui-table-view .layui-table th{
-    border-color:rgba(255,255,255,0.04) !important;
-    padding:12px 10px !important;
-}
-.layui-table-view .layui-table th{
-    background:rgba(0,212,255,0.03) !important;
-    color:rgba(255,255,255,0.5) !important;
-    font-weight:600 !important;
-    font-size:12px !important;
-    letter-spacing:0.5px !important;
-}
-.layui-table-view .layui-table td{font-size:13px !important;}
-.layui-laypage{background:transparent !important;}
-.layui-laypage a,.layui-laypage span{
-    background:rgba(255,255,255,0.03) !important;
-    border:1px solid rgba(255,255,255,0.06) !important;
-    color:rgba(255,255,255,0.5) !important;
-    border-radius:6px !important;
-}
-.layui-laypage a:hover{color:#00d4ff !important;border-color:rgba(0,212,255,0.3) !important;}
-.layui-laypage .layui-laypage-curr .layui-laypage-em{background:linear-gradient(135deg,#00d4ff,#7b2ff7) !important;border-radius:6px !important;}
-.layui-laypage .layui-laypage-curr em{color:#fff !important;}
+.layui-table-view,.layui-table-box,.layui-table-header,.layui-table-body,.layui-table-tool,.layui-table-fixed,.layui-table-fixed-r,.layui-table-main,.layui-table-page,.layui-table-total,.layui-table-view .layui-table,.layui-table-view .layui-table td,.layui-table-view .layui-table th{border-color:rgba(255,255,255,0.04) !important}
+.layui-table-view{border:none !important}
+.layui-table-view .layui-table{background:transparent !important;color:rgba(255,255,255,0.7) !important}
+.layui-table-view .layui-table tbody tr:hover{background:rgba(0,212,255,0.03) !important}
+.layui-table-view .layui-table td,.layui-table-view .layui-table th{padding:12px 10px !important}
+.layui-table-view .layui-table th{background:rgba(0,212,255,0.03) !important;color:rgba(255,255,255,0.5) !important;font-weight:600 !important;font-size:12px !important;letter-spacing:0.5px !important}
+.layui-table-view .layui-table td{font-size:13px !important}
+.layui-table-page{background:rgba(255,255,255,0.02) !important;border-color:rgba(255,255,255,0.06) !important;color:rgba(255,255,255,0.7) !important;}
+.layui-table-page a{color:#fff !important;}
+.layui-table-page .layui-laypage .layui-laypage-curr .layui-laypage-em{background:linear-gradient(135deg,#10b981,#16b777) !important;}
+.layui-table-page .layui-laypage a,.layui-table-page .layui-laypage span{background:rgba(255,255,255,0.02) !important;color:#fff !important;border-color:rgba(255,255,255,0.06) !important;}
+.layui-table-page .layui-laypage input{background:rgba(255,255,255,0.05) !important;color:#fff !important;border-color:rgba(255,255,255,0.06) !important;}
+.layui-table-page .layui-laypage button{background:linear-gradient(135deg,#10b981,#16b777) !important;color:#fff !important;border-color:transparent !important;}
+.layui-laypage select{background:#111827 !important;border:1px solid rgba(255,255,255,0.08) !important;color:#fff !important;border-radius:6px !important;}
+.layui-laypage select option{background:#111827 !important;color:#fff !important;}
 
 @media(max-width:1024px){.log-stats{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:640px){.log-stats{grid-template-columns:1fr;}.log-header{flex-direction:column;gap:16px;}}
@@ -253,46 +243,57 @@ layui.use(['table','layer'], function(){
     var table=layui.table, layer=layui.layer, $=layui.$;
     var autoTimer=null;
 
+    function loadStats(){
+        $.get('/user/outlook/log/stats', function(res){
+            if(res.code===0&&res.data){
+                $('#statTotal').text(res.data.total);
+                $('#statSuccess').text(res.data.success);
+                $('#statRunning').text(res.data.running);
+                $('#statError').text(res.data.error);
+            }
+        });
+    }
+
     var tIns=table.render({
-        elem:'#logTable', url:'/user/outlook/log/api', page:true, limit:20,
+        elem:'#logTable', url:'/user/outlook/log/api', page:true, limit:20, skin:'line',
         cols:[[
-            {field:'_seq', title:'ID', width:70, align:'center'},
-            {field:'source_name', title:'采集源', width:130},
-            {field:'keyword', title:'关键词', width:120},
-            {field:'start_time', title:'开始时间', width:170},
-            {field:'end_time', title:'结束时间', width:170},
-            {field:'total_count', title:'获取数', width:90, sort:true, align:'center'},
-            {field:'saved_count', title:'保存数', width:90, sort:true, align:'center'},
-            {field:'status', title:'状态', width:110, align:'center', templet:function(d){
+            {field:'_seq', title:'ID', width:55, align:'center'},
+            {field:'source_name', title:'采集源', width:100},
+            {field:'keyword', title:'关键词', width:85},
+            {field:'start_time', title:'开始时间', width:145, templet:function(d){return fmt(d.start_time)}},
+            {field:'end_time', title:'结束时间', width:145, templet:function(d){return fmt(d.end_time)}},
+            {field:'total_count', title:'获取', width:65, sort:true, align:'center'},
+            {field:'saved_count', title:'保存', width:65, sort:true, align:'center'},
+            {field:'status', title:'状态', width:80, align:'center', templet:function(d){
                 var cls = d.status || 'error';
                 var txt = d.status === 'completed' ? '已完成' : d.status === 'running' ? '进行中' : '失败';
                 return '<span class="log-status-badge '+cls+'"><span class="dot"></span>'+txt+'</span>';
             }},
-            {field:'error_msg', title:'错误信息', minWidth:180, templet:function(d){
-                return d.error_msg ? '<span class="log-err-msg" title="'+d.error_msg+'">'+d.error_msg+'</span>' : '<span style="color:rgba(255,255,255,0.2)">-</span>';
-            }},
-            {fixed:'right', title:'操作', width:100, align:'center', templet:function(d){
-                return '<button class="log-detail-btn" onclick="showLogDetail('+d.id+')"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>详情</button>';
+            {field:'error_msg', title:'错误信息', minWidth:120, templet:function(d){
+                return d.error_msg ? '<span class="log-err-msg" title="'+d.error_msg+'">'+d.error_msg+'</span>' : '<span style="color:rgba(255,255,255,0.12)">-</span>';
             }}
         ]]
     });
 
-    tIns.on('done', function(res, curr, count){
-        $('#statTotal').text(count);
-        var success=0, running=0, error=0;
-        if(res.data){
-            res.data.forEach(function(d){
-                if(d.status==='completed') success++;
-                else if(d.status==='running') running++;
-                else error++;
-            });
-        }
-        $('#statSuccess').text(success);
-        $('#statRunning').text(running);
-        $('#statError').text(error);
-    });
+    function fmt(v){
+        if(!v) return '-';
+        try{
+            var parts=v.split(' ');
+            var dp=parts[0].split('-');
+            var tp=parts[1].split(':');
+            var utc=new Date(Date.UTC(parseInt(dp[0]),parseInt(dp[1])-1,parseInt(dp[2]),parseInt(tp[0]),parseInt(tp[1]),parseInt(tp[2])));
+            utc.setHours(utc.getHours()+8);
+            var y=utc.getUTCFullYear();
+            var m=String(utc.getUTCMonth()+1).padStart(2,'0');
+            var day=String(utc.getUTCDate()).padStart(2,'0');
+            var h=String(utc.getUTCHours()).padStart(2,'0');
+            var min=String(utc.getUTCMinutes()).padStart(2,'0');
+            var s=String(utc.getUTCSeconds()).padStart(2,'0');
+            return y+'-'+m+'-'+day+' '+h+':'+min+':'+s;
+        }catch(e){return v;}
+    }
 
-    function doRefresh(){ tIns.reload({page:{curr:1}}); }
+    function doRefresh(){ tIns.reload({page:{curr:1}}); loadStats(); }
 
     $('#btnRefresh').on('click', doRefresh);
 
@@ -310,8 +311,8 @@ layui.use(['table','layer'], function(){
     });
 
     $('#btnClearLog').on('click', function(){
-        layer.confirm('确定要清空所有采集日志吗？此操作不可恢复。', {icon:3, title:'确认清空', skin:'layui-layer-lan'}, function(idx){
-            $.post('/user/outlook/log/clear', {_xsrf: getCsrfToken()}, function(res){
+        layer.confirm('确定要清空所有采集日志吗？此操作不可恢复。', {icon:3, title:'确认清空'}, function(idx){
+            $.post('/user/outlook/log/clear', function(res){
                 if(res.code === 0){ layer.msg('日志已清空', {icon:1}); doRefresh(); }
                 else { layer.msg(res.msg, {icon:2}); }
             });
@@ -319,43 +320,9 @@ layui.use(['table','layer'], function(){
         });
     });
 
-    window.showLogDetail = function(id){
-        $.get('/user/outlook/log/api', {page:1, limit:1000}, function(res){
-            if(res.code === 0){
-                var log = null;
-                for(var i=0;i<res.data.length;i++){
-                    if(res.data[i].id === id){ log = res.data[i]; break; }
-                }
-                if(!log){ layer.msg('未找到日志详情', {icon:2}); return; }
-                var html = '<div style="padding:20px;font-size:13px;line-height:2;">' +
-                    '<div style="display:grid;grid-template-columns:100px 1fr;gap:8px;">' +
-                    '<span style="color:rgba(255,255,255,0.4)">任务ID</span><span style="color:#fff">'+(log.task_id||'-')+'</span>' +
-                    '<span style="color:rgba(255,255,255,0.4)">采集源</span><span style="color:#fff">'+(log.source_name||'-')+'</span>' +
-                    '<span style="color:rgba(255,255,255,0.4)">关键词</span><span style="color:#fff">'+(log.keyword||'-')+'</span>' +
-                    '<span style="color:rgba(255,255,255,0.4)">开始时间</span><span style="color:#fff">'+(log.start_time||'-')+'</span>' +
-                    '<span style="color:rgba(255,255,255,0.4)">结束时间</span><span style="color:#fff">'+(log.end_time||'-')+'</span>' +
-                    '<span style="color:rgba(255,255,255,0.4)">获取数量</span><span style="color:#00d4ff">'+(log.total_count||0)+'</span>' +
-                    '<span style="color:rgba(255,255,255,0.4)">保存数量</span><span style="color:#10b981">'+(log.saved_count||0)+'</span>' +
-                    '<span style="color:rgba(255,255,255,0.4)">状态</span><span>'+(log.status||'-')+'</span>' +
-                    (log.error_msg ? '<span style="color:rgba(255,255,255,0.4)">错误信息</span><span style="color:#ef4444;word-break:break-all;">'+log.error_msg+'</span>' : '') +
-                    '</div></div>';
-                layer.open({type:1, title:'日志详情 #'+id, area:['500px','auto'], content:html, skin:'layui-layer-lan'});
-            }
-        });
-    };
-
-    function getCsrfToken(){
-        var cookies = document.cookie.split(';');
-        for(var i=0;i<cookies.length;i++){
-            var c = cookies[i].trim();
-            if(c.indexOf('_xsrf=') === 0) return decodeURIComponent(c.substring(6));
-        }
-        return '';
-    }
-
     function startAuto(){
         clearInterval(autoTimer);
-        autoTimer=setInterval(function(){ tIns.reload(); }, 10000);
+        autoTimer=setInterval(function(){ tIns.reload(); loadStats(); }, 10000);
     }
     function stopAuto(){
         clearInterval(autoTimer); autoTimer=null;
@@ -371,6 +338,8 @@ layui.use(['table','layer'], function(){
         else { startAuto(); }
     });
     window.addEventListener("beforeunload", stopAuto);
+
+    loadStats();
 });
 </script>
 {% end %}
