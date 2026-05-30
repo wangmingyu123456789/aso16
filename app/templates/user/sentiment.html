@@ -20,11 +20,6 @@
 .chart-box .chart-title{font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:10px;letter-spacing:2px}
 .chart-container{width:100%;height:calc(100% - 24px);min-height:220px}
 
-.earth-container{width:100%;height:calc(100vh - 160px);position:relative;background:radial-gradient(ellipse at center,#0a1030 0%,#060a18 50%,#020408 100%);border-radius:12px;overflow:hidden}
-#earthCanvas{width:100%;height:100%;display:block}
-.earth-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.3);font-size:12px;letter-spacing:2px;z-index:10;pointer-events:none;animation:pulse-hint 2s ease-in-out infinite}
-@keyframes pulse-hint{0%,100%{opacity:0.2}50%{opacity:0.5}}
-
 .analysis-panel{background:rgba(255,255,255,0.02);backdrop-filter:blur(15px);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:24px;margin-bottom:20px}
 .panel-title{font-size:16px;font-weight:600;color:#fff;margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .panel-title::before{content:'';width:20px;height:2px;background:linear-gradient(90deg,#00d4ff,transparent)}
@@ -75,13 +70,11 @@
 .empty-state{text-align:center;padding:40px;color:rgba(255,255,255,0.3);font-size:14px}
 </style>
 <script src="/static/dist/echarts-5.5.0.min.js"></script>
-<script src="/static/dist/three-r128.min.js"></script>
 {% end %}
 
 {% block body %}
 <div class="tab-bar">
     <button class="tab-btn active" onclick="switchTab('dashboard', this)">📊 舆情大屏</button>
-    <button class="tab-btn" onclick="switchTab('earth', this)">🌍 3D 地球</button>
     <button class="tab-btn" onclick="switchTab('sentiment', this)">🧠 智慧舆情</button>
 </div>
 
@@ -101,15 +94,7 @@
     </div>
 </div>
 
-<!-- Tab 2: 3D 地球 -->
-<div class="tab-content" id="tab-earth">
-    <div class="earth-container" id="earthContainer">
-        <canvas id="earthCanvas"></canvas>
-        <div class="earth-hint">🖱 拖拽旋转 · 滚轮缩放</div>
-    </div>
-</div>
-
-<!-- Tab 3: 智慧舆情 -->
+<!-- Tab 2: 智慧舆情 -->
 <div class="tab-content" id="tab-sentiment">
     <div class="stats-grid" id="sentimentStats">
         <div class="stat-card"><div class="stat-value" id="outlookTotal">-</div><div class="stat-label">瞭望数据总量</div></div>
@@ -175,7 +160,6 @@
 {% block extra_script %}
 <script>
 var chartSource = null, chartTrend = null, chartRanking = null;
-var earthR = null, earthS = null, earthC = null, earthCtrl = null, earthCloud = null;
 
 function switchTab(tabName, btn) {
     document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -186,9 +170,6 @@ function switchTab(tabName, btn) {
     if (tabName === 'dashboard') {
         document.querySelector('.content-header h3').textContent = '数智大屏';
         initDashboardCharts();
-    } else if (tabName === 'earth') {
-        document.querySelector('.content-header h3').textContent = '3D 地球';
-        setTimeout(initEarth, 100);
     } else {
         document.querySelector('.content-header h3').textContent = '智慧舆情分析';
         loadSentimentStats();
@@ -343,126 +324,6 @@ function initDashboardCharts() {
         .catch(function(err) { console.error('加载图表数据失败:', err); });
 }
 
-var earthInitialized = false;
-function initEarth() {
-    if (earthInitialized) {
-        if (earthR) {
-            var container = document.getElementById('earthContainer');
-            if (container) earthR.setSize(container.clientWidth, container.clientHeight);
-        }
-        return;
-    }
-
-    var canvas = document.getElementById('earthCanvas');
-    var container = document.getElementById('earthContainer');
-    if (!canvas || !container || typeof THREE === 'undefined') return;
-
-    earthInitialized = true;
-
-    earthR = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-    earthR.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    earthR.setSize(container.clientWidth, container.clientHeight);
-
-    earthS = new THREE.Scene();
-    earthC = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    earthC.position.set(0, 0.5, 7);
-
-    var hemiLight = new THREE.HemisphereLight(0x6677aa, 0x1a1a33, 0.8);
-    earthS.add(hemiLight);
-    var ambientLight = new THREE.AmbientLight(0x333355, 0.9);
-    earthS.add(ambientLight);
-    var sunLight = new THREE.DirectionalLight(0xfffff0, 1.5);
-    sunLight.position.set(5, 3, 5);
-    earthS.add(sunLight);
-    var fillLight = new THREE.DirectionalLight(0x6677aa, 0.4);
-    fillLight.position.set(-3, 1, -3);
-    earthS.add(fillLight);
-
-    var earthGroup = new THREE.Group();
-    earthS.add(earthGroup);
-
-    var loader = new THREE.TextureLoader();
-    var earthMat = new THREE.MeshPhongMaterial({
-        map: loader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg'),
-        specularMap: loader.load('https://threejs.org/examples/textures/planets/earth_specular_2048.jpg'),
-        specular: new THREE.Color(0x333333),
-        shininess: 5,
-        normalMap: loader.load('https://threejs.org/examples/textures/planets/earth_normal_2048.jpg'),
-        normalScale: new THREE.Vector2(0.8, 0.8)
-    });
-    var earthMesh = new THREE.Mesh(new THREE.SphereGeometry(2, 64, 64), earthMat);
-    earthGroup.add(earthMesh);
-
-    var cloudMat = new THREE.MeshPhongMaterial({
-        map: loader.load('https://threejs.org/examples/textures/planets/earth_clouds_1024.png'),
-        transparent: true, opacity: 0.4,
-        blending: THREE.AdditiveBlending, depthWrite: false
-    });
-    earthCloud = new THREE.Mesh(new THREE.SphereGeometry(2.03, 64, 64), cloudMat);
-    earthGroup.add(earthCloud);
-
-    var glowMat = new THREE.ShaderMaterial({
-        vertexShader: 'varying vec3 vNormal;void main(){vNormal=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-        fragmentShader: 'varying vec3 vNormal;void main(){float intensity=pow(0.65-dot(vNormal,vec3(0.0,0.0,1.0)),3.0);gl_FragColor=vec4(0.3,0.6,1.0,1.0)*intensity*0.35;}',
-        blending: THREE.AdditiveBlending, side: THREE.FrontSide, transparent: true, depthWrite: false
-    });
-    earthGroup.add(new THREE.Mesh(new THREE.SphereGeometry(2.08, 64, 64), glowMat));
-
-    var starsGeom = new THREE.BufferGeometry();
-    var starsCount = 3000;
-    var starsPositions = new Float32Array(starsCount * 3);
-    var starsColors = new Float32Array(starsCount * 3);
-    for (var i = 0; i < starsCount * 3; i += 3) {
-        var r = 30 + Math.random() * 70;
-        var theta = Math.random() * Math.PI * 2;
-        var phi = Math.acos(2 * Math.random() - 1);
-        starsPositions[i] = r * Math.sin(phi) * Math.cos(theta);
-        starsPositions[i+1] = r * Math.sin(phi) * Math.sin(theta);
-        starsPositions[i+2] = r * Math.cos(phi);
-        var b = 0.5 + Math.random() * 0.5;
-        var tint = Math.random();
-        if (tint < 0.1) { starsColors[i]=0.8; starsColors[i+1]=0.9; starsColors[i+2]=1.0; }
-        else if (tint < 0.2) { starsColors[i]=1.0; starsColors[i+1]=0.85; starsColors[i+2]=0.7; }
-        else { starsColors[i]=b; starsColors[i+1]=b; starsColors[i+2]=b; }
-    }
-    starsGeom.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
-    starsGeom.setAttribute('color', new THREE.BufferAttribute(starsColors, 3));
-    var starsPoints = new THREE.Points(starsGeom, new THREE.PointsMaterial({size:0.15,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:0.9}));
-    earthS.add(starsPoints);
-
-    if (typeof THREE.OrbitControls !== 'undefined') {
-        earthCtrl = new THREE.OrbitControls(earthC, canvas);
-        earthCtrl.enableDamping = true;
-        earthCtrl.dampingFactor = 0.08;
-        earthCtrl.minDistance = 3.5;
-        earthCtrl.maxDistance = 15;
-        earthCtrl.target.set(0, 0, 0);
-        earthCtrl.autoRotate = true;
-        earthCtrl.autoRotateSpeed = 0.3;
-        earthCtrl.update();
-
-        canvas.addEventListener('pointerdown', function() { earthCtrl.autoRotate = false; });
-        canvas.addEventListener('pointerup', function() { setTimeout(function() { earthCtrl.autoRotate = true; }, 1500); });
-    }
-
-    window.addEventListener('resize', function() {
-        if (!earthR || !earthC) return;
-        var c = document.getElementById('earthContainer');
-        if (!c) return;
-        earthC.aspect = c.clientWidth / c.clientHeight;
-        earthC.updateProjectionMatrix();
-        earthR.setSize(c.clientWidth, c.clientHeight);
-    });
-
-    function animate() {
-        requestAnimationFrame(animate);
-        if (earthCloud) earthCloud.rotation.y += 0.0003;
-        if (starsPoints) { starsPoints.rotation.y += 0.0001; starsPoints.rotation.x += 0.00005; }
-        if (earthCtrl) earthCtrl.update();
-        if (earthR && earthS && earthC) earthR.render(earthS, earthC);
-    }
-    animate();
-}
 
 function loadSentimentStats() {
     fetch('/api/sentiment/stats')
@@ -478,6 +339,11 @@ function loadSentimentStats() {
         .catch(function(err) { console.error('加载统计失败:', err); });
 }
 
+function getXsrfToken() {
+    var matches = document.cookie.match(/(^| )\b_xsrf=([^;]+)/);
+    return matches ? matches[2] : '';
+}
+
 function startAnalysis() {
     var btn = document.getElementById('btnAnalyze');
     btn.disabled = true;
@@ -486,7 +352,7 @@ function startAnalysis() {
 
     fetch('/api/sentiment/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-XSRFToken': '' }
+        headers: { 'Content-Type': 'application/json', 'X-XSRFToken': getXsrfToken() }
     })
     .then(function(r) { return r.json(); })
     .then(function(res) {

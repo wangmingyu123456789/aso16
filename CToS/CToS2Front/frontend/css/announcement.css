@@ -1,0 +1,112 @@
+/* ============================================================
+   群公告横幅样式
+   ============================================================ */
+.im-announcement-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    margin: 0 0 8px 0;
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border: 1px solid #ffd93d;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    animation: slideDown 0.3s ease-out;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.im-announcement-banner:hover {
+    background: linear-gradient(135deg, #ffeaa7 0%, #ffd93d 100%);
+}
+
+.im-announcement-banner.dismissed {
+    animation: slideUp 0.3s ease-in forwards;
+}
+
+.im-announcement-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    animation: pulse 2s infinite;
+}
+
+.im-announcement-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.im-announcement-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #856404;
+    margin-bottom: 2px;
+}
+
+.im-announcement-text {
+    font-size: 13px;
+    color: #533f03;
+    line-height: 1.4;
+    word-break: break-all;
+}
+
+.im-announcement-dismiss {
+    font-size: 11px;
+    color: #856404;
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.im-announcement-banner:hover .im-announcement-dismiss {
+    opacity: 1;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+        max-height: 60px;
+    }
+    to {
+        transform: translateY(-20px);
+        opacity: 0;
+        max-height: 0;
+        padding: 0 16px;
+        margin: 0;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* 暗色模式适配 */
+[data-theme="dark"] .im-announcement-banner {
+    background: linear-gradient(135deg, #3d3200 0%, #4a3c00 100%);
+    border-color: #665500;
+}
+
+[data-theme="dark"] .im-announcement-title {
+    color: #ffd93d;
+}
+
+[data-theme="dark"] .im-announcement-text {
+    color: #ffeaa7;
+}
+
+[data-theme="dark"] .im-announcement-dismiss {
+    color: #ffd93d;
+}

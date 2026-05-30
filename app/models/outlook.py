@@ -25,7 +25,7 @@ class OutlookSourceRepository:
     def get_all_sources():
         with get_connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM outlook_sources ORDER BY id DESC"
+                "SELECT * FROM outlook_sources ORDER BY id ASC"
             ).fetchall()
             return [dict(r) for r in rows]
 
@@ -33,7 +33,7 @@ class OutlookSourceRepository:
     def get_active_sources():
         with get_connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM outlook_sources WHERE status=1 ORDER BY id DESC"
+                "SELECT * FROM outlook_sources WHERE status=1 ORDER BY id ASC"
             ).fetchall()
             return [dict(r) for r in rows]
 
@@ -122,7 +122,7 @@ class OutlookTaskRepository:
         创建新的采集任务
         """
         import datetime
-        create_at = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        create_at = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         with get_connection() as conn:
             cursor = conn.execute(
                 """INSERT INTO outlook_tasks(
@@ -512,7 +512,7 @@ class OutlookCollector:
         return raw_items
 
     @staticmethod
-    def parse_html(html_content, html_selector, title_selector, url_selector, content_selector, date_selector, author_selector):
+    def parse_html(html_content, html_selector, title_selector, url_selector, content_selector, date_selector, author_selector, entry_url=''):
         if not HAS_LXML:
             return []
 
@@ -526,6 +526,8 @@ class OutlookCollector:
             nodes = doc.xpath(html_selector)
         else:
             nodes = [doc]
+
+        source_domain = OutlookCollector._resolve_source_domain(entry_url)
 
         for node in nodes:
             item = {}
@@ -552,23 +554,38 @@ class OutlookCollector:
                 if url_nodes and 'href' in url_nodes[0].attrib:
                     item['url'] = url_nodes[0].attrib['href']
 
+            raw_url = item.get('url', '')
+            if raw_url:
+                item['url'] = OutlookCollector._resolve_url_to_absolute(raw_url, source_domain, entry_url)
+
             if content_selector:
                 content_nodes = node.xpath(content_selector)
                 if content_nodes:
                     item['content'] = content_nodes[0].text_content().strip()
+            if not item.get('content'):
+                node_text = node.text_content().strip()
+                node_text = re.sub(r'\s+', ' ', node_text)
+                item['content'] = node_text[:2000]
+            raw_node_html = lxml_html.tostring(node, encoding='unicode', pretty_print=True)[:5000]
+            item['raw_html_snippet'] = raw_node_html
+
+            node_full_text = node.text_content()
 
             if date_selector:
                 date_nodes = node.xpath(date_selector)
                 if date_nodes:
                     date_text = date_nodes[0].text_content().strip()
-                    # Validate date format before saving
                     if OutlookCollector._is_valid_date(date_text):
                         item['publish_date'] = date_text
                     else:
-                        # Try to find date in other sibling/child elements
                         date_text = OutlookCollector._extract_date_from_node(node)
                         if date_text:
                             item['publish_date'] = date_text
+
+            if not item.get('publish_date'):
+                extracted_date = OutlookCollector._extract_date_from_text(node_full_text)
+                if extracted_date:
+                    item['publish_date'] = extracted_date
 
             if author_selector:
                 author_nodes = node.xpath(author_selector)
@@ -579,10 +596,91 @@ class OutlookCollector:
                     elif hasattr(an, 'text') and an.text:
                         item['author'] = an.text.strip()
 
+            if not item.get('author'):
+                extracted_author = OutlookCollector._extract_author_from_text(node_full_text)
+                if extracted_author:
+                    item['author'] = extracted_author
+
             if item.get('title'):
                 items.append(item)
 
         return items
+
+    @staticmethod
+    def _resolve_source_domain(entry_url):
+        from urllib.parse import urlparse
+        parsed = urlparse(entry_url)
+        return f"{parsed.scheme}://{parsed.netloc}"
+
+    @staticmethod
+    def _resolve_url_to_absolute(raw_url, source_domain, entry_url):
+        if raw_url.startswith('http://') or raw_url.startswith('https://'):
+            return raw_url
+        if raw_url.startswith('//'):
+            return 'https:' + raw_url
+        if raw_url.startswith('/'):
+            return source_domain + raw_url
+        from urllib.parse import urljoin
+        return urljoin(entry_url, raw_url)
+
+    @staticmethod
+    def _extract_author_from_text(text):
+        import re
+        if not text:
+            return ''
+        lines = text.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if re.search(r'[\u4e00-\u9fff]{2,10}$', line) and len(line) < 30:
+                candidates = re.findall(r'[\u4e00-\u9fff\u00b7]{2,15}', line)
+                keyword_found = False
+                for i, c in enumerate(candidates):
+                    if any(kw in c for kw in ['来源', '作者', '责任编辑', '编辑']):
+                        keyword_found = True
+                        if i + 1 < len(candidates):
+                            return candidates[i + 1]
+                if not keyword_found:
+                    for c in candidates:
+                        if len(line) < 20 and any(kw in line for kw in ['网', '新闻', '报', '社']):
+                            return line
+        relative_date_match = re.search(r'\d+分钟前|\d+小时前|\d+天前|今天|昨天|刚刚', text)
+        if relative_date_match:
+            before = text[:relative_date_match.start()].strip()
+            candidates = re.findall(r'[\u4e00-\u9fff]{2,10}', before)
+            for c in reversed(candidates):
+                if len(c) >= 2:
+                    return c
+        if re.search(r'\d{4}年', text):
+            before = re.split(r'\d{4}年', text)[0].strip()
+            if before:
+                candidates = re.findall(r'[\u4e00-\u9fff]{2,10}', before)
+                for c in reversed(candidates):
+                    if len(c) >= 2 and not any(kw in c for kw in ['摘要', '标题', '关键词']):
+                        return c
+        return ''
+
+    @staticmethod
+    def _extract_date_from_text(text):
+        import re
+        if not text:
+            return ''
+        patterns = [
+            r'(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})[日]?',
+            r'(\d{1,2})月(\d{1,2})日',
+        ]
+        best = ''
+        for p in patterns:
+            m = re.search(p, text)
+            if m:
+                candidate = m.group(0)
+                if len(candidate) > len(best):
+                    best = candidate
+        relative = re.search(r'今天|昨天|前天|刚刚|\d+分钟前|\d+小时前|\d+天前', text)
+        if relative and not best:
+            best = relative.group(0)
+        return best
 
     @staticmethod
     def _is_valid_date(text):
@@ -709,7 +807,8 @@ class OutlookCollector:
                 source.get('url_selector', ''),
                 source.get('content_selector', ''),
                 source.get('date_selector', ''),
-                source.get('author_selector', '')
+                source.get('author_selector', ''),
+                source.get('entry_url', '')
             )
             t_parse_elapsed = round(time.time() - t_parse, 2)
             page_parse_counts.append(len(items))
@@ -761,7 +860,7 @@ class OutlookCollector:
                     content=item.get('content', ''),
                     author=item.get('author', ''),
                     publish_date=item.get('publish_date', ''),
-                    raw_html='',
+                    raw_html=item.get('raw_html_snippet', ''),
                     ai_processed=ai_processed,
                     task_id=task_id,
                     source_keyword=skw
@@ -805,12 +904,6 @@ class OutlookDeepCollectRepository:
 
     @staticmethod
     def deep_collect(data_ids, callback=None):
-        """
-        AI深度采集
-        :param data_ids: 数据ID列表
-        :param callback: 进度回调函数 callback(current, total, log_msg, data_id, status)
-        :return: 统计结果
-        """
         model_config = ModelRepository.get_default_model()
         if not model_config:
             return {"success": 0, "failed": 0, "error": "未找到可用的默认模型"}
@@ -818,197 +911,258 @@ class OutlookDeepCollectRepository:
         total = len(data_ids)
         success_count = 0
         failed_count = 0
-        results = []
 
         for idx, data_id in enumerate(data_ids):
             current = idx + 1
             data_row = OutlookDataRepository.get_data(data_id)
             if not data_row:
                 failed_count += 1
-                log_msg = f"[{current}/{total}] 数据ID {data_id} 不存在"
                 if callback:
-                    callback(current, total, log_msg, data_id, "failed")
+                    callback(current, total, f"[{current}/{total}] 数据ID {data_id} 不存在", data_id, "failed")
                 continue
 
-            url = data_row.get('url', '')
-            title = data_row.get('title', '')
-            content = data_row.get('content', '')
+            url = (data_row.get('url') or '').strip()
+            title = (data_row.get('title') or '').strip()
+            source_name = data_row.get('source_name', '')
+            source_id = data_row.get('source_id', 0)
+            task_id = data_row.get('task_id', 0)
+            snippet = (data_row.get('content') or '').strip()
+            raw_html_snippet = (data_row.get('raw_html') or '').strip()
 
-            if not url:
-                failed_count += 1
-                log_msg = f"[{current}/{total}] {title} - 无URL，跳过深度采集"
-                if callback:
-                    callback(current, total, log_msg, data_id, "failed")
-                continue
-
-            log_msg = f"[{current}/{total}] 开始深度采集: {title}"
             if callback:
-                callback(current, total, log_msg, data_id, "processing")
+                callback(current, total, f"[{current}/{total}] 开始深度采集: {title}", data_id, "processing")
 
             try:
-                # Step 1: 使用Crawl4AI抓取页面（模拟浏览器，绕过反爬）
-                log_msg = f"[{current}/{total}] 正在抓取页面: {url}"
-                if callback:
-                    callback(current, total, log_msg, data_id, "processing")
+                resolved_url = OutlookDeepCollectRepository._resolve_url(url, source_name)
+                is_redirect = OutlookDeepCollectRepository._is_redirect_url(resolved_url)
 
-                markdown_content, raw_html = OutlookDeepCollectRepository._fetch_page_with_crawl4ai(url)
-
-                if not markdown_content and not raw_html:
-                    failed_count += 1
-                    log_msg = f"[{current}/{total}] {title} - 页面内容为空"
+                if is_redirect:
                     if callback:
-                        callback(current, total, log_msg, data_id, "failed")
-                    OutlookDeepCollectRepository._save_detail(
-                        data_id=data_id, task_id=data_row.get('task_id', 0),
-                        source_id=data_row.get('source_id', 0), source_name=data_row.get('source_name', ''),
-                        title=title, url=url, raw_content='', deep_content='',
-                        summary='', key_points='', model_used=model_config.get('name', ''),
-                        status='failed', error_msg='页面内容为空'
+                        callback(current, total, f"[{current}/{total}] 检测到跳转链接，尝试通过标题搜索获取内容: {title[:40]}", data_id, "processing")
+                    content_text, raw_html_content = OutlookDeepCollectRepository._fetch_by_title_search(
+                        title, source_name, snippet, raw_html_snippet
                     )
-                    continue
-
-                log_msg = f"[{current}/{total}] 页面抓取成功，原始内容长度: {len(raw_html)} 字符"
-                if callback:
-                    callback(current, total, log_msg, data_id, "processing")
-
-                # Step 2: 使用大模型深度解析（先给原始内容，让AI清洗提取）
-                log_msg = f"[{current}/{total}] 正在AI深度解析..."
-                if callback:
-                    callback(current, total, log_msg, data_id, "processing")
-
-                ai_result = OutlookDeepCollectRepository._ai_deep_parse(raw_html, markdown_content, title, model_config)
-
-                # 检查AI是否提取到有效内容
-                content = ai_result.get('content', '').strip()
-                summary = ai_result.get('summary', '').strip()
-                if not content and not summary:
-                    failed_count += 1
-                    log_msg = f"[{current}/{total}] {title} - 采集失败: 未能提取有效内容"
+                    fetch_note = "通过标题搜索获取"
+                else:
                     if callback:
-                        callback(current, total, log_msg, data_id, "failed")
-                    OutlookDeepCollectRepository._save_detail(
-                        data_id=data_id, task_id=data_row.get('task_id', 0),
-                        source_id=data_row.get('source_id', 0), source_name=data_row.get('source_name', ''),
-                        title=title, url=url, raw_content=raw_html[:50000] if raw_html else '',
-                        deep_content='', summary='', key_points='',
-                        model_used=model_config.get('name', ''),
-                        status='failed', error_msg='未能提取有效内容'
-                    )
-                    continue
+                        callback(current, total, f"[{current}/{total}] 正在抓取页面: {resolved_url}", data_id, "processing")
+                    content_text, raw_html_content, fetch_note = OutlookDeepCollectRepository._fetch_page_robust(resolved_url, title)
 
-                # Step 3: 保存结果（原始内容+清洗后内容）
-                detail_id = OutlookDeepCollectRepository._save_detail(
-                    data_id=data_id,
-                    task_id=data_row.get('task_id', 0),
-                    source_id=data_row.get('source_id', 0),
-                    source_name=data_row.get('source_name', ''),
-                    title=title,
-                    url=url,
-                    raw_content=raw_html[:50000] if raw_html else '',
-                    deep_content=content,
-                    summary=summary,
-                    key_points=ai_result.get('key_points', ''),
-                    model_used=model_config.get('name', ''),
-                    status='success'
+                if callback:
+                    callback(current, total, f"[{current}/{total}] 内容准备完成 ({fetch_note})", data_id, "processing")
+
+                if callback:
+                    callback(current, total, f"[{current}/{total}] 正在AI深度解析...", data_id, "processing")
+
+                ai_result = OutlookDeepCollectRepository._ai_deep_parse(
+                    raw_html_content or raw_html_snippet, content_text, title, snippet, model_config
                 )
 
-                # 更新原数据的深度采集状态
-                OutlookDataRepository.update_ai_deep_status(data_id, 1)
+                deep_content = ai_result.get('content', '').strip() or content_text
+                summary = ai_result.get('summary', '').strip()
+                key_points = ai_result.get('key_points', '').strip()
 
+                has_valid_content = bool(summary) or (
+                    len(deep_content) > 30 and not OutlookDeepCollectRepository._is_binary_content(deep_content)
+                )
+                status = 'success' if has_valid_content else 'success_with_limited'
+
+                OutlookDeepCollectRepository._save_detail(
+                    data_id=data_id, task_id=task_id,
+                    source_id=source_id, source_name=source_name,
+                    title=title, url=resolved_url,
+                    raw_content=(raw_html_content or raw_html_snippet or '')[:20000],
+                    deep_content=deep_content,
+                    summary=summary, key_points=key_points,
+                    model_used=model_config.get('name', ''),
+                    status=status
+                )
+
+                OutlookDataRepository.update_ai_deep_status(data_id, 1)
                 success_count += 1
-                log_msg = f"[{current}/{total}] {title} - 深度采集完成"
                 if callback:
-                    callback(current, total, log_msg, data_id, "success")
+                    callback(current, total, f"[{current}/{total}] {title[:30]} - 深度采集完成", data_id, "success")
 
             except Exception as e:
                 failed_count += 1
-                log_msg = f"[{current}/{total}] {title} - 采集失败: {str(e)}"
                 if callback:
-                    callback(current, total, log_msg, data_id, "failed")
-
-                # 保存失败记录
+                    callback(current, total, f"[{current}/{total}] {title[:30]} - 采集失败: {str(e)[:60]}", data_id, "failed")
                 OutlookDeepCollectRepository._save_detail(
-                    data_id=data_id,
-                    task_id=data_row.get('task_id', 0),
-                    source_id=data_row.get('source_id', 0),
-                    source_name=data_row.get('source_name', ''),
-                    title=title,
-                    url=url,
-                    raw_content='',
-                    deep_content='',
-                    summary='',
-                    key_points='',
+                    data_id=data_id, task_id=task_id,
+                    source_id=source_id, source_name=source_name,
+                    title=title, url=url,
+                    raw_content='', deep_content=snippet or title, summary=title, key_points='',
                     model_used=model_config.get('name', ''),
-                    status='failed',
-                    error_msg=str(e)
+                    status='failed', error_msg=str(e)
                 )
 
         return {"success": success_count, "failed": failed_count, "total": total}
 
     @staticmethod
-    def _fetch_page_with_crawl4ai(url):
-        """
-        抓取页面内容，优先使用Playwright真实浏览器（绕过WAF/反爬/JS渲染），
-        httpx仅作兜底
-        返回 (markdown文本, 原始HTML文本)
-        """
-        # 优先使用Playwright真实浏览器
+    def _resolve_url(url, source_name=''):
+        if url.startswith('http://') or url.startswith('https://'):
+            return url
+        if url.startswith('/'):
+            domains = {
+                'sogou': 'https://www.sogou.com',
+                'so_news': 'https://www.so.com',
+                '360': 'https://www.so.com',
+            }
+            for key, domain in domains.items():
+                if key in source_name.lower() or key in source_name:
+                    return domain + url
+            return 'https://www.sogou.com' + url
+        return url
+
+    @staticmethod
+    def _is_redirect_url(url):
+        redirect_patterns = [
+            'sogou.com/link', 'so.com/link', 'www.baidu.com/link',
+            '/link?url=', '/link?m=',
+        ]
+        url_lower = url.lower()
+        for p in redirect_patterns:
+            if p in url_lower:
+                return True
+        return False
+
+    @staticmethod
+    def _is_binary_content(text):
+        if not text or len(text) < 20:
+            return False
+        non_printable = 0
+        for ch in text[:500]:
+            if ord(ch) < 32 and ord(ch) not in (9, 10, 13):
+                non_printable += 1
+            elif 127 < ord(ch) < 256:
+                non_printable += 1
+        ratio = non_printable / min(len(text), 500)
+        return ratio > 0.3
+
+    @staticmethod
+    def _fetch_by_title_search(title, source_name, snippet, raw_html_snippet):
+        """对跳转链接，用标题在搜索引擎重新搜索，拿到真实内容"""
+        search_urls = []
+        if '搜狗' in source_name or 'sogou' in source_name:
+            search_urls.append(f"https://news.sogou.com/news?query={quote(title)}&page=1")
+        if '360' in source_name or 'so_news' in source_name:
+            search_urls.append(f"https://www.so.com/s?q={quote(title)}&pn=1")
+
+        ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0"
+        headers = {
+            "User-Agent": ua,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        }
+
+        for search_url in search_urls:
+            try:
+                with httpx.Client(timeout=15.0, follow_redirects=True, verify=False) as client:
+                    resp = client.get(search_url, headers=headers)
+                    if resp.status_code != 200:
+                        continue
+                    try:
+                        import chardet
+                        detected = chardet.detect(resp.content)
+                        if detected and detected.get('encoding'):
+                            resp.encoding = detected['encoding']
+                    except ImportError:
+                        resp.encoding = 'utf-8'
+                    html = resp.text
+                    if len(html) < 1000 or OutlookDeepCollectRepository._is_binary_content(html):
+                        continue
+                    doc = lxml_html.fromstring(html)
+                    if 'sogou' in search_url:
+                        items = doc.xpath("//div[contains(@class,'vrwrap')]")
+                    else:
+                        items = doc.xpath("//li[contains(@class,'res-list')]")
+                    for item in items:
+                        item_text = item.text_content().strip()
+                        item_text_clean = re.sub(r'\s+', ' ', item_text)
+                        if title[:20] in item_text_clean:
+                            links = item.xpath(".//a")
+                            for a in links:
+                                href = a.get('href', '')
+                                if href and not OutlookDeepCollectRepository._is_redirect_url(href):
+                                    try:
+                                        with httpx.Client(timeout=15.0, follow_redirects=True, verify=False) as c2:
+                                            r2 = c2.get(href, headers=headers)
+                                            if r2.status_code == 200:
+                                                try:
+                                                    detected = chardet.detect(r2.content)
+                                                    if detected and detected.get('encoding'):
+                                                        r2.encoding = detected['encoding']
+                                                except ImportError:
+                                                    r2.encoding = 'utf-8'
+                                                html2 = r2.text
+                                                if not OutlookDeepCollectRepository._is_binary_content(html2) and len(html2) > 1000:
+                                                    text2 = OutlookDeepCollectRepository._extract_text_from_html(html2)
+                                                    if len(text2.strip()) > 200:
+                                                        return text2, html2
+                                    except Exception:
+                                        pass
+            except Exception:
+                pass
+
+        if snippet:
+            return f"标题：{title}\n来源：{source_name}\n摘要：{snippet}", raw_html_snippet
+        return f"标题：{title}\n来源：{source_name}", raw_html_snippet
+
+    @staticmethod
+    def _fetch_page_robust(url, article_title=''):
+        def _try_httpx(fetch_url, extra_headers=None):
+            ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0"
+            headers = {
+                "User-Agent": ua,
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                "Accept-Encoding": "gzip, deflate",
+                "Connection": "keep-alive",
+            }
+            if extra_headers:
+                headers.update(extra_headers)
+            try:
+                with httpx.Client(timeout=15.0, follow_redirects=True, verify=False) as client:
+                    resp = client.get(fetch_url, headers=headers)
+                    if resp.status_code == 200:
+                        try:
+                            import chardet
+                            detected = chardet.detect(resp.content)
+                            if detected and detected.get('encoding'):
+                                resp.encoding = detected['encoding']
+                        except ImportError:
+                            resp.encoding = 'utf-8'
+                        raw_html = resp.text
+                        if OutlookDeepCollectRepository._is_binary_content(raw_html):
+                            return None, None, None
+                        clean_text = OutlookDeepCollectRepository._extract_text_from_html(raw_html)
+                        return clean_text, raw_html, resp.url
+            except Exception:
+                pass
+            return None, None, None
+
         if HAS_PLAYWRIGHT:
             try:
-                print(f"[DeepCollect] Playwright抓取: {url[:80]}")
                 html = OutlookDeepCollectRepository._fetch_with_playwright(url)
                 if html:
                     text = OutlookDeepCollectRepository._extract_text_from_html(html)
-                    if len(text.strip()) > 100:
-                        print(f"[DeepCollect] Playwright成功，内容长度: {len(html)}")
-                        return text, html
-                    else:
-                        print(f"[DeepCollect] Playwright内容过短({len(text.strip())}字符)，尝试httpx")
-            except Exception as e:
-                print(f"[DeepCollect] Playwright失败: {e}，降级到httpx")
+                    if not OutlookDeepCollectRepository._is_binary_content(text) and len(text.strip()) > 200:
+                        return text, html, "Playwright"
+            except Exception:
+                pass
 
-        # Playwright不可用或失败时，用httpx兜底
-        user_agents = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0",
-        ]
+        clean_text, raw_html, final_url = _try_httpx(url)
+        if clean_text and len(clean_text.strip()) > 200 and not OutlookDeepCollectRepository._is_binary_content(clean_text):
+            return clean_text, raw_html, "httpx"
 
-        simple_headers = {
-            "User-Agent": random.choice(user_agents),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive",
-            "Cache-Control": "max-age=0",
-        }
+        clean_text, raw_html, final_url = _try_httpx(url, {
+            "Referer": "https://www.baidu.com/",
+            "User-Agent": "Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)",
+        })
+        if clean_text and len(clean_text.strip()) > 200 and not OutlookDeepCollectRepository._is_binary_content(clean_text):
+            return clean_text, raw_html, "httpx(Baiduspider)"
 
-        last_error = None
-        for attempt in range(3):
-            try:
-                if attempt > 0:
-                    time.sleep(random.uniform(1, 3))
-                    simple_headers["User-Agent"] = random.choice(user_agents)
-
-                with httpx.Client(timeout=30.0, follow_redirects=True) as client:
-                    resp = client.get(url, headers=simple_headers)
-                    if resp.status_code in (403, 412, 502, 503, 504):
-                        last_error = f"页面返回HTTP {resp.status_code}"
-                        continue
-                    resp.raise_for_status()
-                    raw_html = resp.text
-                    markdown_text = OutlookDeepCollectRepository._extract_text_from_html(raw_html)
-                    return markdown_text, raw_html
-            except httpx.HTTPStatusError as e:
-                last_error = f"页面返回HTTP {e.response.status_code}"
-                continue
-            except httpx.RequestError as e:
-                last_error = f"网络请求错误: {str(e)}"
-                continue
-
-        raise Exception(last_error or "页面抓取失败")
+        return article_title, '', "无法获取页面正文"
 
     @staticmethod
     def _fetch_with_playwright(url):
@@ -1024,58 +1178,102 @@ class OutlookDeepCollectRepository:
         return asyncio.run(_render())
 
     @staticmethod
-    def _extract_text_from_html(html):
-        """从HTML中提取正文文本，去除script/style等"""
-        # 去除script、style、nav、footer、header等
-        html = re.sub(r'<script[^>]*>[\s\S]*?</script>', '', html, flags=re.IGNORECASE)
-        html = re.sub(r'<style[^>]*>[\s\S]*?</style>', '', html, flags=re.IGNORECASE)
-        html = re.sub(r'<nav[^>]*>[\s\S]*?</nav>', '', html, flags=re.IGNORECASE)
-        html = re.sub(r'<footer[^>]*>[\s\S]*?</footer>', '', html, flags=re.IGNORECASE)
-        html = re.sub(r'<header[^>]*>[\s\S]*?</header>', '', html, flags=re.IGNORECASE)
-        html = re.sub(r'<aside[^>]*>[\s\S]*?</aside>', '', html, flags=re.IGNORECASE)
-        # 去除注释
-        html = re.sub(r'<!--[\s\S]*?-->', '', html)
-        # 去除HTML标签
-        text = re.sub(r'<[^>]+>', ' ', html)
-        # 去除多余空白
-        text = re.sub(r'\s+', ' ', text).strip()
-        return text
+    def _extract_text_from_html(html_content):
+        if not html_content:
+            return ''
+        try:
+            doc = lxml_html.fromstring(html_content)
+            for tag in ['script', 'style', 'nav', 'footer', 'header', 'aside', 'noscript', 'iframe', 'form', 'svg']:
+                for el in doc.xpath(f'//{tag}'):
+                    el.getparent().remove(el)
+            for el in doc.xpath('//comment()'):
+                el.getparent().remove(el)
+            content_candidates = []
+            for sel in ['//article', '//main', '//div[@class="article"]', '//div[@class="content"]',
+                        '//div[contains(@class,"article-content")]', '//div[contains(@class,"post-content")]',
+                        '//div[contains(@class,"entry-content")]', '//div[contains(@class,"news-content")]',
+                        '//div[contains(@class,"main-content")]', '//div[contains(@class,"text-content")]',
+                        '//div[@id="content"]', '//div[@id="article"]', '//div[@id="main"]',
+                        '//div[contains(@class,"detail")]', '//div[contains(@class,"news-detail")]']:
+                nodes = doc.xpath(sel)
+                for n in nodes:
+                    text = n.text_content().strip()
+                    if len(text) > 200:
+                        content_candidates.append((len(text), n))
+            if content_candidates:
+                content_candidates.sort(key=lambda x: x[0], reverse=True)
+                _, best = content_candidates[0]
+                raw = OutlookDeepCollectRepository._element_to_text(best)
+                if len(raw) > 100:
+                    return raw
+            body = doc.xpath('//body')
+            if body:
+                raw = OutlookDeepCollectRepository._element_to_text(body[0])
+                if len(raw) > 50:
+                    return raw
+        except Exception:
+            pass
+        html_clean = re.sub(r'<script[^>]*>[\s\S]*?</script>', '', html_content, flags=re.IGNORECASE)
+        html_clean = re.sub(r'<style[^>]*>[\s\S]*?</style>', '', html_clean, flags=re.IGNORECASE)
+        html_clean = re.sub(r'<!--[\s\S]*?-->', '', html_clean)
+        html_clean = re.sub(r'<br\s*/?>', '\n', html_clean)
+        html_clean = re.sub(r'</p>', '\n', html_clean)
+        html_clean = re.sub(r'</div>', '\n', html_clean)
+        html_clean = re.sub(r'</h[1-6]>', '\n', html_clean)
+        html_clean = re.sub(r'</li>', '\n', html_clean)
+        html_clean = re.sub(r'<[^>]+>', ' ', html_clean)
+        lines = html_clean.split('\n')
+        cleaned = []
+        for line in lines:
+            line = re.sub(r'\s+', ' ', line).strip()
+            if line:
+                cleaned.append(line)
+        return '\n'.join(cleaned)
 
     @staticmethod
-    def _ai_deep_parse(raw_html, markdown_content, title, model_config):
-        """
-        使用大模型深度解析页面内容
-        先给原始HTML让AI理解结构，再给markdown作为参考
-        """
-        # 截取内容，避免token过多
-        max_html_len = 15000
-        max_md_len = 8000
-        if len(raw_html) > max_html_len:
-            raw_html = raw_html[:max_html_len] + "...[HTML内容已截断]"
-        if len(markdown_content) > max_md_len:
-            markdown_content = markdown_content[:max_md_len] + "...[Markdown内容已截断]"
+    def _element_to_text(el):
+        lines = []
+        for child in el.iter():
+            tag = child.tag if hasattr(child, 'tag') else ''
+            text = child.text_content().strip() if hasattr(child, 'text_content') else ''
+            if tag in ('p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'):
+                if text:
+                    lines.append(text)
+            elif tag == 'br':
+                if lines:
+                    lines.append('')
+            elif tag == 'li':
+                if text:
+                    lines.append(f'- {text}')
+            elif tag in ('div', 'section', 'article', 'main'):
+                pass
+        return '\n'.join(lines) if lines else el.text_content().strip()
 
-        prompt = f"""你是一个专业的网页内容提取专家。请分析以下网页内容，提取出有价值的正文信息。
+    @staticmethod
+    def _ai_deep_parse(raw_html, clean_text, title, snippet='', model_config=None):
+        if not model_config:
+            return {'summary': '', 'key_points': '', 'content': clean_text}
 
-标题：{title}
+        if len(clean_text) > 18000:
+            clean_text = clean_text[:18000]
 
-【原始HTML片段】（用于理解页面结构）：
-{raw_html}
+        context_parts = [f"## 文章标题\n{title}"]
+        if snippet:
+            context_parts.append(f"## 搜索摘要\n{snippet}")
+        context_parts.append(f"## 页面正文\n{clean_text}")
+        context_str = '\n\n'.join(context_parts)
 
-【页面文本内容】（已清理的正文）：
-{markdown_content}
-
-请完成以下任务：
-1. 提取完整的正文内容，去除导航、广告、侧边栏、页脚等无关内容
-2. 用200字以内概括文章核心内容
-3. 提取3-5个关键要点
-
-请严格按以下JSON格式输出（不要输出其他内容）：
-{{
-  "summary": "文章核心内容概括（200字以内）",
-  "key_points": "关键要点1；关键要点2；关键要点3",
-  "content": "完整的正文内容，保留原有的段落结构、标题、列表等格式"
-}}"""
+        prompt = (
+            "你是一个信息整理助手。请根据以下内容，完成提取和整理工作。\n\n"
+            f"{context_str}\n\n"
+            "请执行：\n"
+            "1. 提取正文内容，去除明显的导航、广告、版权声明等无关信息。如果没有明显无关内容，请完整保留原文。\n"
+            "2. 用200字以内概括核心内容\n"
+            "3. 提取3-5个关键要点\n\n"
+            "注意：请尽可能多地保留原文内容，不要过度删减。\n\n"
+            '请按以下JSON格式输出：\n'
+            '{"summary": "文章核心内容概括（200字以内）", "key_points": "要点1；要点2；要点3", "content": "完整的正文内容"}'
+        )
 
         messages = [{"role": "user", "content": prompt}]
         response_text = ModelRepository.call_model_api(
@@ -1087,25 +1285,58 @@ class OutlookDeepCollectRepository:
             max_tokens=8000
         )
 
-        # 解析JSON结果
-        try:
-            json_match = re.search(r'\{[\s\S]*\}', response_text)
-            if json_match:
-                result = json.loads(json_match.group())
-                return {
-                    'summary': result.get('summary', ''),
-                    'key_points': result.get('key_points', ''),
-                    'content': result.get('content', markdown_content)
-                }
-        except (json.JSONDecodeError, Exception):
-            pass
+        result = OutlookDeepCollectRepository._parse_ai_json_response(response_text)
+        if result:
+            return result
 
-        # 如果解析失败，返回markdown内容
-        return {
-            'summary': '',
-            'key_points': '',
-            'content': markdown_content
-        }
+        messages.append({"role": "assistant", "content": response_text})
+        messages.append({
+            "role": "user",
+            "content": '格式错误，请严格按JSON输出：{"summary": "...", "key_points": "...", "content": "..."}'
+        })
+        response_text = ModelRepository.call_model_api(
+            model_config['api_url'],
+            model_config['api_key'],
+            model_config.get('code', 'default'),
+            messages,
+            temperature=0.2,
+            max_tokens=8000
+        )
+        result = OutlookDeepCollectRepository._parse_ai_json_response(response_text)
+        if result:
+            return result
+
+        return {'summary': '', 'key_points': '', 'content': clean_text}
+
+    @staticmethod
+    def _parse_ai_json_response(response_text):
+        if not response_text:
+            return None
+        code_block = re.search(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```', response_text)
+        if code_block:
+            try:
+                data = json.loads(code_block.group(1))
+                if data.get('summary') or data.get('content'):
+                    return {
+                        'summary': data.get('summary', ''),
+                        'key_points': data.get('key_points', ''),
+                        'content': data.get('content', '')
+                    }
+            except json.JSONDecodeError:
+                pass
+        brace_match = re.search(r'\{[\s\S]*?\}', response_text)
+        if brace_match:
+            try:
+                data = json.loads(brace_match.group())
+                if data.get('summary') or data.get('content'):
+                    return {
+                        'summary': data.get('summary', ''),
+                        'key_points': data.get('key_points', ''),
+                        'content': data.get('content', '')
+                    }
+            except json.JSONDecodeError:
+                pass
+        return None
 
     @staticmethod
     def _save_detail(data_id, task_id, source_id, source_name, title, url,

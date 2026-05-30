@@ -121,7 +121,7 @@ class AdminOutlookCollectHandler(AdminBaseHandler):
         keyword = (self.get_body_argument("keyword", "") or "").strip()
         source_id_str = self.get_body_argument("source_id", "")
         sources_str = self.get_body_argument("sources", "")
-        pages = int(self.get_body_argument("pages", "1"))
+        pages = int(self.get_body_argument("pages", "5"))
         page_size_step = int(self.get_body_argument("page_size_step", "0"))
         ai_expand = self.get_body_argument("ai_expand", "0") == "1"
         ai_clean = self.get_body_argument("ai_clean", "0") == "1"

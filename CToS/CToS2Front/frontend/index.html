@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CToS 管理后台</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/announcement.css">
+</head>
+<body>
+    <!-- ============================================================
+         登录/注册页
+         ============================================================ -->
+    <div id="loginPage" class="page active">
+        <div class="login-container">
+            <div class="login-logo">🧠</div>
+            <h1>CToS 管理后台</h1>
+            <p class="subtitle">一站式数据采集 · 分析 · 管理平台</p>
+
+            <div class="login-tabs">
+                <button class="login-tab-btn active" data-tab="loginTab">登录</button>
+                <button class="login-tab-btn" data-tab="registerTab">注册</button>
+            </div>
+
+            <div id="loginTab" class="tab-content active">
+                <div class="form-group">
+                    <label class="required">用户名</label>
+                    <input type="text" id="loginUsername" class="form-input" placeholder="请输入用户名" required autocomplete="username" />
+                    <div class="form-error"></div>
+                </div>
+                <div class="form-group">
+                    <label class="required">密码</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="loginPassword" class="form-input" placeholder="请输入密码" required autocomplete="current-password" />
+                        <button type="button" class="password-toggle" tabindex="-1">👁️</button>
+                    </div>
+                    <div class="form-error"></div>
+                </div>
+                <button id="loginBtn" class="btn btn-primary btn-block">登录</button>
+            </div>
+
+            <div id="registerTab" class="tab-content">
+                <div class="form-group">
+                    <label class="required">用户名</label>
+                    <input type="text" id="regUsername" class="form-input" placeholder="输入用户名（唯一）" required />
+                    <div class="form-error"></div>
+                </div>
+                <div class="form-group">
+                    <label class="required">密码</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="regPassword" class="form-input" placeholder="至少6位密码" required />
+                        <button type="button" class="password-toggle" tabindex="-1">👁️</button>
+                    </div>
+                    <div class="form-error"></div>
+                </div>
+                <div class="form-group">
+                    <label>昵称</label>
+                    <input type="text" id="regNickname" class="form-input" placeholder="可选" />
+                </div>
+                <button id="registerBtn" class="btn btn-primary btn-block">注册</button>
+            </div>
+
+            <div class="health-section">
+                <button id="healthBtn" class="health-btn">🔍 检查服务状态</button>
+                <span id="healthStatus">点击检测后端连接</span>
+            </div>
+            <div class="cert-section">
+                <button id="trustCertBtn" class="cert-btn">🔒 信任证书 (HTTPS/WSS)</button>
+                <span id="certStatus" class="cert-status">首次连接 HTTPS 需要先信任自签名证书</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         主页面
+         ============================================================ -->
+    <div id="mainPage" class="page">
+        <header>
+            <div class="header-left">
+                <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
+                <div class="header-logo">🧠</div>
+                <h2>CToS 管理后台</h2>
+            </div>
+            <div class="header-right">
+                <span id="userInfo" class="user-badge"></span>
+                <button id="themeToggle" class="theme-toggle">🌙</button>
+                <button id="ttsToggle" class="btn btn-sm btn-ghost" onclick="toggleTTS()" title="语音播报（无障碍）">🔇 语音</button>
+                <button id="logoutBtn" class="btn btn-sm btn-outline">退出</button>
+            </div>
+        </header>
+
+        <div class="sidebar-overlay"></div>
+
+        <div class="main-layout">
+            <aside class="sidebar">
+                <ul class="sidebar-nav">
+                    <li data-module="dashboard" class="active"><span class="nav-icon">📈</span> 数字大屏</li>
+                    <li data-module="watch"><span class="nav-icon">📡</span> 智能瞭望</li>
+                    <li data-module="workers"><span class="nav-icon">🤖</span> 数字员工</li>
+                    <li data-module="dispatch"><span class="nav-icon">🚀</span> 派遣执行</li>
+                    <li data-module="cleaning"><span class="nav-icon">🧹</span> 数据清洗</li>
+                    <li data-module="warehouse"><span class="nav-icon">🏪</span> 知识仓库</li>
+                    <li data-module="sentiment"><span class="nav-icon">📊</span> 智慧舆情</li>
+                    <li data-module="workflow"><span class="nav-icon">⚡</span> 自动工作流</li>
+                    <li data-module="chat"><span class="nav-icon">💬</span> 智能问数</li>
+                    <li data-module="im"><span class="nav-icon">📱</span> 智能聊天</li>
+                    <li data-module="files"><span class="nav-icon">📁</span> 文件管理</li>
+                    <li data-module="admin" class="admin-only"><span class="nav-icon">⚙️</span> 系统管理</li>
+                </ul>
+            </aside>
+
+            <main class="content">
+
+                <!-- ===== 数字大屏 Dashboard ===== -->
+                <div id="module-dashboard" class="module-content active">
+                    <div class="module-header">
+                        <h3>📈 数字大屏</h3>
+                        <span class="module-subtitle">系统运行数据总览</span>
+                        <div class="module-actions">
+                            <button class="btn btn-sm btn-primary" onclick="App.loadModuleData('dashboard')">🔄 刷新</button>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <div class="section-title">实时指标</div>
+                        <div class="data-container" id="dashboard-stats"></div>
+                    </div>
+                    <div class="section-row">
+                        <div class="section half">
+                            <div class="section-title">采集趋势（近7天）</div>
+                            <div class="data-container" id="dashboard-collect-trend"></div>
+                        </div>
+                        <div class="section half">
+                            <div class="section-title">Token 趋势（近7天）</div>
+                            <div class="data-container" id="dashboard-token-trend"></div>
+                        </div>
+                    </div>
+                    <div class="section-row">
+                        <div class="section half">
+                            <div class="section-title">舆情统计</div>
+                            <div class="data-container" id="dashboard-sentiment-stats"></div>
+                        </div>
+                        <div class="section half">
+                            <div class="section-title">热点词云</div>
+                            <div class="data-container" id="dashboard-wordcloud"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== 智能瞭望 Watch ===== -->
+                <div id="module-watch" class="module-content">
+                    <div class="module-header">
+                        <h3>📡 智能瞭望</h3>
+                        <span class="module-subtitle">数据源采集与管理</span>
+                        <div class="module-actions">
+                            <button class="btn btn-sm btn-primary" onclick="App.loadModuleData('watch')">🔄 刷新</button>
+                            <button class="btn btn-sm btn-success" onclick="App.showWatchSourceForm()">➕ 新建瞭望源</button>
+                        </div>
+                    </div>
+                    <div class="watch-layout">
+                        <!-- 左侧瞭望源列表 -->
+                        <div class="watch-sources-sidebar">
+                            <div class="watch-sources-header">
+                                <span class="watch-sources-title">📡 瞭望源列表</span>
+                            </div>
+                            <div class="data-container" id="watch-sources"></div>
+                        </div>
+                        <!-- 右侧采集数据 -->
+                        <div class="watch-data-main">
+                            <div id="watch-data-welcome" class="watch-data-welcome">
+                                <div class="watch-data-welcome-icon">📡</div>
+                                <h3>选择瞭望源</h3>
+                                <p>点击左侧的瞭望源查看采集数据</p>
+                            </div>
+                            <div class="data-container" id="watch-data" style="display:none"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== 数字员工 Workers ===== -->
+                <div id="module-workers" class="module-content">
+                    <div class="module-header">
+                        <h3>🤖 数字员工</h3>
+                        <span class="module-subtitle">AI 工作引擎管理</span>
+                        <div class="module-actions">
+                            <button class="btn btn-sm btn-primary" onclick="App.loadModuleData('workers')">🔄 刷新</button>
+                            <button class="btn btn-sm btn-success" onclick="App.showWorkerForm()">➕ 新建员工</button>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <div class="section-title">工作列表</div>
+                        <div class="data-container" id="workers-jobs"></div>
+                    </div>
+                    <div class="section">
+                        <div class="section-title">员工列表</div>
+                        <div class="data-container" id="workers-list"></div>
+                    </div>
+                </div>
+
+                <!-- ===== 派遣执行 Dispatch ===== -->
+                <div id="module-dispatch" class="module-content">
+                    <div class="module-header">
+                        <h3>🚀 派遣执行</h3>
+                        <span class="module-subtitle">任务分配与执行记录</span>
+                        <div class="module-actions">
+                            <button class="btn btn-sm btn-primary" onclick="App.loadModuleData('dispatch')">🔄 刷新</button>
+                            <button class="btn btn-sm btn-success" onclick="App.showDispatchForm()">📤 派遣员工</button>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <div class="section-title">执行记录</div>
+                        <div class="data-container" id="dispatch-logs"></div>
+                    </div>
+                </div>
+
+                <!-- ===== 数据清洗 Cleaning ===== -->
+                <div id="module-cleaning" class="module-content">
+                    <div class="module-header">
+                        <h3>🧹 数据清洗工作台</h3>
+                        <span class="module-subtitle">采集数据清洗 → 结构化文档</span>
+                        <div class="module-actions">
+                            <button class="btn btn-sm btn-primary" onclick="App.loadModuleData('cleaning')">🔄 刷新</button>
+                            <button class="btn btn-sm btn-success" onclick="App.showCleaningForm()">▶️ 启动清洗</button>
+                            <button class="btn btn-sm btn-secondary" onclick="App.showCleaningStats()">📊 统计</button>
+                        </div>
+                    </div>
+
+                    <!-- 清洗工作台：左右分栏 -->
+                    <div class="cleaning-workbench">
+                        <!-- 左侧：待清洗数据 -->
+                        <div class="cleaning-panel uncleaned-panel">
+                            <div class="cleaning-panel-header">
+                                <span class="cleaning-panel-title">📥 待清洗数据</span>
+                                <div class="cleaning-panel-controls">
+                                    <select class="cleaning-source-select" id="clean-source-select" onchange="App.loadUncleanedData()">
+                                        <option value="">-- 所有瞭望源 --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="data-container" id="cleaning-uncleaned">
+                                <div class="empty-state"><div class="empty-icon">📡</div><div class="empty-text">选择瞭望源查看待清洗数据</div></div>
+                            </div>
+                        </div>
+                        <!-- 右侧：已清洗文档 -->
+                        <div class="cleaning-panel cleaned-panel">
+                            <div class="cleaning-panel-header">
+                                <span class="cleaning-panel-title">📄 已清洗文档</span>
+                                <div class="cleaning-panel-controls">
+                                    <input type="text" class="cleaning-search-input" id="clean-article-search" placeholder="搜索标题..." />
+                                    <button class="btn btn-xs btn-primary" onclick="App.loadCleanedArticles()">🔍 搜索</button>
+                                </div>
+                            </div>
+                            <div class="data-container" id="cleaning-cleaned">
+                                <div class="empty-state"><div class="empty-icon">📄</div><div class="empty-text">暂无清洗后的文档</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 底部：清洗日志（可折叠） -->
+                    <div class="cleaning-log-section">
+                        <div class="cleaning-log-header" onclick="App.toggleCleaningLogs()">
+                            <span>📋 清洗日志</span>
+                            <span class="cleaning-log-toggle" id="cleaning-log-toggle">▼</span>
+                        </div>
+                        <div class="cleaning-log-body" id="cleaning-log-body">
+                            <div class="data-container" id="cleaning-logs"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== 知识仓库 Warehouse ===== -->
+                <div id="module-warehouse" class="module-content">
+                    <div class="module-header">
+                        <h3>🏪 知识仓库</h3>
+                        <span class="module-subtitle">AI 清洗后的结构化文章管理</span>
+                        <div class="module-actions">
+                            <button class="btn btn-sm btn-primary" onclick="App.loadModuleData('warehouse')">🔄 刷新</button>
+                            <button class="btn btn-sm btn-secondary" onclick="App.showQuickSearch()">🔍 搜索</button>
+                            <button class="btn btn-sm btn-success" onclick="App.showCreateWarehouseArticle()">➕ 新建文章</button>
+                        </div>
+                    </div>
+
+                    <!-- 统计概览行 -->
+                    <div class="section">
+                        <div class="data-container" id="warehouse-stats"></div>
+                    </div>
+
+                    <!-- 主区域：左侧文章列表 + 右侧分类/域名 -->
+                    <div class="warehouse-layout" style="display:flex; gap:16px; margin-top:16px">
+                        <!-- 左侧：文章列表（主区域） -->
+                        <div class="warehouse-articles-panel" style="flex:2; min-width:0">
+                            <div class="warehouse-panel-header" style="display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap">
+                                <span style="font-weight:600; font-size:15px">📰 文章列表</span>
+                                <!-- 筛选工具栏 -->
+                                <div class="warehouse-filters" style="display:flex; gap:8px; flex-wrap:wrap; flex:1; justify-content:flex-end">
+                                    <select id="wh-filter-status" class="form-input" style="width:auto; min-width:90px; padding:4px 8px; font-size:13px" onchange="App.loadWarehouseArticles()">
+                                        <option value="">全部状态</option>
+                                        <option value="published">✅ 已发布</option>
+                                        <option value="draft">📝 草稿</option>
+                                    </select>
+                                    <select id="wh-filter-category" class="form-input" style="width:auto; min-width:100px; padding:4px 8px; font-size:13px" onchange="App.loadWarehouseArticles()">
+                                        <option value="">全部分类</option>
+                                    </select>
+                                    <select id="wh-filter-domain" class="form-input" style="width:auto; min-width:100px; padding:4px 8px; font-size:13px" onchange="App.loadWarehouseArticles()">
+                                        <option value="">全部域名</option>
+                                    </select>
+                                    <div style="display:flex; gap:4px">
+                                        <input type="text" id="wh-search-input" class="form-input" style="width:140px; padding:4px 8px; font-size:13px" placeholder="搜索标题/内容..." onkeydown="if(event.key==='Enter')App.loadWarehouseArticles()" />
+                                        <button class="btn btn-xs btn-primary" onclick="App.loadWarehouseArticles()">🔍</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 批量操作栏 -->
+                            <div id="wh-batch-bar" style="display:none; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius); padding:8px 12px; margin-bottom:10px; font-size:13px">
+                                <span id="wh-batch-count">已选 0 篇</span>
+                                <button class="btn btn-xs btn-success" onclick="App.batchUpdateStatus('published')">✅ 批量发布</button>
+                                <button class="btn btn-xs btn-warning" onclick="App.batchUpdateStatus('draft')">📝 批量草稿</button>
+                                <button class="btn btn-xs btn-danger" onclick="App.batchDeleteArticles()">🗑️ 批量删除</button>
+                                <button class="btn btn-xs btn-ghost" onclick="App.clearBatchSelect()">取消选择</button>
+                            </div>
+                            <!-- 分页信息 -->
+                            <div id="wh-pagination-info" style="font-size:12px; color:var(--text-light); margin-bottom:8px"></div>
+                            <!-- 文章列表容器 -->
+                            <div class="data-container" id="warehouse-articles"></div>
+                            <!-- 分页导航 -->
+                            <div id="wh-pagination-nav" style="display:flex; justify-content:center; gap:4px; margin-top:12px"></div>
+                        </div>
+
+                        <!-- 右侧：分类管理 + 域名列表 -->
+                        <div class="warehouse-sidebar" style="flex:1; min-width:260px; display:flex; flex-direction:column; gap:16px">
+                            <!-- 分类管理 -->
+                            <div class="warehouse-card" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:12px">
+                                <div class="warehouse-card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                                    <span style="font-weight:600; font-size:14px">📁 分类管理</span>
+                                    <button class="btn btn-xs btn-success" onclick="App.showCreateWarehouseCategory()">➕ 新建</button>
+                                </div>
+                                <div class="data-container" id="warehouse-categories" style="max-height:300px; overflow-y:auto"></div>
+                            </div>
+                            <!-- 域名列表 -->
+                            <div class="warehouse-card" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:12px">
+                                <div class="warehouse-card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                                    <span style="font-weight:600; font-size:14px">🌐 域名列表</span>
+                                    <button class="btn btn-xs btn-primary" onclick="App.loadWarehouseDomains()">🔄</button>
+                                </div>
+                                <div class="data-container" id="warehouse-domains" style="max-height:300px; overflow-y:auto"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== 智慧舆情 Sentiment（重新设计） ===== -->
+                <div id="module-sentiment" class="module-content">
+                    <div class="module-header">
+                        <h3>📊 智慧舆情</h3>
+                        <span class="module-subtitle">舆情分析与情感洞察</span>
+                        <div class="module-actions">
+                            <button class="btn btn-sm btn-primary" onclick="App.loadModuleData('sentiment')">🔄 刷新</button>
+                            <button class="btn btn-sm btn-success" onclick="App.triggerSentimentAnalysis()">⚡ 触发分析</button>
+                        </div>
+                    </div>
+
+                    <!-- 布局：左侧分析列表 + 右侧详情/可视化 -->
+                    <div class="sentiment-layout">
+                        <!-- 左侧：分析条目列表 -->
+                        <div class="sentiment-list-panel">
+                            <div class="sentiment-list-header">
+                                <span>📋 分析记录</span>
+                                <span class="sentiment-list-count" id="sentiment-count">0</span>
+                            </div>
+                            <div class="data-container" id="sentiment-analyses"></div>
+                        </div>
+
+                        <!-- 右侧：详情与可视化 -->
+                        <div class="sentiment-detail-panel">
+                            <!-- 选中分析后的详情区 -->
+                            <div id="sentiment-detail-area">
+                                <!-- 默认提示 -->
+                                <div id="sentiment-default-hint" class="sentiment-default-hint">
+                                    <div class="sentiment-default-icon">📊</div>
+                                    <h3>选择一条分析记录</h3>
+                                    <p>点击左侧列表中的分析条目查看详情</p>
+                                </div>
+
+                                <!-- 详情内容（初始隐藏） -->
+                                <div id="sentiment-detail-content" style="display:none">
+                                    <!-- 概览卡片 -->
+                                    <div class="sentiment-overview-cards" id="sentiment-overview"></div>
+
+                                    <!-- 事件列表 -->
+                                    <div class="sentiment-section-block">
+                                        <div class="sentiment-block-title">📌 舆情事件</div>
+                                        <div id="sentiment-events" class="sentiment-events-list"></div>
+                                    </div>
+
+                                    <!-- 底部按钮区域：词云和3D地球 -->
+                                    <div class="sentiment-viz-actions">
+                                        <button class="btn btn-primary" onclick="App.openWordcloudModal()">☁️ 词云</button>
+                                        <button class="btn btn-primary" onclick="App.openGlobeModal()">🌍 3D 地球</button>
+                                        <button class="btn btn-secondary" onclick="App.openDashboardModal()">📈 大屏快照</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== 自动工作流 Workflow ===== -->
+                <div id="module-workflow" class="module-content">
+                    <div class="module-header">
+                        <h3>⚡ 自动工作流</h3>
+                        <span class="module-subtitle">一键采集所有数据源 → 舆情分析</span>
+                        <div class="module-actions">
+                            <button class="btn btn-sm btn-primary" onclick="App.loadModuleData('workflow')">🔄 刷新</button>
+                            <button class="btn btn-sm btn-success" onclick="App.showCreateWorkflowTask()">➕ 新建任务</button>
+                        </div>
+                    </div>
+
+                    <!-- 统计概览 -->
+                    <div class="section">
+                        <div class="data-container" id="workflow-stats"></div>
+                    </div>
+
+                    <!-- 任务列表 -->
+                    <div class="section" style="margin-top:16px">
+                        <div class="section-title">📋 任务列表</div>
+                        <div id="workflow-pagination-info" style="font-size:12px; color:var(--text-light); margin-bottom:8px"></div>
+                        <div class="data-container" id="workflow-tasks"></div>
+                        <div id="workflow-pagination-nav" style="display:flex; justify-content:center; gap:4px; margin-top:12px"></div>
+                    </div>
+                </div>
+
+                <!-- ===== 智能问数 Chat（聊天对话框风格） ===== -->
+                <div id="module-chat" class="module-content">
+                    <div class="chat-layout">
+                        <!-- 左侧主聊天区 -->
+                        <div class="chat-main">
+                            <!-- 聊天消息区 -->
+                            <div class="chat-messages" id="chat-messages">
+                                <div class="chat-welcome">
+                                    <div class="chat-welcome-icon">💬</div>
+                                    <h3>智能问数</h3>
+                                    <p>选择右侧对话或新建对话开始提问</p>
+                                </div>
+                            </div>
+                            <!-- 底部输入区 -->
+                            <div class="chat-input-bar">
+                                <button class="chat-stop-btn" id="chatStopBtn" title="中断回复" style="display:none">■</button>
+                                <textarea id="chat-input" class="chat-input" rows="1" placeholder="输入您的问题..." style="resize:none"></textarea>
+                                <button class="btn btn-primary chat-send-btn" id="chatSendBtn">📤 发送</button>
+                            </div>
+                        </div>
+                        <!-- 右侧对话列表 -->
+                        <div class="chat-sidebar">
+                            <div class="chat-sidebar-header">
+                                <span class="chat-sidebar-title">📋 对话列表</span>
+                                <button class="btn btn-sm btn-success" onclick="App.showCreateConversationForm()" title="新建对话">➕</button>
+                                <button class="btn btn-sm btn-primary" onclick="App.loadChatConversations()" title="刷新">🔄</button>
+                            </div>
+                            <div class="chat-conv-list" id="chat-conv-list">
+                                <div class="loading-spinner"><span class="mini-spinner"></span> 加载中...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== 智能聊天 IM ===== -->
+                <div id="module-im" class="module-content">
+                    <div class="im-layout">
+                        <!-- 左侧面板: 联系人/会话列表 -->
+                        <div class="im-sidebar">
+                            <!-- IM 顶栏 -->
+                            <div class="im-sidebar-header">
+                                <h3>📱 智能聊天</h3>
+                                <div class="im-header-actions">
+                                    <button class="btn btn-xs btn-primary" onclick="App.loadModuleData('im')" title="刷新">🔄</button>
+                                </div>
+                            </div>
+
+                            <!-- 标签切换: 会话 / 通讯录 -->
+                            <div class="im-tabs">
+                                <button class="im-tab active" data-imtab="chat" onclick="App.switchIMTab('chat')">💬 会话</button>
+                                <button class="im-tab" data-imtab="contacts" onclick="App.switchIMTab('contacts')">👥 通讯录</button>
+                                <button class="im-tab" data-imtab="requests" onclick="App.switchIMTab('requests')">📨 请求</button>
+                            </div>
+
+                            <!-- 搜索栏 -->
+                            <div class="im-search-bar">
+                                <input type="text" class="im-search-input" id="im-search-input" placeholder="搜索好友/群组..." oninput="App.searchIMContacts(this.value)" />
+                                <button class="btn btn-xs btn-ghost" onclick="document.getElementById('im-search-input').value='';App.searchIMContacts('')">✕</button>
+                            </div>
+
+                            <!-- 会话列表 -->
+                            <div id="im-tab-chat" class="im-tab-content active">
+                                <div class="im-list" id="im-conversation-list"></div>
+                            </div>
+
+                            <!-- 通讯录 -->
+                            <div id="im-tab-contacts" class="im-tab-content">
+                                <div class="im-list-section-header">
+                                    <span>👥 我的好友</span>
+                                    <button class="btn btn-xs btn-success" onclick="App.showAddFriendForm()">➕ 添加</button>
+                                </div>
+                                <div class="im-list" id="im-friends-list"></div>
+                                <div class="im-list-section-header">
+                                    <span>👥 我的群组</span>
+                                    <button class="btn btn-xs btn-success" onclick="App.showCreateGroupForm()">➕ 建群</button>
+                                </div>
+                                <div class="im-list" id="im-groups-list"></div>
+                            </div>
+
+                            <!-- 好友请求 -->
+                            <div id="im-tab-requests" class="im-tab-content">
+                                <div class="im-list-section-header">
+                                    <span>📨 收到的请求</span>
+                                </div>
+                                <div class="im-list" id="im-received-requests"></div>
+                                <div class="im-list-section-header">
+                                    <span>📤 已发送的请求</span>
+                                </div>
+                                <div class="im-list" id="im-sent-requests"></div>
+                            </div>
+                        </div>
+
+                        <!-- 右侧聊天主区域 -->
+                        <div class="im-main">
+                            <!-- 聊天头部 -->
+                            <div class="im-chat-header" id="im-chat-header">
+                                <div class="im-chat-header-info">
+                                    <span id="im-chat-title">选择一个会话开始聊天</span>
+                                    <span class="im-chat-header-sub" id="im-chat-subtitle"></span>
+                                </div>
+                                <div class="im-chat-header-actions" id="im-chat-header-actions" style="display:none">
+                                    <button class="btn btn-xs btn-ghost" onclick="App.showChatDetail()" title="聊天详情">ℹ️</button>
+                                </div>
+                            </div>
+
+                            <!-- 消息列表 -->
+                            <div class="im-messages" id="im-messages">
+                                <div class="im-welcome">
+                                    <div class="im-welcome-icon">💬</div>
+                                    <h3>智能聊天</h3>
+                                    <p>从左侧选择一个好友或群组开始聊天</p>
+                                </div>
+                            </div>
+
+                            <!-- 输入区 -->
+                            <div class="im-input-area" id="im-input-area" style="display:none">
+                                <div class="im-input-toolbar">
+                                    <button class="im-toolbar-btn" onclick="App.openEmojiPicker()" title="表情">😊</button>
+                                    <button class="im-toolbar-btn" onclick="App.openFileUpload()" title="发送文件">📎</button>
+                                    <button class="im-toolbar-btn" onclick="App.openImageUpload()" title="发送图片">🖼️</button>
+                                </div>
+                                <div class="im-input-row" style="position:relative">
+                                    <textarea class="im-input" id="im-input" rows="1" placeholder="输入消息，@提及群成员..." oninput="App._onIMInputWithAt(this)"></textarea>
+                                    <button class="btn btn-primary im-send-btn" id="im-send-btn" onclick="App.sendIMMessage()">📤 发送</button>
+                                    <!-- @提及弹出菜单 -->
+                                    <div id="im-at-menu" class="im-at-menu" style="display:none">
+                                        <div class="im-at-menu-header">选择群成员</div>
+                                        <div id="im-at-menu-list" class="im-at-menu-list"></div>
+                                    </div>
+                                </div>
+                                <!-- 表情选择器 -->
+                                <div class="im-emoji-picker" id="im-emoji-picker" style="display:none">
+                                    <div class="im-emoji-grid" id="im-emoji-grid"></div>
+                                </div>
+                            </div>
+
+                            <!-- 聊天详情侧栏（右侧滑出） -->
+                            <div class="im-chat-detail" id="im-chat-detail" style="display:none">
+                                <div class="im-chat-detail-header">
+                                    <h4>聊天详情</h4>
+                                    <button class="btn btn-xs btn-ghost" onclick="App.closeChatDetail()">✕</button>
+                                </div>
+                                <div class="im-chat-detail-body" id="im-chat-detail-body"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== 文件管理 Files ===== -->
+                <div id="module-files" class="module-content">
+                    <div class="module-header">
+                        <h3>📁 文件管理</h3>
+                        <span class="module-subtitle">上传文件集中管理 · MD5去重避免重复存储</span>
+                        <div class="module-actions">
+                            <button class="btn btn-sm btn-primary" onclick="App.loadModuleData('files')">🔄 刷新</button>
+                            <button class="btn btn-sm btn-success" onclick="App.showFileUploadForm()">📤 上传文件</button>
+                        </div>
+                    </div>
+
+                    <!-- 统计概览 -->
+                    <div class="section">
+                        <div class="data-container" id="files-stats"></div>
+                    </div>
+
+                    <!-- 搜索/筛选工具栏 -->
+                    <div class="files-toolbar" style="display:flex; align-items:center; gap:12px; margin-top:16px; flex-wrap:wrap">
+                        <div style="display:flex; gap:4px; align-items:center">
+                            <input type="text" id="files-search-input" class="form-input" style="width:180px; padding:6px 10px; font-size:13px" placeholder="搜索文件名..." onkeydown="if(event.key==='Enter')App.loadFileList()" />
+                            <button class="btn btn-xs btn-primary" onclick="App.loadFileList()">🔍 搜索</button>
+                        </div>
+                        <select id="files-type-filter" class="form-input" style="width:auto; min-width:100px; padding:4px 8px; font-size:13px" onchange="App.loadFileList()">
+                            <option value="">全部类型</option>
+                            <option value="image">🖼️ 图片</option>
+                            <option value="text">📄 文本</option>
+                            <option value="application/pdf">📕 PDF</option>
+                            <option value="video">🎬 视频</option>
+                            <option value="audio">🎵 音频</option>
+                        </select>
+                        <!-- 管理员可见的上传者筛选 -->
+                        <select id="files-uploader-filter" class="form-input admin-visible" style="width:auto; min-width:100px; padding:4px 8px; font-size:13px; display:none" onchange="App.loadFileList()">
+                            <option value="">全部上传者</option>
+                        </select>
+                    </div>
+
+                    <!-- 文件列表 -->
+                    <div class="section" style="margin-top:12px">
+                        <div class="section-title">文件列表</div>
+                        <div id="files-pagination-info" style="font-size:12px; color:var(--text-light); margin-bottom:8px"></div>
+                        <div class="data-container" id="files-list"></div>
+                        <div id="files-pagination-nav" style="display:flex; justify-content:center; gap:4px; margin-top:12px"></div>
+                    </div>
+                </div>
+
+                <!-- ===== 系统管理 Admin ===== -->
+                <div id="module-admin" class="module-content">
+                    <div class="module-header">
+                        <h3>⚙️ 系统管理</h3>
+                        <span class="module-subtitle">用户、配置、API Key 管理</span>
+                        <div class="module-actions">
+                            <button class="btn btn-sm btn-primary" onclick="App.loadModuleData('admin')">🔄 刷新</button>
+                            <button class="btn btn-sm btn-success" onclick="App.showCreateUserForm()">➕ 新建用户</button>
+                            <button class="btn btn-sm btn-success" onclick="App.showCreateApiKeyForm()">➕ 新建 API Key</button>
+                        </div>
+                    </div>
+                    <div class="section-row">
+                        <div class="section half">
+                            <div class="section-title">用户列表</div>
+                            <div class="data-container" id="admin-users"></div>
+                        </div>
+                        <div class="section half">
+                            <div class="section-title">API Key 列表</div>
+                            <div class="data-container" id="admin-apikeys"></div>
+                        </div>
+                    </div>
+                    <div class="section-row">
+                        <div class="section half">
+                            <div class="section-title">系统配置</div>
+                            <div class="data-container" id="admin-configs"></div>
+                        </div>
+                        <div class="section half">
+                            <div class="section-title">操作日志</div>
+                            <div class="data-container" id="admin-logs"></div>
+                        </div>
+                    </div>
+                    <div class="section-row">
+                        <div class="section half">
+                            <div class="section-title">Token 日统计</div>
+                            <div class="data-container" id="admin-token-daily"></div>
+                        </div>
+                        <div class="section half">
+                            <div class="section-title">Token 用户排行</div>
+                            <div class="data-container" id="admin-token-users"></div>
+                        </div>
+                    </div>
+                    <div class="section" style="margin-top:24px">
+                        <div class="section-title">
+                            👥 群组管理
+                            <button class="btn btn-xs btn-primary" style="margin-left:12px" onclick="App.loadAdminGroups()">🔄 刷新群列表</button>
+                        </div>
+                        <div class="data-container" id="admin-groups">
+                            <div class="loading-spinner"><span class="mini-spinner"></span> 加载群组列表...</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== 数据库管理（多数据库支持与切换） ===== -->
+                    <div class="section" style="margin-top:24px">
+                        <div class="section-title">
+                            🗄️ 数据库管理
+                            <span class="module-subtitle" style="font-size:12px">支持 SQLite / MySQL 切换与数据迁移</span>
+                            <button class="btn btn-xs btn-primary" style="margin-left:12px" onclick="App.loadDatabaseStatus()">🔄 刷新状态</button>
+                        </div>
+                        <div class="data-container" id="admin-database-status">
+                            <div class="loading-spinner"><span class="mini-spinner"></span> 加载数据库状态...</div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ===== 词云弹窗 ===== -->
+    <div class="modal-overlay" id="wordcloudModal">
+        <div class="modal-dialog modal-dialog-lg">
+            <div class="modal-header">
+                <h3>☁️ 舆情词云</h3>
+                <button class="modal-close" onclick="App.closeWordcloudModal()">×</button>
+            </div>
+            <div class="modal-body modal-body-viz" id="wordcloud-body">
+                <div class="loading-spinner"><span class="mini-spinner"></span> 加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 3D 地球弹窗 ===== -->
+    <div class="modal-overlay" id="globeModal">
+        <div class="modal-dialog modal-dialog-xl">
+            <div class="modal-header">
+                <h3>🌍 3D 舆情地球</h3>
+                <button class="modal-close" onclick="App.closeGlobeModal()">×</button>
+            </div>
+            <div class="modal-body modal-body-viz" id="globe-body">
+                <div class="loading-spinner"><span class="mini-spinner"></span> 加载 Three.js 中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 大屏快照弹窗 ===== -->
+    <div class="modal-overlay" id="dashboardModal">
+        <div class="modal-dialog modal-dialog-lg">
+            <div class="modal-header">
+                <h3>📈 舆情大屏快照</h3>
+                <button class="modal-close" onclick="App.closeDashboardModal()">×</button>
+            </div>
+            <div class="modal-body" id="dashboard-body">
+                <div class="loading-spinner"><span class="mini-spinner"></span> 加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <!-- Three.js 用于 3D 地球 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="js/app.js"></script>
+    <!-- 手势识别客户端（无障碍功能：手势控制 + 语音播报） -->
+    <script src="js/gesture_client.js"></script>
+</body>
+</html>

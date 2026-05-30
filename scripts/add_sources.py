@@ -21,41 +21,15 @@ NEW_SOURCES = [
     {
         "name": "360新闻",
         "code": "so_news",
-        "entry_url": "https://news.so.com/ns?q={keyword}&pn={page}",
-        "html_selector": "//ul[contains(@class, 'result')]/li",
-        "title_selector": ".//h3/a",
-        "url_selector": ".//h3/a/@href",
-        "content_selector": ".//p[contains(@class, 'info')]",
-        "date_selector": ".//span[contains(@class, 'time')]",
-        "page_size_step": 1,
-        "page_start": 1,
-        "description": "360新闻搜索引擎采集源"
-    },
-    {
-        "name": "必应新闻",
-        "code": "bing_news",
-        "entry_url": "https://www.bing.com/news/search?q={keyword}&first={page}",
-        "html_selector": "//div[contains(@class, 'news-card')]",
-        "title_selector": ".//a[contains(@class, 'title')]",
-        "url_selector": ".//a[contains(@class, 'title')]/@href",
-        "content_selector": ".//div[contains(@class, 'snippet')]",
-        "date_selector": ".//span[contains(@class, 'date')]",
+        "entry_url": "https://www.so.com/s?q={keyword}&pn={page}",
+        "html_selector": "//li[contains(@class, 'res-list')]",
+        "title_selector": ".//h3",
+        "url_selector": ".//a",
+        "content_selector": ".//p[contains(@class, 'summary')]",
+        "date_selector": ".//p[contains(@class, 'g-linkinfo')]",
         "page_size_step": 10,
-        "page_start": 0,
-        "description": "必应新闻搜索引擎采集源"
-    },
-    {
-        "name": "新浪新闻",
-        "code": "sina_news",
-        "entry_url": "https://search.sina.com.cn/news?q={keyword}&c=news&range=all&time=all&num=20&page={page}",
-        "html_selector": "//div[contains(@class, 'result')]",
-        "title_selector": ".//h2/a",
-        "url_selector": ".//h2/a/@href",
-        "content_selector": ".//p[contains(@class, 'content')]",
-        "date_selector": ".//span[contains(@class, 'date')]",
-        "page_size_step": 1,
         "page_start": 1,
-        "description": "新浪新闻搜索引擎采集源"
+        "description": "360搜索引擎采集源（https://www.so.com）"
     },
 ]
 

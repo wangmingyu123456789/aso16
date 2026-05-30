@@ -251,12 +251,12 @@ def init_db():
 				'GET', 'html',
 				'//div[contains(@class,"vrwrap")]',
 				'.//h3', './/h3/a', '', '', '',
-				1, 1, 0, '', 0, '', 1, '搜狗新闻搜索引擎采集源'),
-			('360新闻', 'so_news', 'https://www.so.com/s?q={keyword}&pn={page}',
+				10, 1, 0, '', 0, '', 1, '搜狗新闻搜索引擎采集源'),
+				('360新闻', 'so_news', 'https://www.so.com/s?q={keyword}&pn={page}',
 				'GET', 'html',
 				'//li[contains(@class,"res-list")]',
 				'.//h3', './/a', './/p[contains(@class,"summary")]', './/p[contains(@class,"g-linkinfo")]', '',
-				1, 1, 0, '', 0, '', 1, '360搜索引擎采集源（https://www.so.com）'),
+				10, 1, 0, '', 0, '', 1, '360搜索引擎采集源（https://www.so.com）'),
 			]
 			for ms in _more_sources:
 				conn.execute(

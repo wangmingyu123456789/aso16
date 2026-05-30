@@ -363,6 +363,9 @@
                 {field:'author',title:'作者',width:100,align:'center'},
                 {field:'publish_date',title:'发布日期',width:120,align:'center'},
                 {field:'ai_processed',title:'AI',width:60,align:'center',templet:function(d){
+                    if(d.ai_deep_status == 1){
+                        return '<span style="color:#52c41a;font-weight:600;">已采集</span>';
+                    }
                     return '<span style="color:#999;">否</span>';
                 }},
                 {field:'deep_status',title:'深度',width:70,align:'center',templet:function(d){
