@@ -1,0 +1,543 @@
+# 项目功能实现详细操作指南
+
+> 本文档详细记录瞭望采集（定时采集+采集日志）、数字员工、数智大屏三大模块的完整实现过程。
+> 适用于在相同初始代码基础上从零实现这些功能。
+
+---
+
+## 一、瞭望采集模块：定时采集与采集日志
+
+### 1.1 数据库表结构
+
+在 `app/models/db.py` 的 `upgrade_db()` 函数中添加以下两张表：
+
+**采集日志表（crawl_logs）**
+- 检查表是否已存在，不存在则创建
+- 字段：id（主键自增）、task_id（任务ID，默认0）、source_id（数据源ID）、source_name（数据源名称）、keyword（关键词）、start_time（开始时间）、end_time（结束时间）、total_count（获取总数）、saved_count（保存成功数）、status（状态：running/completed/error）、error_msg（错误信息）、create_at（创建时间，默认当前本地时间）
+
+**定时采集任务表（crawl_schedules）**
+- 检查表是否已存在，不存在则创建
+- 字段：id（主键自增）、source_id（数据源ID）、source_name（数据源名称）、keyword（关键词）、cron_expression（Cron表达式）、pages（采集页数，默认1）、per_page（每页条数，默认10）、is_enabled（是否启用，默认1）、last_run（上次执行时间）、next_run（下次执行时间）、create_at（创建时间）
+
+**菜单初始化**
+在 `upgrade_db()` 函数的菜单升级逻辑中（在"瞭望采集"一级菜单下），添加两个子菜单项：
+- 定时采集：code为`outlook_schedule`，图标为`layui-icon-log`，URL为`/admin/outlook/schedule`，排序为3
+- 采集日志：code为`outlook_log`，图标为`layui-icon-file`，URL为`/admin/outlook/log`，排序为4
+- 每个菜单创建后，都需要为admin角色分配对应权限（插入role_functions表）
+
+### 1.2 定时采集调度器
+
+创建文件 `app/models/crawl_scheduler.py`，实现以下功能：
+
+**核心组件**
+- 使用 APScheduler 的 BackgroundScheduler 作为后台调度器
+- 创建全局 scheduler 实例
+
+**execute_crawl_task 函数**
+- 接收 schedule_id 参数
+- 从数据库获取任务配置，检查是否启用
+- 获取对应的数据源配置
+- 创建采集日志记录（状态为running）
+- 调用采集器执行采集，逐条保存数据
+- 完成后更新日志状态（completed或error）
+- 更新任务的上次执行时间
+
+**load_schedules 函数**
+- 清除现有所有调度任务
+- 获取所有启用的定时任务
+- 解析 Cron 表达式（5段格式：分 时 日 月 星期）
+- 为每个任务创建 CronTrigger 并添加到调度器
+- 任务ID格式为 `crawl_{schedule_id}`
+
+**start_scheduler / stop_scheduler / reload_schedules 函数**
+- start_scheduler：加载任务并启动调度器
+- stop_scheduler：关闭调度器
+- reload_schedules：在任务增删改后重新加载所有任务
+
+### 1.3 采集器引擎
+
+创建文件 `app/models/watch_collector.py`，实现以下功能：
+
+**WatchCollector 类**
+- build_url 方法：根据数据源配置、关键词、页码构建完整URL，支持参数替换
+- fetch_html 方法：使用 urllib.request 发起HTTP请求，支持自定义Header，处理UTF-8/GBK编码
+- parse_items 方法：使用 HTMLParser 解析HTML，提取链接和标题作为采集项
+- collect 方法：循环遍历页数，逐页构建URL、获取HTML、解析数据，返回所有采集项
+
+### 1.4 数据访问层
+
+在 `app/models/watch.py` 中添加以下 Repository 类：
+
+**CrawlLogRepository**
+- create_log：创建日志记录，返回日志ID
+- update_log：更新日志的结束时间、获取数、保存数、错误信息、状态
+- complete_log：标记日志为完成状态
+- fail_log：标记日志为失败状态
+- get_log_list：分页获取日志列表，按ID倒序
+
+**CrawlScheduleRepository**
+- get_all_enabled：获取所有启用的定时任务
+- add_schedule：添加定时任务
+- update_schedule：更新定时任务（支持部分字段更新）
+- delete_schedule：删除定时任务
+- get_schedule_list：分页获取任务列表，关联数据源表获取名称
+- get_schedule_by_id：根据ID获取任务详情，关联数据源表
+
+### 1.5 控制器层
+
+在 `app/controllers/admin_watch.py` 中添加以下 Handler 类：
+
+**AdminCrawlLogHandler**
+- 继承 AdminBaseHandler
+- GET方法：渲染 crawl_log.html 模板，传入标题和用户名
+
+**AdminCrawlLogApiHandler**
+- 继承 AdminBaseHandler
+- GET方法：分页获取日志列表，返回JSON格式（code、count、data）
+
+**AdminCrawlScheduleHandler**
+- 继承 AdminBaseHandler
+- GET方法：渲染 crawl_schedule.html 模板
+
+**AdminCrawlScheduleApiHandler**
+- 继承 AdminBaseHandler
+- GET方法：支持两个action
+  - list：分页获取任务列表
+  - detail：根据ID获取任务详情
+- POST方法：支持两个action
+  - add：添加定时任务，成功后调用 reload_schedules()
+  - edit：编辑定时任务，成功后调用 reload_schedules()
+- DELETE方法：删除定时任务，成功后调用 reload_schedules()
+
+### 1.6 前端模板
+
+**crawl_log.html**
+- 继承 layout.html
+- 页面风格：深色背景（#0a0e27），圆角卡片
+- 工具栏：标题（带图标）+ 刷新按钮
+- 数据表格：显示ID、数据源、关键词、开始时间、结束时间、获取数、保存数、状态、错误信息
+- 状态显示：running（蓝色脉冲动画）、completed（绿色对勾）、error（红色叉号）
+- 分页：使用 Layui laypage 组件
+- JavaScript：使用 Layui 的 layer、jquery、laypage 模块，AJAX 加载数据，渲染表格
+
+**crawl_schedule.html**
+- 继承 layout.html
+- 页面风格：与日志页面一致的深色主题
+- 工具栏：标题 + 新增任务按钮
+- 数据表格：显示ID、数据源、关键词、Cron表达式（等宽字体高亮）、页数、每页条数、状态（启用/禁用开关样式）、上次执行时间、操作按钮
+- 新增/编辑弹窗：使用 layer.open 打开表单，包含数据源下拉选择、关键词输入、Cron表达式输入（带帮助说明）、页数、每页条数、启用状态开关
+- Cron帮助信息：显示格式说明、常用示例（每6小时、每天凌晨、工作日、每30分钟、每周日）、特殊字符说明
+- JavaScript：加载数据源列表用于下拉选择，表单提交后调用 reload_schedules
+
+### 1.7 路由注册
+
+在 `app.py` 的 make_app() 函数中添加以下路由：
+
+```
+/admin/outlook/log -> AdminCrawlLogHandler
+/admin/outlook/log/api -> AdminCrawlLogApiHandler
+/admin/outlook/schedule -> AdminCrawlScheduleHandler
+/admin/outlook/schedule/api -> AdminCrawlScheduleApiHandler
+/admin/outlook/schedule/delete -> AdminCrawlScheduleApiHandler (DELETE)
+```
+
+### 1.8 应用启动
+
+在 `app.py` 的 `if __name__ == "__main__"` 块中，数据库初始化之后，添加：
+- 导入 crawl_scheduler 模块
+- 调用 start_scheduler() 启动定时采集调度器
+
+---
+
+## 二、数字员工功能
+
+### 2.1 数据库表结构
+
+在 `app/models/db.py` 的 `upgrade_db()` 函数中添加以下三张表：
+
+**数字员工表（assistants）**
+- 检查表是否已存在，不存在则创建
+- 字段：id（主键自增）、assistant_name（名称）、assistant_code（编码，唯一）、icon（图标类名）、prompt_template（Prompt模板）、model_id（绑定模型ID）、sort_order（排序）、is_enabled（是否启用）、api_key（API密钥，可覆盖模型配置）、api_url（API地址，可覆盖模型配置）、description（描述）、create_at（创建时间）
+
+**聊天历史表（chat_history）**
+- 检查表是否已存在，不存在则创建
+- 字段：id（主键自增）、user_id（用户ID）、assistant_id（助手ID）、model_id（模型ID）、role（角色：user/assistant）、content（消息内容）、prompt_tokens（输入token数）、completion_tokens（输出token数）、total_tokens（总token数）、create_at（创建时间）
+
+**菜单初始化**
+在 `_init_default_data()` 函数的默认菜单中，在"核心业务"一级菜单下添加：
+- 数字员工：code为`biz_employees`，图标为`layui-icon-user`，URL为`/admin/employees`，排序为2
+
+在 `upgrade_db()` 函数中添加数智大屏菜单时，同时确保数字员工菜单存在：
+- 如果 biz_employees 菜单不存在，则创建并分配admin权限
+
+### 2.2 数据访问层
+
+创建文件 `app/models/assistant.py`，实现以下 Repository 类：
+
+**AssistantRepository**
+- get_assistant_list：分页获取助手列表，支持关键词搜索（名称或编码），关联models表获取模型名称，按sort_order和id排序
+- get_assistant_count：获取助手总数，支持关键词过滤
+- get_assistant_by_id：根据ID获取助手详情，关联models表
+- get_enabled_assistants：获取所有启用的助手，用于前端下拉选择
+- add_assistant：添加助手，捕获异常返回布尔值
+- update_assistant：更新助手，支持所有字段
+- delete_assistant：删除单个助手
+- batch_delete_assistant：批量删除助手（使用IN子句）
+- update_sort_order：批量更新排序顺序（拖拽排序用）
+- get_usage_stats：获取调用统计，关联chat_history表，按天数过滤，返回每个助手的调用次数、总token、输入token、输出token
+
+**ChatHistoryRepository**
+- save_message：保存聊天消息，支持token统计
+- get_history：获取聊天历史，支持按助手ID过滤，限制条数，按时间正序
+- clear_history：清空聊天历史，支持按助手ID过滤
+
+### 2.3 模型层修改
+
+在 `app/models/model.py` 中添加流式对话方法：
+
+**stream_model_chat 静态方法**
+- 参数：api_url、api_key、model_code、messages
+- 使用 httpx 客户端的 stream 上下文管理器（注意：不是 client.post 的 stream 参数）
+- 构建请求头（Authorization Bearer token、Content-Type）
+- 构建请求体（model、messages、stream=true）
+- 逐行读取响应，解析 SSE 格式（data: 前缀）
+- 提取 delta.content 内容，以 JSON 格式逐块返回
+- 捕获 usage 信息返回
+- 处理 [DONE] 结束标记
+- 异常处理：返回错误JSON
+
+### 2.4 控制器层
+
+创建文件 `app/controllers/admin_assistant.py`，实现以下 Handler 类：
+
+**AdminAssistantConfigHandler**
+- 继承 AdminBaseHandler
+- GET方法：渲染 assistant.html 模板，传入 current_page="agent"
+
+**AdminAssistantChatHandler**
+- 继承 AdminBaseHandler
+- GET方法：渲染 chat.html 模板，标题为"智能问数"
+
+**AdminAssistantApiHandler**
+- 继承 AdminBaseHandler
+- GET方法：支持四个action
+  - stats：获取调用统计（天数参数，默认7天）
+  - enabled：获取所有启用的助手列表
+  - detail：根据ID获取助手详情
+  - 默认：分页获取助手列表（支持关键词搜索）
+- POST方法：支持两个action
+  - sort：更新助手排序（接收ids数组）
+  - 默认：新增或编辑助手（根据是否有id参数判断）
+- DELETE方法：批量删除助手（接收ids数组）
+
+**AdminAssistantUsageHandler**
+- 继承 AdminBaseHandler
+- GET方法：获取调用统计，渲染 assistant_usage.html 模板，传入stats和days参数
+
+创建文件 `app/controllers/chat.py`，实现以下 Handler 类：
+
+**ChatPageHandler**
+- 继承 AdminBaseHandler
+- GET方法：渲染 chat.html 模板，current_page="agent_chat"
+
+**ChatSendHandler**
+- 继承 AdminBaseHandler
+- POST方法：处理流式聊天请求
+  - 验证助手ID、消息内容、助手状态、模型状态
+  - 保存用户消息到聊天历史
+  - 构建消息列表（system prompt + 历史记录 + 当前消息）
+  - 设置 SSE 响应头（text/event-stream、no-cache）
+  - 使用线程池启动流式请求（避免阻塞）
+  - 使用队列接收流式数据
+  - 逐块返回 SSE 格式数据（data: JSON）
+  - 完成后保存助手回复到聊天历史
+
+**ChatHistoryHandler**
+- 继承 AdminBaseHandler
+- GET方法：获取聊天历史，支持按助手ID过滤
+
+**ChatClearHandler**
+- 继承 AdminBaseHandler
+- POST方法：清空聊天历史，支持按助手ID过滤
+
+### 2.5 前端模板
+
+**assistant.html**
+- 继承 layout.html
+- 页面布局：工具栏（搜索框 + 调用统计按钮 + 新增按钮）+ 卡片网格（3列）
+- 卡片设计：
+  - 拖拽手柄（左上角）
+  - 状态徽章（右上角：已启用/已禁用）
+  - 图标（渐变色圆角方块）
+  - 名称和编码
+  - Prompt模板预览（最多3行，溢出省略）
+  - 绑定模型信息
+  - 操作按钮：对话、编辑、删除
+  - 排序号（右下角）
+- 拖拽排序：使用 HTML5 Drag and Drop API，拖拽结束后AJAX提交新排序
+- 新增/编辑弹窗：使用 layer.open，表单包含名称、编码、图标、Prompt模板、模型下拉、API Key、API URL、描述、启用状态单选
+- 搜索功能：支持名称和编码模糊搜索
+- 调用统计按钮：跳转到 /admin/agent/usage
+
+**chat.html**
+- 独立页面（不继承layout），全屏布局
+- 左侧面板（280px宽）：
+  - 标题栏：数字员工标题 + 返回按钮
+  - 助手列表：图标、名称、描述、激活状态指示点
+- 右侧聊天区：
+  - 聊天头部：当前助手信息 + 清空对话按钮 + 助手配置按钮
+  - 消息区域：用户消息（右对齐，渐变色气泡）、助手消息（左对齐，半透明气泡）、欢迎屏幕
+  - 输入区域：多行文本输入框 + 发送按钮
+- 流式响应处理：
+  - 使用 Fetch API 的 ReadableStream
+  - 显示打字动画指示器
+  - 逐块更新助手回复内容
+  - 错误处理和超时处理
+- 快捷键：Enter发送消息，Shift+Enter换行
+- URL参数支持：assistant_id 参数自动选中对应助手
+
+**assistant_usage.html**
+- 继承 layout.html
+- 页面风格：深色背景（#0a0e27）
+- 工具栏：返回按钮 + 统计周期显示
+- 统计卡片网格（自适应列数）：
+  - 卡片顶部渐变色条
+  - 助手图标、名称、编码、"数字员工"标签
+  - 四项统计数据：调用次数（绿色）、总Token消耗（默认色）、输入Token（黄色）、输出Token（红色）
+- 卡片悬停效果：边框高亮、上移、阴影
+
+### 2.6 路由注册
+
+在 `app.py` 的 make_app() 函数中添加以下路由：
+
+```
+/admin/agent -> AdminAssistantConfigHandler
+/admin/api/assistant -> AdminAssistantApiHandler
+/admin/agent/usage -> AdminAssistantUsageHandler
+/admin/agent/chat -> AdminAssistantChatHandler
+/api/chat/history -> ChatHistoryHandler
+/api/chat/send -> ChatSendHandler
+/api/chat/clear -> ChatClearHandler
+```
+
+**重要注意**：前端AJAX调用的是 `/admin/api/assistant`，路由必须与此一致，不能注册为 `/admin/agent/api`。
+
+---
+
+## 三、数智大屏功能
+
+### 3.1 数据库表结构
+
+在 `app/models/db.py` 的 `upgrade_db()` 函数中添加以下表：
+
+**大屏组件表（dashboard_components）**
+- 检查表是否已存在，不存在则创建
+- 字段：id（主键自增）、name（组件名称）、type（图表类型：line/bar/pie/gauge）、color（主题颜色）、refresh_interval（刷新间隔秒数）、grid_x（网格X坐标）、grid_y（网格Y坐标）、grid_w（网格宽度）、grid_h（网格高度）、is_enabled（是否启用）、sort_order（排序）
+
+**菜单初始化**
+在 `upgrade_db()` 函数中添加：
+- 数智大屏一级菜单：code为`biz_dashboard`，图标为`layui-icon-chart`，URL为`/dashboard`，排序为5
+- 大屏主页子菜单：code为`biz_dashboard_home`，图标为`layui-icon-home`，URL为`/dashboard`，排序为1
+- 组件管理子菜单：code为`biz_dashboard_components`，图标为`layui-icon-set`，URL为`/admin/dashboard/components`，排序为2
+- 为admin角色分配所有新菜单权限
+
+### 3.2 控制器层
+
+创建文件 `app/controllers/dashboard.py`，实现以下 Handler 类：
+
+**DashboardPageHandler**
+- 继承 tornado.web.RequestHandler（不需要认证，大屏页面独立访问）
+- GET方法：渲染 admin/dashboard.html 模板，传入标题
+
+**DashboardComponentsHandler**
+- 继承 AdminBaseHandler
+- GET方法：渲染 admin/dashboard_components.html 模板，需要认证，传入 current_page="dashboard_components"
+
+**DashboardStatsHandler**
+- 继承 tornado.web.RequestHandler（不需要认证）
+- GET方法：根据action参数返回不同统计数据
+  - user_trend：近7天用户访问量趋势（从users表按日期分组统计）
+  - token_ranking：模型token消耗排行榜（从models表按total_tokens倒序取前10）
+  - data_source：瞭望采集数据来源分布（从watch_data表按source_name分组统计前10）
+  - today_collect：今日实时采集数量（从watch_data表统计当天数据量）
+- 所有返回数据格式：{code: 0, data: {...}}
+
+**DashboardComponentAPIHandler**
+- 继承 AdminBaseHandler（需要认证）
+- GET方法：获取所有组件列表，按sort_order排序
+- POST方法：支持四个action
+  - add：添加组件（名称、类型、颜色、刷新间隔）
+  - update：更新组件（ID、名称、类型、颜色、刷新间隔）
+  - delete：删除组件（ID）
+  - save_layout：保存布局（接收JSON数组，更新每个组件的grid_x/y/w/h）
+
+### 3.3 前端模板
+
+**dashboard.html**
+- 独立页面（不继承layout），全屏布局，无左侧菜单
+- 页面风格：深色渐变背景（#0a0e27 -> #1a1f3a -> #0d1225）
+- 头部栏：
+  - 左侧：返回按钮（指向/admin）+ 标题"数智大屏"
+  - 右侧：当前时间（每秒更新）+ 3D预览按钮
+- 网格布局：12列 x 8行 CSS Grid
+- 四个图表卡片：
+  1. 近7天用户访问量趋势（折线图）：占 1-7列，1-5行
+  2. 模型Token消耗排行榜（柱状图）：占 7-13列，1-5行
+  3. 瞭望采集数据来源分布（饼图）：占 1-7列，5-9行
+  4. 今日实时采集数量（仪表盘）：占 7-13列，5-9行
+- 每个卡片：标题 + 导出按钮（PNG/CSV）
+- 3D预览弹窗：全屏遮罩，Three.js 场景（旋转线框球体 + 粒子效果）
+- 关闭按钮：右上角圆形按钮，带叉号图标
+- JavaScript：
+  - 使用 ECharts 5.5.0 初始化四个图表
+  - 页面加载时AJAX获取统计数据并渲染图表
+  - 仪表盘每10秒自动刷新
+  - 导出功能：PNG使用ECharts的getDataURL，CSV将图表数据转为CSV格式下载
+  - Three.js 3D场景：球体几何、粒子系统、光照、动画循环
+  - 窗口resize时自动调整所有图表和3D渲染器大小
+
+**dashboard_components.html**
+- 继承 admin/layout.html（注意：必须是 admin/layout.html，不是 layout.html）
+- 页面布局：标题 + 添加组件按钮 + 组件卡片网格
+- 组件卡片：名称、类型徽章（带颜色）、颜色值、刷新间隔、网格位置信息、编辑/删除按钮
+- 新增/编辑弹窗：组件名称、图表类型下拉（折线图/柱状图/饼图/仪表盘）、主题颜色选择器、刷新间隔输入
+- JavaScript：
+  - 加载组件列表并渲染卡片
+  - 表单提交AJAX到 /api/dashboard/components
+  - 删除确认对话框
+  - 使用 Layui 的 layer.msg 显示操作结果
+
+### 3.4 静态资源准备
+
+需要准备以下第三方库文件放在 `app/static/dist/` 目录：
+- echarts-5.5.0.min.js（ECharts图表库）
+- three-r128.min.js（Three.js 3D库）
+- fontawesome-free-5.15.4-web/fontawesome-free-5.15.4-web/css/all.min.css（图标库CSS）
+- fontawesome-free-5.15.4-web/fontawesome-free-5.15.4-web/js/all.min.js（图标库JS）
+
+**注意FontAwesome路径**：CSS和JS引用路径必须包含两层目录 `fontawesome-free-5.15.4-web/fontawesome-free-5.15.4-web/`，否则图标无法显示。
+
+### 3.5 路由注册
+
+在 `app.py` 的 make_app() 函数中添加以下路由：
+
+```
+/admin/dashboard -> DashboardPageHandler
+/dashboard -> DashboardPageHandler
+/admin/dashboard/components -> DashboardComponentsHandler
+/api/dashboard/stats -> DashboardStatsHandler
+/api/dashboard/components -> DashboardComponentAPIHandler
+```
+
+**重要注意**：
+- `/admin/dashboard` 和 `/dashboard` 都指向同一个 Handler，因为菜单中配置的URL是 `/admin/dashboard`
+- 如果只注册 `/dashboard`，从菜单点击会404
+
+---
+
+## 四、依赖安装
+
+需要安装以下 Python 包：
+- apscheduler（定时任务调度）
+- httpx（HTTP客户端，用于流式请求）
+- openai（OpenAI SDK，用于AI分析）
+
+安装命令：
+```
+pip install apscheduler httpx openai
+```
+
+---
+
+## 五、应用入口修改
+
+在 `app.py` 文件中需要完成以下操作：
+
+### 5.1 导入新增的控制器
+
+在文件顶部添加：
+```python
+from app.controllers.admin_watch import AdminWatchSourceHandler, AdminWatchSourceApiHandler, AdminWatchCollectHandler, AdminWatchCollectApiHandler, AdminWatchDataHandler, AdminWatchDataApiHandler, AdminCrawlLogHandler, AdminCrawlLogApiHandler, AdminCrawlScheduleHandler, AdminCrawlScheduleApiHandler
+from app.controllers.admin_assistant import AdminAssistantConfigHandler, AdminAssistantApiHandler, AdminAssistantUsageHandler, AdminAssistantChatHandler
+from app.controllers.chat import ChatPageHandler, ChatHistoryHandler, ChatSendHandler, ChatClearHandler
+from app.controllers.dashboard import DashboardPageHandler, DashboardComponentsHandler, DashboardStatsHandler, DashboardComponentAPIHandler
+```
+
+### 5.2 导入调度器
+
+```python
+from app.models.crawl_scheduler import load_schedules, start_scheduler, scheduler
+```
+
+### 5.3 注册所有路由
+
+按模块分组注册路由（参考前面各模块的路由注册部分）
+
+### 5.4 启动调度器
+
+在 `if __name__ == "__main__"` 块中，数据库初始化之后添加：
+```python
+try:
+    start_scheduler()
+except Exception as e:
+    print(f"Scheduler start error: {e}", flush=True)
+```
+
+---
+
+## 六、已知问题与修复记录
+
+### 6.1 数字员工路由不匹配
+- 问题：前端AJAX调用 `/admin/api/assistant`，但路由注册为 `/admin/agent/api`
+- 修复：将路由改为 `(r"/admin/api/assistant", AdminAssistantApiHandler)`
+
+### 6.2 httpx stream 参数错误
+- 问题：httpx v0.28.1 不支持 `client.post(..., stream=True)`
+- 修复：改用 `with client.stream("POST", ...) as response:` 上下文管理器
+
+### 6.3 组件管理模板继承错误
+- 问题：dashboard_components.html 继承 `layout.html`，但该文件不存在
+- 修复：改为继承 `admin/layout.html`
+
+### 6.4 数智大屏菜单路由缺失
+- 问题：菜单中"数智大屏"指向 `/admin/dashboard`，但路由只注册了 `/dashboard`
+- 修复：添加 `(r"/admin/dashboard", DashboardPageHandler)` 路由
+
+### 6.5 FontAwesome 图标路径
+- 问题：CSS路径少了一层目录，导致图标不显示
+- 修复：路径改为 `/static/dist/fontawesome-free-5.15.4-web/fontawesome-free-5.15.4-web/css/all.min.css`
+
+---
+
+## 七、文件清单
+
+### 新增文件
+```
+app/controllers/admin_watch.py          # 瞭望管理控制器
+app/controllers/admin_assistant.py      # 数字员工管理控制器
+app/controllers/chat.py                 # 聊天交互控制器
+app/controllers/dashboard.py            # 数智大屏控制器
+app/models/assistant.py                 # 数字员工数据访问层
+app/models/crawl_scheduler.py           # 定时采集调度器
+app/models/watch.py                     # 瞭望管理数据访问层
+app/models/watch_collector.py           # 采集器实现
+app/models/deep_analysis_service.py     # AI深度分析服务
+app/templates/admin/watch_source.html   # 数据源管理页面
+app/templates/admin/watch_collect.html  # 瞭望采集页面
+app/templates/admin/watch_data.html     # 数据仓库页面
+app/templates/admin/crawl_log.html      # 采集日志页面
+app/templates/admin/crawl_schedule.html # 定时采集页面
+app/templates/admin/assistant.html      # 数字员工管理页面
+app/templates/admin/assistant_usage.html# 助手调用统计页面
+app/templates/admin/chat.html           # 聊天交互页面
+app/templates/admin/dashboard.html      # 数智大屏页面
+app/templates/admin/dashboard_components.html # 组件管理页面
+```
+
+### 修改文件
+```
+app.py                                  # 应用入口（路由注册、调度器启动）
+app/models/db.py                        # 数据库表结构和菜单初始化
+app/models/model.py                     # 模型交互（添加流式对话方法）
+app/templates/admin/layout.html         # 后台布局（可能需要添加菜单项）
+```

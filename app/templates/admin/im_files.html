@@ -1,0 +1,250 @@
+{% extends "admin/layout.html" %}
+{% block body %}
+<div class="im-files-page">
+    <div class="page-header">
+        <h2>📁 文件管理</h2>
+        <div class="header-actions">
+            <span class="stat-badge" id="statTotal">加载中...</span>
+        </div>
+    </div>
+
+    <div class="stats-row" id="statsRow">
+        <div class="stat-card"><div class="stat-val" id="statTotalFiles">0</div><div class="stat-label">文件总数</div></div>
+        <div class="stat-card"><div class="stat-val" id="statTotalSize">0 B</div><div class="stat-label">总大小</div></div>
+        <div class="stat-card"><div class="stat-val" id="statSavedSpace">0 B</div><div class="stat-label">去重节省</div></div>
+        <div class="stat-card" style="flex:2">
+            <div class="type-bars">
+                <div class="type-bar"><span class="type-name">图片</span><span class="type-count" id="statImage">0</span></div>
+                <div class="type-bar"><span class="type-name">文档</span><span class="type-count" id="statDoc">0</span></div>
+                <div class="type-bar"><span class="type-name">压缩包</span><span class="type-count" id="statZip">0</span></div>
+                <div class="type-bar"><span class="type-name">其他</span><span class="type-count" id="statOther">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="search-bar">
+        <input type="text" id="searchKeyword" placeholder="搜索文件名..." oninput="reloadTable()">
+        <select id="filterType" onchange="reloadTable()">
+            <option value="">全部类型</option>
+            <option value="image">图片</option>
+            <option value="doc">文档</option>
+            <option value="zip">压缩包</option>
+            <option value="other">其他</option>
+        </select>
+        <select id="filterUploader" onchange="reloadTable()">
+            <option value="0">全部上传者</option>
+        </select>
+    </div>
+
+    <table class="data-table" id="filesTable">
+        <thead>
+            <tr>
+                <th>文件名</th>
+                <th>类型</th>
+                <th>大小</th>
+                <th>上传者</th>
+                <th>引用次数</th>
+                <th>上传时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="filesTableBody">
+            <tr><td colspan="7" class="loading-cell">加载中...</td></tr>
+        </tbody>
+    </table>
+
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<style>
+.im-files-page{padding:20px}
+.im-files-page .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.im-files-page .page-header h2{margin:0;font-size:20px;color:var(--text-color)}
+.im-files-page .stat-badge{padding:6px 16px;border-radius:20px;background:var(--accent-bg);color:var(--accent-color);font-size:13px}
+.stats-row{display:flex;gap:16px;margin-bottom:20px}
+.stat-card{flex:1;padding:16px 20px;border-radius:12px;background:var(--card-bg);border:1px solid var(--border-color)}
+.stat-card .stat-val{font-size:24px;font-weight:700;color:var(--accent-color)}
+.stat-card .stat-label{font-size:12px;color:var(--text-secondary);margin-top:4px}
+.type-bars{display:flex;flex-direction:column;gap:6px}
+.type-bar{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+.type-bar .type-name{color:var(--text-secondary)}
+.type-bar .type-count{color:var(--text-color);font-weight:600}
+.search-bar{display:flex;gap:12px;margin-bottom:16px}
+.search-bar input{flex:1;padding:10px 14px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--input-bg);color:var(--text-color);font-size:14px;outline:none}
+.search-bar input:focus{border-color:var(--accent-color)}
+.search-bar select{padding:10px 14px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--input-bg);color:var(--text-color);font-size:13px;outline:none;min-width:140px}
+.data-table{width:100%;border-collapse:collapse;background:var(--card-bg);border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.data-table th{padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:var(--text-secondary);background:var(--table-header-bg);border-bottom:1px solid var(--border-color)}
+.data-table td{padding:12px 16px;font-size:13px;color:var(--text-color);border-bottom:1px solid var(--border-color)}
+.data-table tr:hover td{background:var(--hover-bg)}
+.data-table .file-type-icon{font-size:18px;margin-right:8px}
+.data-table .file-name-cell{display:flex;align-items:center;gap:8px}
+.data-table .file-name-cell .fn{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.data-table .size-cell{font-family:monospace;font-size:12px}
+.data-table .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.badge-img{background:rgba(16,185,129,0.15);color:#10b981}
+.badge-doc{background:rgba(59,130,246,0.15);color:#60a5fa}
+.badge-zip{background:rgba(245,158,11,0.15);color:#fbbf24}
+.badge-other{background:rgba(255,255,255,0.05);color:var(--text-secondary)}
+.loading-cell{text-align:center;padding:40px;color:var(--text-secondary)}
+.delete-btn{padding:4px 12px;border-radius:6px;border:none;font-size:12px;cursor:pointer;transition:all .2s;background:rgba(255,77,79,0.15);color:#ff4d4f}
+.delete-btn:hover{background:rgba(255,77,79,0.25)}
+.pagination{display:flex;justify-content:center;gap:6px;margin-top:20px}
+.pagination button{padding:6px 14px;border-radius:6px;border:1px solid var(--border-color);background:var(--card-bg);color:var(--text-color);cursor:pointer;font-size:13px}
+.pagination button.active{background:var(--accent-color);color:#fff;border-color:var(--accent-color)}
+.pagination button:disabled{opacity:0.4;cursor:not-allowed}
+</style>
+
+<script>
+var _page = 1, _pageSize = 20, _total = 0;
+
+function loadStats() {
+    fetch('/admin/im/files/stats').then(function(r){return r.json()}).then(function(res){
+        if(res.code===0){
+            var d = res.data;
+            document.getElementById('statTotalFiles').textContent = d.total_files;
+            document.getElementById('statTotalSize').textContent = formatSize(d.total_size);
+            document.getElementById('statSavedSpace').textContent = formatSize(d.saved_space);
+            document.getElementById('statTotal').textContent = d.total_files + ' 个文件 | ' + formatSize(d.total_size);
+            document.getElementById('statImage').textContent = d.type_distribution.image;
+            document.getElementById('statDoc').textContent = d.type_distribution.doc;
+            document.getElementById('statZip').textContent = d.type_distribution.zip;
+            document.getElementById('statOther').textContent = d.type_distribution.other;
+        }
+        if(res.users){
+            var sel = document.getElementById('filterUploader');
+            res.users.forEach(function(u){
+                var opt = document.createElement('option');
+                opt.value = u.id; opt.textContent = u.username;
+                sel.appendChild(opt);
+            });
+        }
+    });
+}
+
+function formatSize(bytes) {
+    if (!bytes) return '0 B';
+    var units = ['B','KB','MB','GB'];
+    var i = 0;
+    while (bytes >= 1024 && i < units.length-1) { bytes /= 1024; i++; }
+    return bytes.toFixed(i>0?1:0) + ' ' + units[i];
+}
+
+function getFileTypeIcon(ext) {
+    ext = (ext||'').toLowerCase();
+    if (['.jpg','.jpeg','.png','.gif','.webp','.bmp'].indexOf(ext)>=0) return '🖼️';
+    if (['.doc','.docx'].indexOf(ext)>=0) return '📝';
+    if (['.xls','.xlsx'].indexOf(ext)>=0) return '📊';
+    if (['.pdf'].indexOf(ext)>=0) return '📄';
+    if (['.zip','.rar','.7z','.tar','.gz'].indexOf(ext)>=0) return '🗜️';
+    if (['.txt'].indexOf(ext)>=0) return '📃';
+    if (['.ppt','.pptx'].indexOf(ext)>=0) return '📑';
+    return '📎';
+}
+
+function getFileTypeBadge(ext) {
+    ext = (ext||'').toLowerCase();
+    if (['.jpg','.jpeg','.png','.gif','.webp','.bmp'].indexOf(ext)>=0) return 'badge-img';
+    if (['.doc','.docx','.pdf','.txt','.xls','.xlsx','.ppt','.pptx'].indexOf(ext)>=0) return 'badge-doc';
+    if (['.zip','.rar','.7z','.tar','.gz'].indexOf(ext)>=0) return 'badge-zip';
+    return 'badge-other';
+}
+
+function getFileTypeLabel(ext) {
+    ext = (ext||'').toLowerCase();
+    if (['.jpg','.jpeg','.png','.gif','.webp','.bmp'].indexOf(ext)>=0) return '图片';
+    if (['.doc','.docx','.pdf','.txt','.xls','.xlsx','.ppt','.pptx'].indexOf(ext)>=0) return '文档';
+    if (['.zip','.rar','.7z','.tar','.gz'].indexOf(ext)>=0) return '压缩包';
+    return '其他';
+}
+
+function reloadTable() {
+    _page = 1;
+    loadData();
+}
+
+function loadData() {
+    var keyword = document.getElementById('searchKeyword').value;
+    var fileType = document.getElementById('filterType').value;
+    var uploaderId = document.getElementById('filterUploader').value;
+    var params = 'page=' + _page + '&limit=' + _pageSize + '&keyword=' + encodeURIComponent(keyword) + '&file_type=' + fileType + '&uploader_id=' + uploaderId;
+    fetch('/admin/im/files/api?' + params).then(function(r){return r.json()}).then(function(res){
+        var tbody = document.getElementById('filesTableBody');
+        _total = res.count || 0;
+        if (!res.data || res.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">暂无文件</td></tr>';
+            renderPagination();
+            return;
+        }
+        var html = '';
+        res.data.forEach(function(f){
+            var icon = getFileTypeIcon(f.file_ext);
+            var badge = getFileTypeBadge(f.file_ext);
+            var label = getFileTypeLabel(f.file_ext);
+            html += '<tr>';
+            html += '<td><div class="file-name-cell">' + icon + '<span class="fn">' + escapeHtml(f.file_name) + '</span></div></td>';
+            html += '<td><span class="badge ' + badge + '">' + label + '</span></td>';
+            html += '<td class="size-cell">' + formatSize(f.file_size) + '</td>';
+            html += '<td>' + escapeHtml(f.uploader_name||'未知') + '</td>';
+            html += '<td>' + f.ref_count + '</td>';
+            html += '<td>' + f.create_at + '</td>';
+            html += '<td>';
+            html += '<button class="delete-btn" onclick="deleteFile(' + f.id + ')" ' + (f.ref_count>0?'disabled title="引用数大于0，无法删除"':'') + '>删除</button>';
+            html += '</td>';
+            html += '</tr>';
+        });
+        tbody.innerHTML = html;
+        renderPagination();
+    });
+}
+
+function renderPagination() {
+    var totalPages = Math.ceil(_total / _pageSize) || 1;
+    var html = '';
+    html += '<button ' + (_page<=1?'disabled':'') + ' onclick="gotoPage(1)">首页</button>';
+    html += '<button ' + (_page<=1?'disabled':'') + ' onclick="gotoPage(' + (_page-1) + ')">上一页</button>';
+    var start = Math.max(1, _page-2);
+    var end = Math.min(totalPages, _page+2);
+    for (var i = start; i <= end; i++) {
+        html += '<button class="' + (i===_page?'active':'') + '" onclick="gotoPage(' + i + ')">' + i + '</button>';
+    }
+    html += '<button ' + (_page>=totalPages?'disabled':'') + ' onclick="gotoPage(' + (_page+1) + ')">下一页</button>';
+    html += '<button ' + (_page>=totalPages?'disabled':'') + ' onclick="gotoPage(' + totalPages + ')">末页</button>';
+    document.getElementById('pagination').innerHTML = html;
+}
+
+function gotoPage(p) {
+    _page = p;
+    loadData();
+}
+
+function deleteFile(fileId) {
+    if (!confirm('确定删除此文件？引用数大于0的文件无法删除。')) return;
+    fetch('/admin/im/files/delete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-XSRFToken': getXsrfToken()},
+        body: JSON.stringify({file_id: fileId})
+    }).then(function(r){return r.json()}).then(function(res){
+        if (res.code === 0) {
+            loadData();
+            loadStats();
+        } else {
+            alert(res.msg);
+        }
+    });
+}
+
+function getXsrfToken() {
+    var m = document.cookie.match(/_xsrf=([^;]+)/);
+    return m ? m[1] : '';
+}
+
+function escapeHtml(s) {
+    if (!s) return '';
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+loadStats();
+loadData();
+</script>
+{% endblock %}

@@ -20,10 +20,13 @@ from app.controllers.admin.watch import AdminCrawlLogHandler,AdminCrawlLogApiHan
 from app.controllers.user.outlook import UserOutlookCollectPageHandler,UserOutlookCollectHandler,UserOutlookStatusApiHandler,UserOutlookLatestDataApiHandler,UserOutlookDataListHandler,UserOutlookDataApiHandler,UserOutlookTaskApiHandler,UserOutlookTaskDeleteHandler,UserOutlookTaskDataHandler,UserOutlookTaskDataApiHandler,UserOutlookDeepCollectHandler,UserOutlookDeepCollectStatusHandler,UserOutlookDeepDetailHandler,UserOutlookSourceApiHandler,UserOutlookSourceAddHandler,UserOutlookSourceEditHandler,UserOutlookSourceDeleteHandler,UserOutlookDataDeleteHandler,UserCrawlLogHandler,UserCrawlLogApiHandler,UserCrawlLogClearHandler,UserCrawlLogStatsHandler,UserCrawlScheduleHandler,UserCrawlScheduleApiHandler
 from app.controllers.admin.assistant import AdminAssistantConfigHandler,AdminAssistantApiHandler,AdminAssistantChatHandler,AdminAssistantUsageHandler,AdminChatSendHandler,AdminChatHistoryHandler,AdminChatClearHandler
 from app.controllers.admin.settings import AdminSettingsHandler
-from app.controllers.dashboard import DashboardPageHandler,DashboardStatsHandler
+from app.controllers.dashboard import DashboardPageHandler,UserDashboardPageHandler,DashboardStatsHandler
+from app.controllers.user.sentiment import SentimentHandler,DashboardChartsHandler,SentimentStatsHandler,SentimentAnalyzeHandler
 from app.controllers.chat import ChatPageHandler,ChatStreamHandler,ChatAssistantsHandler,ChatHistoryHandler,ChatModelsHandler
-from app.controllers.im import IMPageHandler,IMConversationsHandler,IMHistoryHandler,IMSendHandler,IMCreatePrivateHandler,IMAssistantChatHandler,IMCreateGroupHandler,IMMembersHandler,IMUsersHandler,IMAssistantsHandler,IMSearchHandler,IMMarkReadHandler,IMFriendsHandler,IMFriendRequestHandler,IMRemoveFriendHandler,IMGroupsHandler,IMGroupManageHandler,IMFileUploadHandler,IMFileDownloadHandler
+from app.controllers.im import IMPageHandler,IMConversationsHandler,IMRestoreConversationHandler,IMHistoryHandler,IMSendHandler,IMCreatePrivateHandler,IMAssistantChatHandler,IMCreateGroupHandler,IMMembersHandler,IMUsersHandler,IMAssistantsHandler,IMSearchHandler,IMGlobalSearchHandler,IMMarkReadHandler,IMFriendsHandler,IMFriendRequestHandler,IMGroupInviteHandler,IMRemoveFriendHandler,IMGroupsHandler,IMGroupManageHandler as IMGroupManageOldHandler,IMFileUploadHandler,IMFileDownloadHandler,IMFilesHandler
 from app.controllers.im_ws import IMWebSocketHandler
+from app.controllers.im_group import IMGroupDetailHandler,IMGroupManageHandler,IMGroupAnnounceHandler,IMGroupDismissHandler,IMGroupLeaveHandler,IMGroupTransferHandler,IMGroupMemberSearchHandler,IMAnnounceUnconfirmedHandler,IMAnnounceConfirmHandler
+from app.controllers.admin.im_files import AdminIMFilesHandler,AdminIMFilesApiHandler,AdminIMFilesDeleteHandler,AdminIMFilesStatsHandler
 from app.models.db import init_db,upgrade_db
 
 class ViteClientHandler(tornado.web.RequestHandler):
@@ -90,6 +93,7 @@ def make_app():
 			(r"/im",IMPageHandler),
 			(r"/im/ws",IMWebSocketHandler),
 			(r"/im/api/conversations",IMConversationsHandler),
+			(r"/im/api/conversations/restore",IMRestoreConversationHandler),
 			(r"/im/api/history",IMHistoryHandler),
 			(r"/im/api/send",IMSendHandler),
 			(r"/im/api/private",IMCreatePrivateHandler),
@@ -99,14 +103,26 @@ def make_app():
 			(r"/im/api/users",IMUsersHandler),
 			(r"/im/api/assistants",IMAssistantsHandler),
 			(r"/im/api/search",IMSearchHandler),
+			(r"/im/api/global-search",IMGlobalSearchHandler),
 			(r"/im/api/read",IMMarkReadHandler),
 			(r"/im/api/friends",IMFriendsHandler),
 			(r"/im/api/friend/request",IMFriendRequestHandler),
+			(r"/im/api/group/invite",IMGroupInviteHandler),
 			(r"/im/api/friend/remove",IMRemoveFriendHandler),
 			(r"/im/api/groups",IMGroupsHandler),
-			(r"/im/api/group/manage",IMGroupManageHandler),
+			(r"/im/api/group/manage",IMGroupManageOldHandler),
+		(r"/im/api/group/detail",IMGroupDetailHandler),
+		(r"/im/api/group/manage2",IMGroupManageHandler),
+		(r"/im/api/group/member/search",IMGroupMemberSearchHandler),
+		(r"/im/api/group/announcement",IMGroupAnnounceHandler),
+		(r"/im/api/group/dismiss",IMGroupDismissHandler),
+		(r"/im/api/group/leave",IMGroupLeaveHandler),
+		(r"/im/api/group/transfer",IMGroupTransferHandler),
+		(r"/im/api/announcement/unconfirmed",IMAnnounceUnconfirmedHandler),
+		(r"/im/api/announcement/confirm",IMAnnounceConfirmHandler),
 		(r"/im/api/file/upload",IMFileUploadHandler),
 		(r"/im/api/file/(.+)",IMFileDownloadHandler),
+		(r"/im/api/files",IMFilesHandler),
 
 			(r"/admin/login",AdminLoginHandler),
 			(r"/admin/logout",AdminLogoutHandler),
@@ -194,6 +210,14 @@ def make_app():
 			(r"/admin/agent/usage",AdminAssistantUsageHandler),
 			(r"/admin/assistant/api",AdminAssistantApiHandler),
 			(r"/api/admin/chat/send",AdminChatSendHandler),
+
+			# 聊天文件管理
+			(r"/admin/im/files",AdminIMFilesHandler),
+			(r"/admin/im/files/api",AdminIMFilesApiHandler),
+			(r"/admin/im/files/delete",AdminIMFilesDeleteHandler),
+			(r"/admin/im/files/stats",AdminIMFilesStatsHandler),
+
+			# 设置
 			(r"/api/admin/chat/history",AdminChatHistoryHandler),
 			(r"/api/admin/chat/clear",AdminChatClearHandler),
 
@@ -202,7 +226,14 @@ def make_app():
 
 			# 数智大屏
 			(r"/dashboard",DashboardPageHandler),
+			(r"/user/dashboard",UserDashboardPageHandler),
 			(r"/api/dashboard/stats",DashboardStatsHandler),
+
+			# 用户侧-智慧舆情分析
+			(r"/user/sentiment",SentimentHandler),
+			(r"/api/dashboard/charts",DashboardChartsHandler),
+			(r"/api/sentiment/stats",SentimentStatsHandler),
+			(r"/api/sentiment/analyze",SentimentAnalyzeHandler),
 
 			# 用户侧-瞭望系统
 			(r"/user/outlook/collect",UserOutlookCollectPageHandler),

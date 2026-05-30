@@ -31,6 +31,22 @@
         /* 列表区域 */
         .list-area{flex:1;overflow-y:auto;padding:8px}
 
+        .sidebar-bottom{padding:10px 12px;border-top:1px solid rgba(255,255,255,0.06)}
+        .sidebar-file-btn{width:100%;padding:8px 12px;border-radius:8px;border:none;background:rgba(123,47,247,0.12);color:#a78bfa;font-size:13px;cursor:pointer;transition:all .2s;text-align:center}
+        .sidebar-file-btn:hover{background:rgba(123,47,247,0.22)}
+
+        /* 文件列表 */
+        .file-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;cursor:pointer;margin-bottom:4px;transition:all .2s}
+        .file-item:hover{background:rgba(255,255,255,0.04)}
+        .file-item .file-icon{font-size:22px;width:36px;text-align:center}
+        .file-item .file-info{flex:1;min-width:0}
+        .file-item .file-name{font-size:13px;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .file-item .file-meta{font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px}
+        .file-item .file-download{padding:4px 10px;border-radius:6px;border:none;background:rgba(123,47,247,0.12);color:#a78bfa;font-size:11px;cursor:pointer;transition:all .2s;flex-shrink:0}
+        .file-item .file-download:hover{background:rgba(123,47,247,0.25)}
+        .file-empty{padding:40px 20px;text-align:center;color:rgba(255,255,255,0.25);font-size:13px}
+        .file-loading{padding:40px 20px;text-align:center;color:rgba(255,255,255,0.25);font-size:13px}
+
         /* 会话列表项 */
         .conv-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;cursor:pointer;margin-bottom:4px;transition:all .2s}
         .conv-item:hover{background:rgba(255,255,255,0.04)}
@@ -90,19 +106,25 @@
         .chat-messages{flex:1;overflow-y:auto;padding:24px;padding-bottom:12px;display:flex;flex-direction:column;gap:16px}
 
         /* 消息气泡 */
-        .msg-row{display:flex;align-items:flex-start;gap:10px;max-width:70%}
+        .msg-row{display:flex;align-items:flex-start;gap:10px;max-width:70%;margin-bottom:4px}
         .msg-row.self{align-self:flex-end;flex-direction:row-reverse}
         .msg-row .msg-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#7b2ff7,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0}
         .msg-row .msg-bubble{padding:10px 14px;border-radius:12px;font-size:14px;line-height:1.6;word-break:break-word}
         .msg-row:not(.self) .msg-bubble{background:rgba(255,255,255,0.06);color:#e0e0e0;border-top-left-radius:4px}
         .msg-row.self .msg-bubble{background:linear-gradient(135deg,rgba(0,212,255,0.2),rgba(123,47,247,0.2));color:#fff;border-top-right-radius:4px}
-        .msg-row .msg-sender{font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:4px}
-        .msg-row .msg-time{font-size:10px;color:rgba(255,255,255,0.2);margin-top:4px;text-align:right}
-        .msg-row.self .msg-time{text-align:left}
+        .msg-row .msg-sender{font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+        .msg-time{font-size:10px;color:rgba(255,255,255,0.2);padding:2px 0}
+        .msg-time-left{text-align:left}
+        .msg-time-right{text-align:right}
+
+        /* 角色标识 */
+        .role-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:500;line-height:1.4}
+        .role-owner{background:rgba(250,173,20,0.15);color:#fbbf24;border:1px solid rgba(250,173,20,0.3)}
+        .role-admin{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3)}
 
         /* 时间分割线 */
-        .msg-divider{text-align:center;font-size:11px;color:rgba(255,255,255,0.2);padding:8px 0}
-        .msg-divider span{background:rgba(255,255,255,0.06);padding:4px 12px;border-radius:10px}
+        .msg-divider{width:100%;text-align:center;padding:16px 0}
+        .msg-divider span{background:rgba(255,255,255,0.06);padding:4px 16px;border-radius:10px;font-size:11px;color:rgba(255,255,255,0.25)}
 
         /* 输入区域 */
         .chat-input{border-top:1px solid rgba(255,255,255,0.08);padding:12px 48px 16px;position:relative}
@@ -158,6 +180,15 @@
         .modal .btn-primary:hover{opacity:0.9;transform:translateY(-1px)}
         .modal .btn-secondary{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.1)}
         .modal .btn-secondary:hover{background:rgba(255,255,255,0.12)}
+
+        /* 公告确认弹窗 */
+        .announce-confirm-box{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+        .announce-confirm-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0;background:#fff}
+        .announce-confirm-header h3{margin:0;color:#1a1a2e;font-size:18px}
+        .announce-confirm-body{padding:16px 24px 20px;background:#fff;color:#333;font-size:15px;line-height:1.7;min-height:80px;white-space:pre-wrap;word-break:break-word}
+        .announce-confirm-footer{padding:0 24px 20px;background:#fff}
+        .announce-confirm-footer .gm-btn{background:linear-gradient(135deg,#7b2ff7,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:15px;cursor:pointer;transition:opacity .2s}
+        .announce-confirm-footer .gm-btn:hover{opacity:0.9}
 
         /* 创建群聊 */
         .create-group-container{width:100%}
@@ -274,6 +305,41 @@
         .cg-select-check.checked{background:linear-gradient(135deg,#7b2ff7,#00d4ff);border-color:transparent;color:#fff}
         .cg-item-selected{background:rgba(123,47,247,0.12) !important;border:1.5px solid rgba(123,47,247,0.4) !important}
         .cg-item-selected:hover{background:rgba(123,47,247,0.16) !important}
+        .cg-tabs{display:flex;padding:0 24px;border-bottom:1px solid rgba(255,255,255,0.06)}
+        .cg-tab{flex:1;padding:12px 0;text-align:center;font-size:13px;color:rgba(255,255,255,0.4);cursor:pointer;position:relative;transition:all .25s}
+        .cg-tab.active{color:#a78bfa}
+        .cg-tab.active::after{content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,#7b2ff7,#00d4ff);border-radius:1px}
+        .cg-tab:hover{color:rgba(255,255,255,0.7)}
+        .cg-tab-content{display:none}
+        .cg-tab-content.active{display:block}
+        .cg-search-bar{display:flex;gap:10px;padding:16px 24px}
+        .cg-search-bar input{flex:1;height:38px;border-radius:12px;border:1.5px solid rgba(123,47,247,0.3);background:rgba(255,255,255,0.06);color:#f0f0f0;padding:0 16px;font-size:14px;outline:none;transition:all .3s}
+        .cg-search-bar input:focus{border-color:#7b2ff7;box-shadow:0 0 20px rgba(123,47,247,0.15)}
+        .cg-search-bar input::placeholder{color:rgba(255,255,255,0.25)}
+        .cg-friends-list{padding:0 24px 20px;max-height:300px;min-height:0;overflow-y:auto}
+        .cg-friends-list::-webkit-scrollbar{width:0}
+        .cg-friends-list.show-scrollbar::-webkit-scrollbar{width:6px}
+        .cg-friends-list.show-scrollbar::-webkit-scrollbar-track{background:rgba(255,255,255,0.05);border-radius:3px}
+        .cg-friends-list.show-scrollbar::-webkit-scrollbar-thumb{background:rgba(123,47,247,0.3);border-radius:3px}
+
+        /* ===== 群管理-邀请成员弹窗 ===== */
+        .gm-add-member-modal{width:500px;max-height:75vh;background:#2a324a;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.4);display:flex;flex-direction:column}
+        .gm-invite-tabs{display:flex;padding:0 24px;border-bottom:1px solid rgba(255,255,255,0.06)}
+        .gm-invite-tab{flex:1;padding:12px 0;text-align:center;font-size:13px;color:rgba(255,255,255,0.4);cursor:pointer;position:relative;transition:all .25s}
+        .gm-invite-tab.active{color:#a78bfa}
+        .gm-invite-tab.active::after{content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,#7b2ff7,#00d4ff);border-radius:1px}
+        .gm-invite-tab:hover{color:rgba(255,255,255,0.7)}
+        .gm-invite-content{display:none}
+        .gm-invite-content.active{display:block}
+        .gm-invite-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;margin-bottom:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);transition:all .25s}
+        .gm-invite-item:hover{background:rgba(255,255,255,0.07)}
+        .gm-invite-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7b2ff7,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#fff;flex-shrink:0}
+        .gm-invite-info{flex:1;min-width:0}
+        .gm-invite-name{font-size:14px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .gm-invite-action{flex-shrink:0}
+        .gm-invite-btn{padding:6px 16px;border-radius:8px;border:none;font-size:12px;font-weight:500;cursor:pointer;transition:all .25s;background:linear-gradient(135deg,#7b2ff7,#00d4ff);color:#fff}
+        .gm-invite-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(123,47,247,0.4)}
+        .gm-invite-btn.disabled{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.3);cursor:not-allowed;transform:none;box-shadow:none}
 
         /* ===== 好友申请弹窗 ===== */
         .friend-req-modal{width:500px;min-height:60vh;max-height:72vh;background:#2a324a;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.4);display:flex;flex-direction:column}
@@ -306,6 +372,37 @@
         .status-badge.accepted{background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(22,163,74,0.15));color:#22c55e}
         .status-badge.rejected{background:linear-gradient(135deg,rgba(255,77,79,0.15),rgba(239,68,68,0.15));color:#ff4d4f}
         .friend-req-empty{text-align:center;padding:40px 20px;color:rgba(255,255,255,0.2);font-size:13px}
+
+        /* ===== 群邀请弹窗 ===== */
+        .group-invite-modal{width:500px;min-height:60vh;max-height:72vh;background:#2a324a;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.4);display:flex;flex-direction:column}
+        .group-invite-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid rgba(255,255,255,0.06)}
+        .group-invite-header h3{font-size:18px;font-weight:600;background:linear-gradient(135deg,#a78bfa,#00d4ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+        .group-invite-tabs{display:flex;padding:0 24px;border-bottom:1px solid rgba(255,255,255,0.06)}
+        .group-invite-tab{flex:1;padding:12px 0;text-align:center;font-size:13px;color:rgba(255,255,255,0.4);cursor:pointer;position:relative;transition:all .25s}
+        .group-invite-tab.active{color:#a78bfa}
+        .group-invite-tab.active::after{content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,#7b2ff7,#00d4ff);border-radius:1px}
+        .group-invite-tab:hover{color:rgba(255,255,255,0.7)}
+        .group-invite-list{padding:12px 24px 20px;flex:1;min-height:0;overflow-y:auto}
+        .group-invite-card{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;margin-bottom:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);transition:all .25s;position:relative}
+        .group-invite-card:hover{background:rgba(255,255,255,0.07);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
+        .group-invite-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#7b2ff7,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:#fff;flex-shrink:0}
+        .group-invite-content{flex:1;min-width:0}
+        .group-invite-name{font-size:14px;font-weight:500;color:#fff;margin-bottom:4px}
+        .group-invite-group{font-size:12px;color:#a78bfa;margin-bottom:2px}
+        .group-invite-msg{font-size:12px;color:rgba(255,255,255,0.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .group-invite-status{text-align:center;padding:4px 0}
+        .group-invite-actions{display:flex;gap:8px;flex-shrink:0}
+        .group-invite-btn{padding:6px 14px;border-radius:8px;border:none;font-size:12px;font-weight:500;cursor:pointer;transition:all .25s}
+        .group-invite-btn.accept{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
+        .group-invite-btn.accept:hover{box-shadow:0 4px 12px rgba(34,197,94,0.4)}
+        .group-invite-btn.reject{background:rgba(255,77,79,0.15);color:#ff4d4f}
+        .group-invite-btn.reject:hover{background:rgba(255,77,79,0.25)}
+        .group-invite-btn.delete{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.2);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0}
+        .group-invite-btn.delete:hover{background:rgba(255,77,79,0.2);color:#ff4d4f}
+        .group-invite-empty{text-align:center;padding:40px 20px;color:rgba(255,255,255,0.2);font-size:13px}
+
+        /* 群邀请红点 */
+        .group-invite-badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#ff4d4f;color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;line-height:1}
 
         /* 消息发送状态 */
         .msg-sending{opacity:0.6}
@@ -342,6 +439,110 @@
         .my-confirm-box .cf-ok.danger{background:linear-gradient(135deg,#ff4d4f,#ef4444)}
         .my-confirm-box .cf-ok.danger:hover{box-shadow:0 4px 20px rgba(255,77,79,0.5)}
         @keyframes scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+
+        /* ===== 群管理弹窗 ===== */
+        .group-manage-modal{width:800px;height:600px;background:#2a324a;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.4);display:flex;flex-direction:column}
+        .gm-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid rgba(255,255,255,0.06)}
+        .gm-header h3{font-size:17px;font-weight:600;color:#fff}
+        .gm-close{width:32px;height:32px;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+        .gm-close:hover{background:rgba(255,77,79,0.2);color:#ff4d4f}
+        .gm-tabs{display:flex;padding:0 24px;border-bottom:1px solid rgba(255,255,255,0.06)}
+        .gm-tab{flex:none;padding:12px 20px;font-size:13px;color:rgba(255,255,255,0.4);cursor:pointer;position:relative;transition:all .25s;white-space:nowrap}
+        .gm-tab:hover{color:rgba(255,255,255,0.7)}
+        .gm-tab.active{color:#10b981}
+        .gm-tab.active::after{content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,#10b981,#16b777);border-radius:1px}
+        .gm-body{flex:1;overflow-y:auto;padding:20px 24px}
+        .gm-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid rgba(255,255,255,0.06)}
+        .gm-btn{padding:8px 20px;border-radius:10px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .2s}
+        .gm-btn-secondary{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.1)}
+        .gm-btn-secondary:hover{background:rgba(255,255,255,0.12)}
+        .gm-btn-primary{background:linear-gradient(135deg,#10b981,#16b777);color:#fff}
+        .gm-btn-primary:hover{box-shadow:0 4px 15px rgba(16,185,129,0.4);transform:translateY(-1px)}
+        .gm-btn-danger{background:linear-gradient(135deg,#ff4d4f,#ef4444);color:#fff}
+        .gm-btn-danger:hover{box-shadow:0 4px 15px rgba(255,77,79,0.4)}
+
+        .gm-tab-content{display:none}
+        .gm-tab-content.active{display:block}
+
+        /* 群资料 */
+        .gm-profile{display:flex;gap:24px;align-items:flex-start}
+        .gm-profile-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#10b981,#16b777);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#fff;flex-shrink:0;cursor:pointer;transition:opacity .2s}
+        .gm-profile-avatar:hover{opacity:0.8}
+        .gm-profile-form{flex:1}
+        .gm-form-item{margin-bottom:16px}
+        .gm-form-item label{display:block;font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:6px}
+        .gm-form-item input,.gm-form-item textarea{width:100%;padding:10px 14px;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:10px;color:#f0f0f0;font-size:14px;outline:none;transition:border-color .2s}
+        .gm-form-item input:focus,.gm-form-item textarea:focus{border-color:rgba(16,185,129,0.5)}
+        .gm-form-item input[readonly]{background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.3);cursor:not-allowed}
+        .gm-form-item textarea{resize:vertical;min-height:60px}
+
+        /* 成员列表 */
+        .gm-member-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+        .gm-member-search{flex:1;height:36px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);color:#f0f0f0;padding:0 14px;font-size:13px;outline:none;transition:border-color .2s}
+        .gm-member-search:focus{border-color:rgba(16,185,129,0.5)}
+        .gm-member-search::placeholder{color:rgba(255,255,255,0.25)}
+        .gm-member-list{max-height:380px;overflow-y:auto}
+        .gm-member-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;margin-bottom:6px;background:rgba(255,255,255,0.03);transition:all .2s}
+        .gm-member-item:hover{background:rgba(255,255,255,0.06)}
+        .gm-member-item .gm-m-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#10b981,#16b777);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0}
+        .gm-member-item .gm-m-info{flex:1;min-width:0}
+        .gm-member-item .gm-m-name{font-size:13px;color:#fff;font-weight:500}
+        .gm-member-item .gm-m-meta{font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px}
+        .gm-member-item .gm-m-actions{display:flex;gap:6px;flex-shrink:0}
+        .gm-role-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600}
+        .gm-role-tag.owner{background:linear-gradient(135deg,rgba(250,204,21,0.2),rgba(245,158,11,0.2));color:#facc15}
+        .gm-role-tag.admin{background:linear-gradient(135deg,rgba(59,130,246,0.2),rgba(99,102,241,0.2));color:#60a5fa}
+        .gm-role-tag.member{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.3)}
+        .gm-mute-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;background:rgba(255,77,79,0.2);color:#ff4d4f}
+        .gm-action-btn{padding:4px 10px;border-radius:6px;border:none;font-size:11px;cursor:pointer;transition:all .2s}
+        .gm-action-btn.set-admin{background:rgba(59,130,246,0.15);color:#60a5fa}
+        .gm-action-btn.set-admin:hover{background:rgba(59,130,246,0.25)}
+        .gm-action-btn.cancel-admin{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.4)}
+        .gm-action-btn.cancel-admin:hover{background:rgba(255,255,255,0.1)}
+        .gm-action-btn.remove{background:rgba(255,77,79,0.15);color:#ff4d4f}
+        .gm-action-btn.remove:hover{background:rgba(255,77,79,0.25)}
+        .gm-action-btn.mute{background:rgba(251,191,36,0.15);color:#fbbf24}
+        .gm-action-btn.mute:hover{background:rgba(251,191,36,0.25)}
+        .gm-action-btn.unmute{background:rgba(34,197,94,0.15);color:#22c55e}
+        .gm-action-btn.unmute:hover{background:rgba(34,197,94,0.25)}
+
+        /* 群管控 */
+        .gm-control-list{display:flex;flex-direction:column;gap:12px}
+        .gm-control-item{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,0.03)}
+        .gm-control-item .gm-c-info{flex:1}
+        .gm-control-item .gm-c-title{font-size:14px;color:#fff;font-weight:500}
+        .gm-control-item .gm-c-desc{font-size:12px;color:rgba(255,255,255,0.3);margin-top:4px}
+        .gm-switch{width:44px;height:24px;border-radius:12px;background:rgba(255,255,255,0.1);cursor:pointer;position:relative;transition:background .2s}
+        .gm-switch.on{background:linear-gradient(135deg,#10b981,#16b777)}
+        .gm-switch::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
+        .gm-switch.on::after{transform:translateX(20px)}
+
+        /* 公告 */
+        .gm-announce-current{padding:14px 18px;border-radius:12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);margin-bottom:16px}
+        .gm-announce-current .gm-ac-title{font-size:13px;color:#10b981;font-weight:600;margin-bottom:6px}
+        .gm-announce-current .gm-ac-content{font-size:13px;color:rgba(255,255,255,0.7);line-height:1.6}
+        .gm-announce-current .gm-ac-meta{font-size:11px;color:rgba(255,255,255,0.3);margin-top:8px}
+        .gm-announce-history{display:flex;flex-direction:column;gap:8px}
+        .gm-announce-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,0.03)}
+        .gm-announce-item .gm-ai-content{flex:1;font-size:13px;color:rgba(255,255,255,0.6);line-height:1.5}
+        .gm-announce-item .gm-ai-meta{font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px}
+        .gm-announce-item .gm-ai-actions{display:flex;gap:6px;flex-shrink:0}
+        .gm-announce-editor{margin-top:16px}
+        .gm-announce-editor textarea{width:100%;padding:12px 14px;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:10px;color:#f0f0f0;font-size:14px;outline:none;resize:vertical;min-height:80px;transition:border-color .2s}
+        .gm-announce-editor textarea:focus{border-color:rgba(16,185,129,0.5)}
+        .gm-announce-editor textarea::placeholder{color:rgba(255,255,255,0.25)}
+
+        /* 更多/危险操作 */
+        .gm-danger-zone{padding:20px;border-radius:12px;background:rgba(255,77,79,0.05);border:1px solid rgba(255,77,79,0.15)}
+        .gm-danger-title{font-size:15px;color:#ff4d4f;font-weight:600;margin-bottom:8px}
+        .gm-danger-desc{font-size:13px;color:rgba(255,255,255,0.4);line-height:1.6;margin-bottom:16px}
+        .gm-transfer-section{margin-bottom:20px;padding:16px;border-radius:12px;background:rgba(255,255,255,0.03)}
+        .gm-transfer-section h4{font-size:14px;color:#fff;margin-bottom:10px}
+        .gm-transfer-select{display:flex;gap:10px;align-items:center}
+        .gm-transfer-select select{flex:1;padding:8px 12px;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:8px;color:#f0f0f0;font-size:13px;outline:none}
+        .gm-transfer-select select option{background:#2a324a;color:#f0f0f0}
+        .gm-leave-section{padding:16px;border-radius:12px;background:rgba(255,255,255,0.03)}
+        .gm-leave-section h4{font-size:14px;color:#fff;margin-bottom:10px}
     </style>
 </head>
 <body>
@@ -364,10 +565,15 @@
         <div class="tab-bar">
             <div class="tab-item active" data-tab="conversations">会话</div>
             <div class="tab-item" data-tab="contacts">通讯录</div>
+            <div class="tab-item" data-tab="files">文件</div>
         </div>
 
         <div class="list-area" id="listArea">
             <!-- 动态加载 -->
+        </div>
+
+        <div class="sidebar-bottom">
+            <button class="sidebar-file-btn" onclick="switchTab('files')">📁 文件管理</button>
         </div>
     </div>
 
@@ -407,7 +613,7 @@
             <div class="input-toolbar">
                 <button class="toolbar-btn" onclick="toggleEmojiPanel(event)" title="表情">😊</button>
                 <button class="toolbar-btn" onclick="document.getElementById('fileInput').click()" title="文件">📎</button>
-                <input type="file" id="fileInput" style="display:none" onchange="uploadFile(this)" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar">
+                <input type="file" id="fileInput" style="display:none" onchange="uploadFile(this)" accept="*">
                 <button class="toolbar-btn" id="btnMention" onclick="toggleMentionPanel()" title="@提及" style="display:none">@</button>
             </div>
             <div class="input-wrapper" style="position:relative">
@@ -434,8 +640,27 @@
 <div class="modal-overlay" id="friendRequestModal">
     <div class="modal"></div>
 </div>
+<div class="modal-overlay" id="groupInviteModal">
+    <div class="modal"></div>
+</div>
 <div class="modal-overlay" id="addFriendModal">
     <div class="modal"></div>
+</div>
+
+<!-- 公告确认弹窗 -->
+<div class="modal-overlay" id="announceConfirmModal">
+    <div class="modal" style="max-width:500px">
+        <div class="announce-confirm-box">
+            <div class="announce-confirm-header">
+                <h3>📢 群公告确认</h3>
+                <button class="gm-close" onclick="closeAnnounceConfirm()" style="color:#333;font-size:24px;background:none;border:none;cursor:pointer">×</button>
+            </div>
+            <div class="announce-confirm-body" id="announceConfirmBody"></div>
+            <div class="announce-confirm-footer">
+                <button class="gm-btn gm-btn-primary" onclick="doConfirmAnnouncement()" style="width:100%;padding:12px">确认已读</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- 图片预览 -->
@@ -447,6 +672,7 @@
 // ==================== 全局状态 ====================
 var currentConvId = 0;
 var currentConvType = '';
+var _pendingAnnounceConfirm = null; // 待确认的公告 {id, content}
 var ws = null;
 var wsReconnectTimer = null;
 var wsReconnectDelay = 1000;
@@ -501,6 +727,58 @@ function connectWebSocket() {
             // 新好友已添加（自己同意别人的申请后刷新）
             loadContacts();
             loadFriendRequestBadge();
+        }
+        if (data.type === 'group_invite') {
+            // 收到新的群邀请
+            onNewGroupInvite(data);
+        }
+        if (data.type === 'group_invite_accepted') {
+            // 群邀请被同意
+            onGroupInviteAccepted(data);
+        }
+        if (data.type === 'group_invite_rejected') {
+            // 群邀请被拒绝
+            onGroupInviteRejected(data);
+        }
+        if (data.type === 'group_joined') {
+            // 加入群聊（邀请被同意后）
+            onGroupJoined(data);
+        }
+        if (data.type === 'group_info_changed') {
+            onGroupInfoChanged(data);
+        }
+        if (data.type === 'member_removed') {
+            onMemberRemoved(data);
+        }
+        if (data.type === 'member_added') {
+            onMemberAdded(data);
+        }
+        if (data.type === 'member_role_changed') {
+            onMemberRoleChanged(data);
+        }
+        if (data.type === 'member_muted') {
+            onMemberMuted(data);
+        }
+        if (data.type === 'group_mute_all') {
+            onGroupMuteAll(data);
+        }
+        if (data.type === 'group_dismissed') {
+            onGroupDismissed(data);
+        }
+        if (data.type === 'new_announcement') {
+            onNewAnnouncement(data);
+        }
+        if (data.type === 'announcement_deleted') {
+            onAnnouncementDeleted(data);
+        }
+        if (data.type === 'announcement_confirmed') {
+            onAnnouncementConfirmed(data);
+        }
+        if (data.type === 'you_removed') {
+            onYouRemoved(data);
+        }
+        if (data.type === 'group_transferred') {
+            onGroupTransferred(data);
         }
     };
 
@@ -612,7 +890,9 @@ function sendMessage() {
     var clientMsgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 
     // 先显示在界面上（发送中状态）
-    var tempEl = appendMessage('self', content, '', true);
+    var selfName = getCurrentUserName();
+    var selfRole = (currentConvType === 'group') ? getCurrentUserRole() : '';
+    var tempEl = appendMessage('self', content, selfName, true, '', 'text', selfRole);
     if (tempEl) {
         tempEl.setAttribute('data-pending-conv', currentConvId);
         tempEl.classList.add('msg-sending');
@@ -663,7 +943,7 @@ function sendMessage() {
 
 function onReceiveMessage(data) {
     if (data.conversation_id === currentConvId && data.sender_id !== getCurrentUserId()) {
-        appendMessage('other', data.content, data.sender_name, false, data.create_at, data.msg_type);
+        appendMessage('other', data.content, data.sender_name, false, data.create_at, data.msg_type, data.sender_role);
         // 标记已读
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({type: 'read', conversation_id: currentConvId}));
@@ -673,7 +953,7 @@ function onReceiveMessage(data) {
 }
 
 // ==================== 消息展示 ====================
-function appendMessage(direction, content, sender, isTemp, time, msgType) {
+function appendMessage(direction, content, sender, isTemp, time, msgType, senderRole) {
     var container = document.getElementById('chatMessages');
     // 移除空状态
     var empty = container.querySelector('.chat-empty');
@@ -685,14 +965,22 @@ function appendMessage(direction, content, sender, isTemp, time, msgType) {
 
     var avatar = document.createElement('div');
     avatar.className = 'msg-avatar';
-    avatar.textContent = '{{ username[0] }}';
+    avatar.textContent = (sender || '?')[0];
 
     var bubble = document.createElement('div');
 
-    if (direction !== 'self') {
+    // 群聊中显示发送人名称和角色标识
+    if (currentConvType === 'group') {
         var senderEl = document.createElement('div');
         senderEl.className = 'msg-sender';
-        senderEl.textContent = sender;
+        var roleBadge = '';
+        var role = senderRole || '';
+        if (role === 'owner') {
+            roleBadge = '<span class="role-badge role-owner">群主</span>';
+        } else if (role === 'admin') {
+            roleBadge = '<span class="role-badge role-admin">管理员</span>';
+        }
+        senderEl.innerHTML = sender + roleBadge;
         bubble.appendChild(senderEl);
     }
 
@@ -712,10 +1000,13 @@ function appendMessage(direction, content, sender, isTemp, time, msgType) {
         try { fileInfo = JSON.parse(content || '{}'); } catch(e) {}
         var fileDiv = document.createElement('div');
         fileDiv.className = 'msg-file';
-        fileDiv.onclick = function() { window.open(fileInfo.url); };
+        fileDiv.onclick = function() { var u = this.getAttribute('data-download-url'); if (u) window.open(u); };
         fileDiv.innerHTML = '<div class="file-icon">📄</div><div class="file-info"><div class="file-name">' +
-            (fileInfo.filename || '未知文件') + '</div><div class="file-size">' +
+            escapeHtml(fileInfo.filename || '未知文件') + '</div><div class="file-size">' +
             formatFileSize(fileInfo.size || 0) + '</div></div>';
+        if (fileInfo.url) {
+            fileDiv.setAttribute('data-download-url', fileInfo.url);
+        }
         bubble.appendChild(fileDiv);
     } else {
         var textEl = document.createElement('div');
@@ -724,13 +1015,13 @@ function appendMessage(direction, content, sender, isTemp, time, msgType) {
     }
 
     var timeEl = document.createElement('div');
-    timeEl.className = 'msg-time';
+    timeEl.className = 'msg-time ' + (direction === 'self' ? 'msg-time-right' : 'msg-time-left');
     timeEl.textContent = time || formatTime(new Date());
-    bubble.appendChild(timeEl);
 
     div.appendChild(avatar);
     div.appendChild(bubble);
     container.appendChild(div);
+    container.appendChild(timeEl);
     container.scrollTop = container.scrollHeight;
     return div;
 }
@@ -753,6 +1044,11 @@ function formatMsgTime(dateStr) {
     return (d.getMonth()+1) + '/' + d.getDate();
 }
 
+function escapeHtml(s) {
+    if (!s) return '';
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // ==================== 加载会话列表 ====================
 function loadConversations() {
     fetch('/im/api/conversations').then(function(r){return r.json()}).then(function(res){
@@ -772,10 +1068,17 @@ function renderConversations(list) {
     list.forEach(function(c){
         var active = c.id === currentConvId ? ' active' : '';
         var unread = c.unread_count > 0 ? '<div class="unread">' + (c.unread_count > 99 ? '99+' : c.unread_count) + '</div>' : '';
+        // 安全解析 JSON 格式的 last_message，只显示文件名
+        var lastMsg = c.last_message || '';
+        if (lastMsg && lastMsg.charAt(0) === '{') {
+            // 从 JSON 中提取 filename 字段（兼容被截断的 JSON）
+            var match = lastMsg.match(/"filename"\s*:\s*"([^"]+)"/);
+            lastMsg = match ? match[1] : '[文件]';
+        }
         html += '<div class="conv-item' + active + '" onclick="openConversation(' + c.id + ',\'' + c.type + '\',\'' + (c.name||'').replace(/'/g,"\\'") + '\')">';
         html += '<div class="avatar">' + (c.avatar || '#') + '</div>';
         html += '<div class="info"><div class="name">' + (c.name || '未知') + '</div>';
-        html += '<div class="last-msg">' + (c.last_message || '') + '</div></div>';
+        html += '<div class="last-msg">' + escapeHtml(lastMsg) + '</div></div>';
         html += '<div class="meta"><div class="time">' + formatMsgTime(c.last_message_at) + '</div>' + unread + '</div>';
         html += '<button class="conv-delete-btn" onclick="event.stopPropagation();deleteConversation(' + c.id + ',\'' + (c.name||'').replace(/'/g,"\\'") + '\')" title="删除会话">×</button>';
         html += '</div>';
@@ -784,20 +1087,21 @@ function renderConversations(list) {
 }
 
 function deleteConversation(convId, convName) {
-    showConfirm('确定要删除与「' + convName + '」的对话吗？相关数据将被清除。', 'danger', '🗑️').then(function(ok){
+    convId = Number(convId);
+    showConfirm('确定要删除与「' + convName + '」的对话吗？聊天记录将被清除，文件不会丢失。', 'danger', '🗑️').then(function(ok){
     if (!ok) return;
     fetch('/im/api/conversations?conversation_id=' + convId, {
         method: 'DELETE',
         headers: {'X-XSRFToken': getCsrfToken()}
     }).then(function(r){return r.json()}).then(function(res){
         if(res.code === 0){
-            if (convId === currentConvId) {
+            if (currentConvId === convId) {
                 currentConvId = 0;
                 currentConvType = '';
                 document.getElementById('chatHeader').style.display = 'none';
                 document.getElementById('chatInput').style.display = 'none';
-                document.getElementById('chatMessages').innerHTML = '<div class="chat-empty"><div class="placeholder"><div class="icon">💬</div><h3>暂无会话</h3><p>选择一个会话开始聊天</p></div></div>';
             }
+            document.getElementById('chatMessages').innerHTML = '<div class="chat-empty"><div class="placeholder"><div class="icon">💬</div><h3>暂无会话</h3><p>选择一个会话开始聊天</p></div></div>';
             loadConversations();
         } else {
             showToast(res.msg || '删除失败', 'error');
@@ -813,6 +1117,7 @@ function loadContacts() {
         if(res.code === 0){
             renderContacts(res.data);
             loadFriendRequestBadge();
+            loadGroupInviteBadge();
         }
     });
 }
@@ -825,6 +1130,12 @@ function renderContacts(users) {
     html += '<div class="contact-item" onclick="showFriendRequestModal()" style="background:rgba(123,47,247,0.05);margin-bottom:8px;border-radius:8px">';
     html += '<div class="avatar" style="background:linear-gradient(135deg,#a78bfa,#7b2ff7)">✉️</div>';
     html += '<div class="name" style="color:#a78bfa">好友申请</div>';
+    html += '</div>';
+
+    // 群邀请入口
+    html += '<div class="contact-item" onclick="showGroupInviteModal()" style="background:rgba(123,47,247,0.05);margin-bottom:8px;border-radius:8px">';
+    html += '<div class="avatar" style="background:linear-gradient(135deg,#00d4ff,#7b2ff7)">👥</div>';
+    html += '<div class="name" style="color:#00d4ff">群邀请</div>';
     html += '</div>';
 
     // 添加好友入口
@@ -893,8 +1204,90 @@ function renderContacts(users) {
             }
             asstHtml += '</div></div>';
             area.innerHTML = html + groupHtml + asstHtml;
+            // 渲染红点（DOM已生成）
+            renderFriendReqBadge();
+            renderGroupInviteBadge();
         });
     });
+}
+
+function loadFiles() {
+    var area = document.getElementById('listArea');
+    area.innerHTML = '<div class="file-loading">加载文件中...</div>';
+    fetch('/im/api/files?scope=all&page_size=100').then(function(r){return r.json()}).then(function(res){
+        if (res.code !== 0) {
+            area.innerHTML = '<div class="file-empty">加载失败</div>';
+            return;
+        }
+        if (!res.data || res.data.length === 0) {
+            area.innerHTML = '<div class="file-empty">暂无文件</div>';
+            return;
+        }
+        var html = '<div style="padding:8px 4px;font-size:12px;color:rgba(255,255,255,0.3)">共 ' + (res.total||res.data.length) + ' 个文件</div>';
+        res.data.forEach(function(f){
+            var icon = getFileIcon(f.file_ext);
+            var sizeStr = formatFileSize(f.file_size);
+            var timeStr = formatFileTime(f.create_at);
+            html += '<div class="file-item">';
+            html += '<div class="file-icon">' + icon + '</div>';
+            html += '<div class="file-info">';
+            html += '<div class="file-name">' + escapeHtml(f.file_name) + '</div>';
+            html += '<div class="file-meta">' + escapeHtml(f.uploader_name||'未知') + ' · ' + sizeStr + ' · ' + timeStr + '</div>';
+            html += '</div>';
+            html += '<button class="file-download" data-hash="' + f.file_hash + '" data-ext="' + f.file_ext + '" data-name="' + escapeHtml(f.file_name) + '">下载</button>';
+            html += '</div>';
+        });
+        area.innerHTML = html;
+        // 事件委托：文件下载按钮
+        area.querySelectorAll('.file-download').forEach(function(btn){
+            btn.addEventListener('click', function(){
+                var hash = this.dataset.hash;
+                var ext = this.dataset.ext;
+                var name = this.dataset.name;
+                downloadFile(hash + ext, name);
+            });
+        });
+    });
+}
+
+function getFileIcon(ext) {
+    ext = (ext||'').toLowerCase();
+    if (['.jpg','.jpeg','.png','.gif','.webp','.bmp'].indexOf(ext)>=0) return '🖼️';
+    if (['.doc','.docx'].indexOf(ext)>=0) return '📝';
+    if (['.xls','.xlsx'].indexOf(ext)>=0) return '📊';
+    if (['.pdf'].indexOf(ext)>=0) return '📄';
+    if (['.zip','.rar','.7z','.tar','.gz'].indexOf(ext)>=0) return '🗜️';
+    if (['.txt'].indexOf(ext)>=0) return '📃';
+    if (['.ppt','.pptx'].indexOf(ext)>=0) return '📑';
+    if (['.mp3','.wav','.flac','.aac'].indexOf(ext)>=0) return '🎵';
+    if (['.mp4','.avi','.mov','.mkv'].indexOf(ext)>=0) return '🎬';
+    return '📎';
+}
+
+function formatFileTime(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr.replace(' ','T'));
+    if (isNaN(d.getTime())) return dateStr;
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var yesterday = new Date(today - 86400000);
+    var dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (dDay.getTime() === today.getTime()) {
+        return ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
+    } else if (dDay.getTime() === yesterday.getTime()) {
+        return '昨天 ' + ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
+    } else {
+        return (d.getMonth()+1) + '/' + d.getDate() + ' ' + ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
+    }
+}
+
+function downloadFile(url, filename) {
+    var a = document.createElement('a');
+    a.href = '/im/api/file/' + url;
+    a.download = filename || url;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
 
 function toggleGroup(el) {
@@ -926,6 +1319,17 @@ function openConversation(convId, convType, convName) {
     currentConvId = convId;
     currentConvType = convType;
 
+    // 切换到会话标签页
+    _activeMainTab = 'conversations';
+    document.querySelectorAll('.tab-item').forEach(function(t){t.classList.remove('active')});
+    document.querySelector('.tab-item[data-tab="conversations"]').classList.add('active');
+
+    // 恢复可能被删除的会话（将 is_deleted 重置为 0）
+    fetch('/im/api/conversations/restore?conversation_id=' + convId, {
+        method: 'POST',
+        headers: {'X-XSRFToken': getCsrfToken()}
+    });
+
     // 更新头部
     document.getElementById('chatHeader').style.display = 'flex';
     document.getElementById('chatTitle').textContent = convName;
@@ -938,23 +1342,32 @@ function openConversation(convId, convType, convName) {
         groupMembersCache = []; // 清空缓存
     }
 
-    // 高亮当前会话
-    document.querySelectorAll('.conv-item').forEach(function(el){el.classList.remove('active')});
-    var activeEl = event && event.currentTarget ? event.currentTarget : null;
-    if (activeEl) activeEl.classList.add('active');
-
     // 加载历史消息
     loadHistory(convId);
+
+    // 刷新会话列表（确保当前会话显示在列表中）
+    loadConversations();
 
     // 加载群成员数
     if (convType === 'group') {
         fetch('/im/api/members?conversation_id=' + convId).then(function(r){return r.json()}).then(function(res){
             if(res.code === 0){
                 document.getElementById('chatMembers').textContent = res.data.length + ' 人';
+                // 获取当前用户在群中的角色
+                var selfUserId = getCurrentUserId();
+                for (var i = 0; i < res.data.length; i++) {
+                    if (res.data[i].id === selfUserId) {
+                        _currentUserRole = res.data[i].role || 'member';
+                        break;
+                    }
+                }
             }
         });
+        // 检查是否有未确认的公告
+        checkUnconfirmedAnnouncement(convId);
     } else {
         document.getElementById('chatMembers').textContent = '';
+        _currentUserRole = '';
     }
 
     // 标记已读
@@ -962,15 +1375,19 @@ function openConversation(convId, convType, convName) {
         ws.send(JSON.stringify({type: 'read', conversation_id: convId}));
     }
 
-    // 立即清除该会话的未读角标
-    var convItems = document.querySelectorAll('.conv-item');
-    convItems.forEach(function(item){
-        var onclick = item.getAttribute('onclick') || '';
-        if (onclick.indexOf('openConversation(' + convId + ',') !== -1) {
-            var badge = item.querySelector('.unread');
-            if (badge) badge.remove();
-        }
-    });
+    // 延迟高亮当前会话（等loadConversations完成）
+    setTimeout(function(){
+        document.querySelectorAll('.conv-item').forEach(function(el){el.classList.remove('active')});
+        var convItems = document.querySelectorAll('.conv-item');
+        convItems.forEach(function(item){
+            var onclick = item.getAttribute('onclick') || '';
+            if (onclick.indexOf('openConversation(' + convId + ',') !== -1) {
+                item.classList.add('active');
+                var badge = item.querySelector('.unread');
+                if (badge) badge.remove();
+            }
+        });
+    }, 100);
 }
 
 function loadHistory(convId) {
@@ -1003,6 +1420,14 @@ function renderMessages(messages) {
             container.appendChild(divider);
         }
 
+        if (m.type === 'system') {
+            var sysDiv = document.createElement('div');
+            sysDiv.className = 'msg-divider';
+            sysDiv.innerHTML = '<span>' + (m.content || '') + '</span>';
+            container.appendChild(sysDiv);
+            return;
+        }
+
         var isSelf = m.sender_id === selfUserId;
         var div = document.createElement('div');
         div.className = 'msg-row ' + (isSelf ? 'self' : '');
@@ -1013,31 +1438,44 @@ function renderMessages(messages) {
 
         var bubble = document.createElement('div');
 
-        if (!isSelf) {
+        // 群聊中显示发送人名称和角色标识
+        if (currentConvType === 'group') {
             var senderEl = document.createElement('div');
             senderEl.className = 'msg-sender';
-            senderEl.textContent = m.sender_name;
+            var roleBadge = '';
+            var role = m.sender_role || '';
+            if (role === 'owner') {
+                roleBadge = '<span class="role-badge role-owner">群主</span>';
+            } else if (role === 'admin') {
+                roleBadge = '<span class="role-badge role-admin">管理员</span>';
+            }
+            senderEl.innerHTML = m.sender_name + roleBadge;
             bubble.appendChild(senderEl);
         }
 
         // 根据消息类型渲染
         var msgType = m.type || 'text';
         if (msgType === 'image') {
+            var fileInfo = {};
+            try { fileInfo = JSON.parse(m.content || '{}'); } catch(e) {}
             var img = document.createElement('img');
             img.className = 'msg-image';
-            img.src = m.content;
+            img.src = fileInfo.url || m.content;
             img.loading = 'lazy';
-            img.onclick = function() { previewImage(m.content); };
+            img.onclick = function() { previewImage(fileInfo.url || m.content); };
             bubble.appendChild(img);
         } else if (msgType === 'file') {
             var fileInfo = {};
             try { fileInfo = JSON.parse(m.content || '{}'); } catch(e) {}
             var fileDiv = document.createElement('div');
             fileDiv.className = 'msg-file';
-            fileDiv.onclick = function() { window.open(fileInfo.url); };
+            fileDiv.onclick = function() { var u = this.getAttribute('data-download-url'); if (u) window.open(u); };
             fileDiv.innerHTML = '<div class="file-icon">📄</div><div class="file-info"><div class="file-name">' +
-                (fileInfo.filename || '未知文件') + '</div><div class="file-size">' +
+                escapeHtml(fileInfo.filename || '未知文件') + '</div><div class="file-size">' +
                 formatFileSize(fileInfo.size || 0) + '</div></div>';
+            if (fileInfo.url) {
+                fileDiv.setAttribute('data-download-url', fileInfo.url);
+            }
             bubble.appendChild(fileDiv);
         } else {
             var textEl = document.createElement('div');
@@ -1045,17 +1483,29 @@ function renderMessages(messages) {
             bubble.appendChild(textEl);
         }
 
-        var timeEl = document.createElement('div');
-        timeEl.className = 'msg-time';
-        timeEl.textContent = m.create_at ? m.create_at.split(' ')[1] : '';
-        bubble.appendChild(timeEl);
-
         div.appendChild(avatar);
         div.appendChild(bubble);
+
+        // 时间放在气泡外面，独立一行
+        var timeWrapper = document.createElement('div');
+        timeWrapper.className = 'msg-time ' + (isSelf ? 'msg-time-right' : 'msg-time-left');
+        timeWrapper.textContent = m.create_at ? formatDisplayTime(m.create_at) : '';
         container.appendChild(div);
+        container.appendChild(timeWrapper);
     });
 
     container.scrollTop = container.scrollHeight;
+}
+
+function formatDisplayTime(timeStr) {
+    if (!timeStr) return '';
+    var parts = timeStr.split(' ');
+    if (parts.length < 2) return timeStr;
+    var timeParts = parts[1].split(':');
+    if (timeParts.length >= 2) {
+        return timeParts[0] + ':' + timeParts[1];
+    }
+    return parts[1];
 }
 
 function previewImage(src) {
@@ -1102,39 +1552,72 @@ function insertEmoji(emoji) {
     autoResizeTextarea(input);
 }
 
-// ==================== 文件上传 ====================
+// ==================== 文件上传与发送 ====================
+var _pendingFileUploads = {};
+
 function uploadFile(input) {
     var file = input.files[0];
     if (!file) return;
+    if (!currentConvId) { showToast('请先选择一个会话', 'warn'); input.value = ''; return; }
 
-    // 检查文件大小
     if (file.size > 10 * 1024 * 1024) {
         showToast('文件大小不能超过10MB', 'warn');
         input.value = '';
         return;
     }
 
+    var pendingId = 'fu_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    _pendingFileUploads[pendingId] = { convId: currentConvId, fileData: null };
+
+    var selfName = getCurrentUserName();
+    var selfRole = (currentConvType === 'group') ? getCurrentUserRole() : '';
+    var tempContent = JSON.stringify({
+        filename: file.name,
+        size: file.size
+    });
+    var tempEl = appendMessage('self', tempContent, selfName, true, '', 'file', selfRole);
+    if (tempEl) {
+        tempEl.setAttribute('data-pending-upload', pendingId);
+        tempEl.classList.add('msg-sending');
+    }
+
+    var container = document.getElementById('chatMessages');
+    container.scrollTop = container.scrollHeight;
+
     var formData = new FormData();
     formData.append('file', file);
+    formData.append('_xsrf', getCsrfToken());
 
-    // 显示发送中状态
     var msgInput = document.getElementById('msgInput');
     msgInput.placeholder = '上传中...';
 
-    formData.append('_xsrf', getCsrfToken());
     fetch('/im/api/file/upload', {
         method: 'POST',
         body: formData
     }).then(function(r){return r.json()}).then(function(res){
-        if(res.code === 0){
+        msgInput.placeholder = '输入消息...';
+        input.value = '';
+
+        if (res.code === 0) {
             var data = res.data;
-            // 发送文件消息
+            var pendingEl = container.querySelector('[data-pending-upload="' + pendingId + '"]');
+            if (pendingEl) {
+                pendingEl.setAttribute('data-file-url', data.url);
+                pendingEl.setAttribute('data-file-id', data.file_id);
+                var fileDiv = pendingEl.querySelector('.msg-file');
+                if (fileDiv) {
+                    fileDiv.setAttribute('data-download-url', data.url);
+                }
+            }
+            _pendingFileUploads[pendingId].fileData = data;
+
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'message',
                     conversation_id: currentConvId,
                     msg_type: data.type,
                     content: JSON.stringify({
+                        file_id: data.file_id,
                         filename: data.filename,
                         url: data.url,
                         size: data.size
@@ -1143,14 +1626,24 @@ function uploadFile(input) {
             }
         } else {
             showToast(res.msg || '上传失败', 'error');
+            markPendingFileFailed(pendingId);
         }
-        msgInput.placeholder = '输入消息...';
-        input.value = '';
     }).catch(function(){
         showToast('上传失败', 'error');
         msgInput.placeholder = '输入消息...';
         input.value = '';
+        markPendingFileFailed(pendingId);
     });
+}
+
+function markPendingFileFailed(pendingId) {
+    var el = document.querySelector('[data-pending-upload="' + pendingId + '"]');
+    if (el) {
+        el.classList.remove('msg-sending');
+        el.classList.add('msg-failed');
+        el.removeAttribute('data-pending-upload');
+    }
+    delete _pendingFileUploads[pendingId];
 }
 
 // ==================== @提及功能 ====================
@@ -1310,10 +1803,21 @@ document.querySelectorAll('.tab-item').forEach(function(tab){
         document.querySelectorAll('.tab-item').forEach(function(t){t.classList.remove('active')});
         this.classList.add('active');
         var tabName = this.dataset.tab;
+        _activeMainTab = tabName;
         if (tabName === 'conversations') loadConversations();
-        else loadContacts();
+        else if (tabName === 'contacts') loadContacts();
+        else if (tabName === 'files') loadFiles();
     });
 });
+
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-item').forEach(function(t){t.classList.remove('active')});
+    document.querySelector('.tab-item[data-tab="' + tabName + '"]').classList.add('active');
+    _activeMainTab = tabName;
+    if (tabName === 'conversations') loadConversations();
+    else if (tabName === 'contacts') loadContacts();
+    else if (tabName === 'files') loadFiles();
+}
 
 // ==================== 退出登录 ====================
 function logout() {
@@ -1334,11 +1838,28 @@ function getCurrentUserId() {
     return _currentUserId;
 }
 
+// ==================== 获取当前用户名 ====================
+var _currentUserName = document.getElementById('appRoot').dataset.username || '';
+function getCurrentUserName() {
+    return _currentUserName;
+}
+
+// ==================== 获取当前用户在群中的角色 ====================
+var _currentUserRole = '';
+function getCurrentUserRole() {
+    return _currentUserRole;
+}
+
 // ==================== 初始化 ====================
+var _activeMainTab = 'conversations';
+
 window.addEventListener('DOMContentLoaded', function(){
     connectWebSocket();
     loadConversations();
     initEmojiPanel();
+    // 同时加载红点数据（不切换标签页）
+    loadFriendRequestBadge();
+    loadGroupInviteBadge();
 });
 
 // 点击页面任意位置关闭表情面板
@@ -1367,7 +1888,14 @@ function hideModal(id) {
 }
 
 // 创建群聊模态框
+var _cgTab = 'friends';
+var _cgSearchResults = [];
+var _cgFriendsList = [];
+
 function showCreateGroupModal() {
+    _cgTab = 'friends';
+    _cgSearchResults = [];
+    _cgFriendsList = [];
     var html = '';
     html += '<div class="create-group-modal">';
     html += '<div class="add-friend-header"><h3>创建群聊</h3>';
@@ -1375,8 +1903,16 @@ function showCreateGroupModal() {
     html += '<div class="add-friend-search">';
     html += '<input type="text" id="groupName" placeholder="请输入群名称...">';
     html += '</div>';
-    html += '<div class="add-friend-list" id="groupMemberSelect" style="max-height:220px;overflow-y:auto">';
-    html += '<div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">加载中...</div>';
+    html += '<div class="cg-tabs">';
+    html += '<div class="cg-tab active" id="cgTabFriends" onclick="switchCgTab(\'friends\')">好友</div>';
+    html += '<div class="cg-tab" id="cgTabSearch" onclick="switchCgTab(\'search\')">搜索</div>';
+    html += '</div>';
+    html += '<div class="cg-tab-content active" id="cgContentFriends">';
+    html += '<div class="cg-friends-list" id="cgFriendsList"><div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">加载中...</div></div>';
+    html += '</div>';
+    html += '<div class="cg-tab-content" id="cgContentSearch">';
+    html += '<div class="cg-search-bar"><input type="text" id="cgSearchInput" placeholder="搜索用户名..." onkeyup="if(event.keyCode===13)cgDoSearch()"><button class="add-friend-btn add" onclick="cgDoSearch()">搜索</button></div>';
+    html += '<div class="cg-friends-list" id="cgSearchResults"><div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">搜索用户后显示</div></div>';
     html += '</div>';
     html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px 16px;border-top:1px solid rgba(255,255,255,0.06)">';
     html += '<span style="font-size:12px;color:rgba(255,255,255,0.3)">已选择 <b id="cgSelectCount" style="color:#a78bfa">0</b> 人</span>';
@@ -1388,63 +1924,134 @@ function showCreateGroupModal() {
 
     document.getElementById('createGroupModal').innerHTML = html;
     showModal('createGroupModal');
+    loadCgFriends();
+}
 
-    Promise.all([
-        fetch('/im/api/friends').then(function(r){return r.json()}),
-        fetch('/im/api/assistants').then(function(r){return r.json()})
-    ]).then(function(results){
-        var friendsRes = results[0];
-        var asstRes = results[1];
-        var members = [];
-        if (friendsRes.code === 0) {
-            (friendsRes.data || []).forEach(function(f){
-                members.push({id: f.id, name: f.remark || f.username, avatar: (f.remark || f.username)[0], type: 'friend', typeLabel: '好友'});
+function switchCgTab(tab) {
+    _cgTab = tab;
+    document.getElementById('cgTabFriends').className = 'cg-tab' + (tab === 'friends' ? ' active' : '');
+    document.getElementById('cgTabSearch').className = 'cg-tab' + (tab === 'search' ? ' active' : '');
+    document.getElementById('cgContentFriends').className = 'cg-tab-content' + (tab === 'friends' ? ' active' : '');
+    document.getElementById('cgContentSearch').className = 'cg-tab-content' + (tab === 'search' ? ' active' : '');
+}
+
+function loadCgFriends() {
+    fetch('/im/api/friends').then(function(r){return r.json()}).then(function(res){
+        _cgFriendsList = [];
+        if (res.code === 0) {
+            _cgFriendsList = (res.data || []).map(function(f){
+                return {id: f.id, name: f.remark || f.username, avatar: (f.remark || f.username)[0]};
             });
         }
-        if (asstRes.code === 0) {
-            (asstRes.data || []).forEach(function(a){
-                members.push({id: a.id + 10000, name: a.assistant_name, avatar: a.assistant_name[0], type: 'assistant', typeLabel: '数字员工'});
-            });
+        renderCgFriends();
+    });
+}
+
+function renderCgFriends() {
+    var container = document.getElementById('cgFriendsList');
+    if (!container) return;
+    if (_cgFriendsList.length === 0) {
+        container.innerHTML = '<div class="add-friend-empty">暂无好友</div>';
+        container.classList.remove('show-scrollbar');
+        return;
+    }
+    var html = '';
+    _cgFriendsList.forEach(function(m){
+        html += '<label class="add-friend-item cg-member-item" data-id="' + m.id + '">';
+        html += '<input type="checkbox" value="' + m.id + '" onchange="updateCgCount()" style="display:none">';
+        html += '<div class="cg-select-check">✓</div>';
+        html += '<div class="add-friend-avatar">' + m.avatar + '</div>';
+        html += '<div class="add-friend-info"><div class="add-friend-name">' + m.name + '</div></div>';
+        html += '</label>';
+    });
+    container.innerHTML = html;
+    requestAnimationFrame(function(){
+        if (container.scrollHeight > container.clientHeight) {
+            container.classList.add('show-scrollbar');
+        } else {
+            container.classList.remove('show-scrollbar');
         }
-        var container = document.getElementById('groupMemberSelect');
-        if (members.length === 0) {
-            container.innerHTML = '<div class="add-friend-empty">暂无可选成员</div>';
-            return;
-        }
-        var gridHtml = '';
-        members.forEach(function(m){
-            gridHtml += '<label class="add-friend-item" style="cursor:pointer;border:1.5px solid transparent">';
-            gridHtml += '<input type="checkbox" value="' + m.id + '" onchange="updateCgCount()" style="display:none">';
-            gridHtml += '<div class="cg-select-check">✓</div>';
-            gridHtml += '<div class="add-friend-avatar">' + m.avatar + '</div>';
-            gridHtml += '<div class="add-friend-info"><div class="add-friend-name">' + m.name + '</div></div>';
-            gridHtml += '<div style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.3);flex-shrink:0">' + m.typeLabel + '</div>';
-            gridHtml += '</label>';
+    });
+    container.querySelectorAll('.cg-member-item').forEach(function(item){
+        item.addEventListener('click', function(e){
+            e.preventDefault();
+            var cb = item.querySelector('input[type=checkbox]');
+            var check = item.querySelector('.cg-select-check');
+            cb.checked = !cb.checked;
+            if (cb.checked) {
+                item.classList.add('cg-item-selected');
+                check.classList.add('checked');
+            } else {
+                item.classList.remove('cg-item-selected');
+                check.classList.remove('checked');
+            }
+            updateCgCount();
         });
-        container.innerHTML = gridHtml;
-        container.querySelectorAll('.add-friend-item').forEach(function(item){
-            item.addEventListener('click', function(e){
-                e.preventDefault();
-                var cb = item.querySelector('input[type=checkbox]');
-                var check = item.querySelector('.cg-select-check');
-                cb.checked = !cb.checked;
-                if (cb.checked) {
-                    item.classList.add('cg-item-selected');
-                    check.classList.add('checked');
-                } else {
-                    item.classList.remove('cg-item-selected');
-                    check.classList.remove('checked');
-                }
-                updateCgCount();
+    });
+}
+
+function cgDoSearch() {
+    var keyword = document.getElementById('cgSearchInput').value.trim();
+    if (!keyword) { showToast('请输入搜索关键词', 'warn'); return; }
+    var container = document.getElementById('cgSearchResults');
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">搜索中...</div>';
+
+    fetch('/im/api/search?keyword=' + encodeURIComponent(keyword)).then(function(r){return r.json()}).then(function(res){
+        _cgSearchResults = [];
+        if (res.code === 0) {
+            _cgSearchResults = (res.data.users || []).map(function(u){
+                return {id: u.id, name: u.username, avatar: u.username[0]};
             });
+        }
+        renderCgSearchResults();
+    });
+}
+
+function renderCgSearchResults() {
+    var container = document.getElementById('cgSearchResults');
+    if (!container) return;
+    if (_cgSearchResults.length === 0) {
+        container.innerHTML = '<div class="add-friend-empty">未找到用户</div>';
+        container.classList.remove('show-scrollbar');
+        return;
+    }
+    var html = '';
+    _cgSearchResults.forEach(function(m){
+        html += '<label class="add-friend-item cg-member-item" data-id="' + m.id + '">';
+        html += '<input type="checkbox" value="' + m.id + '" onchange="updateCgCount()" style="display:none">';
+        html += '<div class="cg-select-check">✓</div>';
+        html += '<div class="add-friend-avatar">' + m.avatar + '</div>';
+        html += '<div class="add-friend-info"><div class="add-friend-name">' + m.name + '</div></div>';
+        html += '</label>';
+    });
+    container.innerHTML = html;
+    requestAnimationFrame(function(){
+        if (container.scrollHeight > container.clientHeight) {
+            container.classList.add('show-scrollbar');
+        } else {
+            container.classList.remove('show-scrollbar');
+        }
+    });
+    container.querySelectorAll('.cg-member-item').forEach(function(item){
+        item.addEventListener('click', function(e){
+            e.preventDefault();
+            var cb = item.querySelector('input[type=checkbox]');
+            var check = item.querySelector('.cg-select-check');
+            cb.checked = !cb.checked;
+            if (cb.checked) {
+                item.classList.add('cg-item-selected');
+                check.classList.add('checked');
+            } else {
+                item.classList.remove('cg-item-selected');
+                check.classList.remove('checked');
+            }
+            updateCgCount();
         });
-    }).catch(function(){
-        document.getElementById('groupMemberSelect').innerHTML = '<div class="add-friend-empty">加载失败</div>';
     });
 }
 
 function updateCgCount() {
-    var count = document.querySelectorAll('#groupMemberSelect input[type=checkbox]:checked').length;
+    var count = document.querySelectorAll('.create-group-modal input[type=checkbox]:checked').length;
     var el = document.getElementById('cgSelectCount');
     if (el) el.textContent = count;
 }
@@ -1452,119 +2059,489 @@ function updateCgCount() {
 function createGroup() {
     var name = document.getElementById('groupName').value.trim();
     if (!name) { showToast('请输入群名称', 'warn'); return; }
-    var checkboxes = document.querySelectorAll('#groupMemberSelect input[type=checkbox]:checked');
-    var friendIds = [], assistantIds = [];
+    var checkboxes = document.querySelectorAll('.create-group-modal input[type=checkbox]:checked');
+    var memberIds = [];
     checkboxes.forEach(function(cb){
-        var v = parseInt(cb.value);
-        if (v >= 10000) assistantIds.push(v - 10000);
-        else friendIds.push(v);
+        memberIds.push(parseInt(cb.value));
     });
-    if (friendIds.length === 0 && assistantIds.length === 0) { showToast('请至少选择一个成员', 'warn'); return; }
+    if (memberIds.length === 0) { showToast('请至少选择一个成员', 'warn'); return; }
 
     fetch('/im/api/group', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-XSRFToken': getCsrfToken()},
-        body: JSON.stringify({name: name, member_ids: friendIds, assistant_ids: assistantIds})
+        body: JSON.stringify({name: name, member_ids: memberIds, assistant_ids: []})
     }).then(function(r){return r.json()}).then(function(res){
         if(res.code === 0){
             hideModal('createGroupModal');
             loadConversations();
             loadContacts();
+            showToast('群聊创建成功，已向成员发送邀请', 'success');
         } else {
             showToast(res.msg || '创建失败', 'error');
         }
     });
 }
 
-// 群管理模态框
+// ==================== 群管理弹窗 ====================
+var _gmData = {};
+var _gmCurrentTab = 'profile';
+
 function showGroupModal() {
     if (!currentConvId || currentConvType !== 'group') return;
-    var html = '<h3>群管理</h3>';
-    html += '<div class="form-group"><label>群名称</label><input type="text" id="editGroupName" placeholder="请输入新群名称"></div>';
-    html += '<div class="form-group"><label>群成员</label><div class="member-list" id="groupMemberList">加载中...</div></div>';
-    html += '<div class="form-group"><label>添加成员</label><div id="addMemberSelect" style="max-height:100px;overflow-y:auto">加载中...</div></div>';
-    html += '<div class="form-actions">';
-    html += '<button class="btn btn-secondary" onclick="hideModal(\'groupManageModal\')">关闭</button>';
-    html += '<button class="btn btn-primary" onclick="updateGroupInfo()">保存</button>';
+    _gmCurrentTab = 'profile';
+    fetch('/im/api/group/detail?group_id=' + currentConvId)
+        .then(function(r){return r.json()})
+        .then(function(res){
+            if(res.code !== 0){showToast(res.msg||'加载失败','error');return;}
+            _gmData = res.data;
+            renderGroupModal();
+            showModal('groupManageModal');
+        });
+}
+
+function renderGroupModal(){
+    var g = _gmData.group;
+    var members = _gmData.members;
+    var announcements = _gmData.announcements;
+    var settings = _gmData.settings;
+    var myRole = g.my_role;
+    var isOwner = myRole === 'owner';
+    var isAdmin = myRole === 'admin' || isOwner;
+
+    var html = '<div class="group-manage-modal">';
+    html += '<div class="gm-header"><h3>群管理</h3><button class="gm-close" onclick="hideModal(\'groupManageModal\')">×</button></div>';
+    html += '<div class="gm-tabs">';
+    html += '<div class="gm-tab' + (_gmCurrentTab==='profile'?' active':'') + '" onclick="switchGmTab(\'profile\')">群资料</div>';
+    html += '<div class="gm-tab' + (_gmCurrentTab==='members'?' active':'') + '" onclick="switchGmTab(\'members\')">成员管理</div>';
+    html += '<div class="gm-tab' + (_gmCurrentTab==='control'?' active':'') + '" onclick="switchGmTab(\'control\')" ' + (isOwner?'':'style="display:none"') + '>群管控</div>';
+    html += '<div class="gm-tab' + (_gmCurrentTab==='announce'?' active':'') + '" onclick="switchGmTab(\'announce\')">群公告</div>';
+    html += '<div class="gm-tab' + (_gmCurrentTab==='files'?' active':'') + '" onclick="switchGmTab(\'files\')">群文件</div>';
+    html += '<div class="gm-tab' + (_gmCurrentTab==='more'?' active':'') + '" onclick="switchGmTab(\'more\')">更多</div>';
+    html += '</div>';
+    html += '<div class="gm-body">';
+
+    // Tab1: 群资料
+    html += '<div class="gm-tab-content' + (_gmCurrentTab==='profile'?' active':'') + '" id="gmTabProfile">';
+    html += '<div class="gm-profile">';
+    html += '<div class="gm-profile-avatar" title="点击修改头像">' + (g.name||'?')[0] + '</div>';
+    html += '<div class="gm-profile-form">';
+    html += '<div class="gm-form-item"><label>群名称</label><input type="text" id="gmGroupName" value="' + (g.name||'') + '" ' + (isOwner?'':'readonly') + '></div>';
+    html += '<div class="gm-form-item"><label>群号</label><input type="text" value="' + g.id + '" readonly></div>';
+    html += '<div class="gm-form-item"><label>群介绍</label><textarea id="gmGroupDesc" ' + (isOwner?'':'readonly') + ' placeholder="暂无群介绍"></textarea></div>';
+    html += '</div></div>';
+    html += '</div>';
+
+    // Tab2: 成员管理
+    html += '<div class="gm-tab-content' + (_gmCurrentTab==='members'?' active':'') + '" id="gmTabMembers">';
+    html += '<div class="gm-member-toolbar">';
+    html += '<input type="text" class="gm-member-search" id="gmMemberSearch" placeholder="搜索成员..." oninput="filterGmMembers()">';
+    html += '<button class="gm-btn gm-btn-primary" onclick="showGmAddMember()" ' + (isAdmin?'':'style="display:none"') + '>邀请成员</button>';
+    html += '</div>';
+    html += '<div class="gm-member-list" id="gmMemberList">';
+    members.forEach(function(m){
+        var roleTag = m.role==='owner'?'<span class="gm-role-tag owner">群主</span>':m.role==='admin'?'<span class="gm-role-tag admin">管理员</span>':'<span class="gm-role-tag member">成员</span>';
+        var muteTag = (m.mute_until && m.mute_until > new Date().toISOString().replace('T',' ').substring(0,19))?'<span class="gm-mute-tag">禁言中</span>':'';
+        var actions = '';
+        if(isOwner && m.role==='member'){
+            actions += '<button class="gm-action-btn set-admin" onclick="gmSetAdmin('+m.id+',\'set\')">设为管理</button>';
+        }
+        if(isOwner && m.role==='admin'){
+            actions += '<button class="gm-action-btn cancel-admin" onclick="gmSetAdmin('+m.id+',\'cancel\')">撤销管理</button>';
+        }
+        if(isAdmin && m.role==='member'){
+            actions += '<button class="gm-action-btn mute" onclick="gmMuteMember('+m.id+')">禁言</button>';
+        }
+        if(isAdmin && m.role==='member'){
+            actions += '<button class="gm-action-btn remove" onclick="gmRemoveMember('+m.id+',\''+m.username+'\')">移除</button>';
+        }
+        if(isAdmin && m.mute_until){
+            actions += '<button class="gm-action-btn unmute" onclick="gmUnmuteMember('+m.id+')">解禁</button>';
+        }
+        html += '<div class="gm-member-item" data-name="'+m.username+'">';
+        html += '<div class="gm-m-avatar">'+(m.username||'?')[0]+'</div>';
+        html += '<div class="gm-m-info"><div class="gm-m-name">'+m.username+' '+roleTag+' '+muteTag+'</div>';
+        html += '<div class="gm-m-meta">入群: '+(m.join_at||'')+(m.last_speak_at?' | 最后发言: '+m.last_speak_at:'')+'</div></div>';
+        html += '<div class="gm-m-actions">'+actions+'</div></div>';
+    });
+    html += '</div></div>';
+
+    // Tab3: 群管控
+    html += '<div class="gm-tab-content' + (_gmCurrentTab==='control'?' active':'') + '" id="gmTabControl">';
+    html += '<div class="gm-control-list">';
+    html += '<div class="gm-control-item"><div class="gm-c-info"><div class="gm-c-title">全体禁言</div><div class="gm-c-desc">开启后仅群主和管理员可发言</div></div>';
+    html += '<div class="gm-switch' + (settings.is_muted_all?' on':'') + '" onclick="gmToggleMuteAll(this,' + (settings.is_muted_all?0:1) + ')"></div></div>';
+    html += '<div class="gm-control-item"><div class="gm-c-info"><div class="gm-c-title">禁止新成员加入</div><div class="gm-c-desc">开启后无法通过邀请或搜索入群</div></div>';
+    html += '<div class="gm-switch' + (settings.allow_join? '':' on') + '" onclick="gmToggleAllowJoin(this,' + (settings.allow_join?0:1) + ')"></div></div>';
+    html += '</div></div>';
+
+    // Tab4: 群公告
+    html += '<div class="gm-tab-content' + (_gmCurrentTab==='announce'?' active':'') + '" id="gmTabAnnounce">';
+    if(g.announcement){
+        html += '<div class="gm-announce-current">';
+        html += '<div class="gm-ac-title">当前公告</div>';
+        html += '<div class="gm-ac-content">' + g.announcement + '</div>';
+        html += '<div class="gm-ac-meta">发布者: '+(g.announcement_publisher_name||'')+' | '+g.announcement_time+'</div>';
+        html += '</div>';
+    }
+    html += '<div class="gm-announce-history" id="gmAnnounceHistory">';
+    announcements.forEach(function(a){
+        html += '<div class="gm-announce-item">';
+        html += '<div style="flex:1"><div class="gm-ai-content">'+a.content+'</div>';
+        html += '<div class="gm-ai-meta">'+a.publisher_name+' | '+a.create_at+'</div></div>';
+        html += '<div class="gm-ai-actions">';
+        if(isAdmin){
+            html += '<button class="gm-action-btn remove" onclick="gmDeleteAnnounce('+a.id+')">删除</button>';
+        }
+        html += '</div></div>';
+    });
+    html += '</div>';
+    if(isAdmin){
+        html += '<div class="gm-announce-editor">';
+        html += '<textarea id="gmAnnounceInput" placeholder="输入公告内容..."></textarea>';
+        html += '<div style="margin-top:10px;text-align:right"><button class="gm-btn gm-btn-primary" onclick="gmPublishAnnounce()">发布公告</button></div>';
+        html += '</div>';
+    }
+    html += '</div>';
+
+    // Tab5: 群文件
+    html += '<div class="gm-tab-content' + (_gmCurrentTab==='files'?' active':'') + '" id="gmTabFiles">';
+    html += '<div style="padding:4px 0" id="gmFilesList">';
+    html += '<div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">加载中...</div>';
+    html += '</div></div>';
+
+    // Tab7: 更多
+    html += '<div class="gm-tab-content' + (_gmCurrentTab==='more'?' active':'') + '" id="gmTabMore">';
+    if(isOwner){
+        html += '<div class="gm-transfer-section"><h4>转让群主</h4>';
+        html += '<div class="gm-transfer-select"><select id="gmTransferSelect">';
+        members.forEach(function(m){if(m.role!=='owner') html+='<option value="'+m.id+'">'+m.username+' ('+m.role+')</option>';});
+        html += '</select><button class="gm-btn gm-btn-primary" onclick="gmTransferGroup()">转让</button></div></div>';
+    }
+    html += '<div class="gm-leave-section"><h4>退出群聊</h4>';
+    html += '<button class="gm-btn gm-btn-secondary" onclick="gmLeaveGroup()" ' + (isOwner?'disabled style="opacity:0.4;cursor:not-allowed"':'') + '>' + (isOwner?'群主不能退出':'退出群聊') + '</button></div>';
+    if(isOwner){
+        html += '<div class="gm-danger-zone" style="margin-top:16px">';
+        html += '<div class="gm-danger-title">⚠ 解散群聊</div>';
+        html += '<div class="gm-danger-desc">解散后所有聊天记录将被清除，成员将被移出，不可恢复。</div>';
+        html += '<div class="gm-form-item"><input type="text" id="gmDismissInput" placeholder="请输入群名称确认解散"></div>';
+        html += '<button class="gm-btn gm-btn-danger" onclick="gmDismissGroup()">解散群聊</button>';
+        html += '</div>';
+    }
+    html += '</div>';
+
+    html += '</div>'; // gm-body
+    html += '<div class="gm-footer">';
+    html += '<button class="gm-btn gm-btn-secondary" onclick="hideModal(\'groupManageModal\')">关闭</button>';
+    html += '<button class="gm-btn gm-btn-primary" onclick="gmSaveProfile()" ' + (isOwner?'':'style="display:none"') + '>保存修改</button>';
+    html += '</div>';
+    html += '</div>';
+
+    document.getElementById('groupManageModal').innerHTML = html;
+}
+
+function switchGmTab(tab){
+    _gmCurrentTab = tab;
+    renderGroupModal();
+    if (tab === 'files') {
+        loadGmFiles();
+    }
+}
+
+function loadGmFiles() {
+    var container = document.getElementById('gmFilesList');
+    if (!container) return;
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">加载中...</div>';
+    var gid = _gmData.group ? _gmData.group.id : currentConvId;
+    if (!gid) return;
+    fetch('/im/api/files?scope=group&group_id=' + gid + '&page_size=50').then(function(r){return r.json()}).then(function(res){
+        if (res.code !== 0 || !res.data || res.data.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:30px;color:rgba(255,255,255,0.2);font-size:13px">暂无群文件</div>';
+            return;
+        }
+        var html = '<div style="font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:8px">共 ' + res.data.length + ' 个文件</div>';
+        res.data.forEach(function(f){
+            var icon = getFileIcon(f.file_ext);
+            var sizeStr = formatFileSize(f.file_size);
+            var timeStr = formatFileTime(f.create_at);
+            html += '<div class="file-item" style="padding:8px 10px">';
+            html += '<div class="file-icon" style="font-size:18px;width:28px">' + icon + '</div>';
+            html += '<div class="file-info">';
+            html += '<div class="file-name" style="font-size:12px">' + escapeHtml(f.file_name) + '</div>';
+            html += '<div class="file-meta">' + escapeHtml(f.uploader_name||'未知') + ' · ' + sizeStr + ' · ' + timeStr + '</div>';
+            html += '</div>';
+            html += '<button class="file-download" data-hash="' + f.file_hash + '" data-ext="' + f.file_ext + '" data-name="' + escapeHtml(f.file_name) + '">下载</button>';
+            html += '</div>';
+        });
+        container.innerHTML = html;
+        container.querySelectorAll('.file-download').forEach(function(btn){
+            btn.addEventListener('click', function(){
+                var hash = this.dataset.hash;
+                var ext = this.dataset.ext;
+                var name = this.dataset.name;
+                downloadFile(hash + ext, name);
+            });
+        });
+    });
+}
+
+function gmSaveProfile(){
+    var name = document.getElementById('gmGroupName').value.trim();
+    if(!name){showToast('群名称不能为空','warn');return;}
+    fetch('/im/api/group/manage2',{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':getCsrfToken()},
+        body:JSON.stringify({action:'update_name',group_id:currentConvId,name:name})
+    }).then(function(r){return r.json()}).then(function(res){
+        if(res.code===0){showToast('群名称已更新','success');document.getElementById('chatTitle').textContent=name;showGroupModal();}
+        else showToast(res.msg||'操作失败','error');
+    });
+}
+
+function gmSetAdmin(memberId, action){
+    var label = action==='set'?'设为管理员':'撤销管理员';
+    showConfirm('确定'+label+'？','info','👤').then(function(ok){
+        if(!ok) return;
+        fetch('/im/api/group/manage2',{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':getCsrfToken()},
+            body:JSON.stringify({action:'set_admin',group_id:currentConvId,member_id:memberId,set_action:action})
+        }).then(function(r){return r.json()}).then(function(res){
+            if(res.code===0){showToast(res.msg,'success');showGroupModal();}
+            else showToast(res.msg||'操作失败','error');
+        });
+    });
+}
+
+function gmRemoveMember(memberId, memberName){
+    showConfirm('确定将 '+memberName+' 移出群聊？','danger','👤').then(function(ok){
+        if(!ok) return;
+        fetch('/im/api/group/manage2',{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':getCsrfToken()},
+            body:JSON.stringify({action:'remove_member',group_id:currentConvId,member_id:memberId})
+        }).then(function(r){return r.json()}).then(function(res){
+            if(res.code===0){showToast(res.msg,'success');showGroupModal();}
+            else showToast(res.msg||'操作失败','error');
+        });
+    });
+}
+
+function gmMuteMember(memberId){
+    showConfirm('禁言该成员多久？','warn','🔇').then(function(ok){
+        if(!ok) return;
+        fetch('/im/api/group/manage2',{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':getCsrfToken()},
+            body:JSON.stringify({action:'mute_member',group_id:currentConvId,member_id:memberId,duration:60})
+        }).then(function(r){return r.json()}).then(function(res){
+            if(res.code===0){showToast(res.msg,'success');showGroupModal();}
+            else showToast(res.msg||'操作失败','error');
+        });
+    });
+}
+
+function gmUnmuteMember(memberId){
+    fetch('/im/api/group/manage2',{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':getCsrfToken()},
+        body:JSON.stringify({action:'unmute_member',group_id:currentConvId,member_id:memberId})
+    }).then(function(r){return r.json()}).then(function(res){
+        if(res.code===0){showToast(res.msg,'success');showGroupModal();}
+        else showToast(res.msg||'操作失败','error');
+    });
+}
+
+function gmToggleMuteAll(el, enabled){
+    fetch('/im/api/group/manage2',{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':getCsrfToken()},
+        body:JSON.stringify({action:'mute_all',group_id:currentConvId,enabled:enabled})
+    }).then(function(r){return r.json()}).then(function(res){
+        if(res.code===0){showToast(res.msg,'success');showGroupModal();}
+        else showToast(res.msg||'操作失败','error');
+    });
+}
+
+function gmToggleAllowJoin(el, enabled){
+    fetch('/im/api/group/manage2',{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':getCsrfToken()},
+        body:JSON.stringify({action:'allow_join',group_id:currentConvId,enabled:enabled})
+    }).then(function(r){return r.json()}).then(function(res){
+        if(res.code===0){showToast(res.msg,'success');showGroupModal();}
+        else showToast(res.msg||'操作失败','error');
+    });
+}
+
+function gmPublishAnnounce(){
+    var content = document.getElementById('gmAnnounceInput').value.trim();
+    if(!content){showToast('公告内容不能为空','warn');return;}
+    fetch('/im/api/group/announcement',{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':getCsrfToken()},
+        body:JSON.stringify({action:'publish',group_id:currentConvId,content:content})
+    }).then(function(r){return r.json()}).then(function(res){
+        if(res.code===0){showToast('公告已发布','success');showGroupModal();}
+        else showToast(res.msg||'操作失败','error');
+    });
+}
+
+function gmDeleteAnnounce(annId){
+    showConfirm('确定删除该公告？','warn','📝').then(function(ok){
+        if(!ok) return;
+        fetch('/im/api/group/announcement',{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':getCsrfToken()},
+            body:JSON.stringify({action:'delete',group_id:currentConvId,announcement_id:annId})
+        }).then(function(r){return r.json()}).then(function(res){
+            if(res.code===0){showToast('公告已删除','success');showGroupModal();}
+            else showToast(res.msg||'操作失败','error');
+        });
+    });
+}
+
+function gmDismissGroup(){
+    var input = document.getElementById('gmDismissInput').value.trim();
+    if(input !== _gmData.group.name){showToast('群名称输入不正确','warn');return;}
+    showConfirm('确定解散群聊？此操作不可恢复！','danger','⚠').then(function(ok){
+        if(!ok) return;
+        fetch('/im/api/group/dismiss',{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':getCsrfToken()},
+            body:JSON.stringify({group_id:currentConvId,confirm_name:input})
+        }).then(function(r){return r.json()}).then(function(res){
+            if(res.code===0){showToast('群聊已解散','success');hideModal('groupManageModal');loadConversations();}
+            else showToast(res.msg||'操作失败','error');
+        });
+    });
+}
+
+function gmLeaveGroup(){
+    showConfirm('确定退出群聊？','warn','🚪').then(function(ok){
+        if(!ok) return;
+        fetch('/im/api/group/leave',{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':getCsrfToken()},
+            body:JSON.stringify({group_id:currentConvId})
+        }).then(function(r){return r.json()}).then(function(res){
+            if(res.code===0){showToast('已退出群聊','success');hideModal('groupManageModal');loadConversations();}
+            else showToast(res.msg||'操作失败','error');
+        });
+    });
+}
+
+function gmTransferGroup(){
+    var newOwnerId = parseInt(document.getElementById('gmTransferSelect').value);
+    if(!newOwnerId){showToast('请选择目标成员','warn');return;}
+    showConfirm('确定转让群主？','warn','👑').then(function(ok){
+        if(!ok) return;
+        fetch('/im/api/group/transfer',{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':getCsrfToken()},
+            body:JSON.stringify({group_id:currentConvId,new_owner_id:newOwnerId})
+        }).then(function(r){return r.json()}).then(function(res){
+            if(res.code===0){showToast(res.msg,'success');showGroupModal();}
+            else showToast(res.msg||'操作失败','error');
+        });
+    });
+}
+
+// ==================== 群管理-邀请成员 ====================
+var _gmInviteGroupId = 0;
+
+function showGmAddMember(){
+    _gmInviteGroupId = currentConvId;
+    var html = '';
+    html += '<div class="gm-add-member-modal">';
+    html += '<div class="add-friend-header"><h3>邀请成员</h3>';
+    html += '<button class="add-friend-close" onclick="hideModal(\'groupManageModal\');showGroupModal()">×</button></div>';
+    html += '<div class="add-friend-search">';
+    html += '<input type="text" id="gmInviteSearch" placeholder="搜索用户名..." onkeyup="if(event.keyCode===13)gmInviteSearchUsers()">';
+    html += '<button class="add-friend-btn" style="padding:8px 16px" onclick="gmInviteSearchUsers()">搜索</button>';
+    html += '</div>';
+    html += '<div class="gm-invite-tabs">';
+    html += '<div class="gm-invite-tab active" id="gmInviteTabFriends" onclick="switchGmInviteTab(\'friends\')">好友</div>';
+    html += '<div class="gm-invite-tab" id="gmInviteTabSearch" onclick="switchGmInviteTab(\'search\')">搜索结果</div>';
+    html += '</div>';
+    html += '<div class="gm-invite-content active" id="gmInviteContentFriends">';
+    html += '<div class="add-friend-list" id="gmInviteFriendsList"><div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">加载中...</div></div>';
+    html += '</div>';
+    html += '<div class="gm-invite-content" id="gmInviteContentSearch">';
+    html += '<div class="add-friend-list" id="gmInviteSearchResults"><div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">搜索用户后显示</div></div>';
+    html += '</div>';
     html += '</div>';
     document.getElementById('groupManageModal').innerHTML = html;
-    showModal('groupManageModal');
+    loadGmInviteFriends();
+}
 
-    // 加载群成员
-    fetch('/im/api/members?conversation_id=' + currentConvId).then(function(r){return r.json()}).then(function(res){
-        if(res.code === 0){
-            var listHtml = '';
-            res.data.forEach(function(m){
-                listHtml += '<div class="member-item">';
-                listHtml += '<div class="m-avatar">' + (m.username||'?')[0] + '</div>';
-                listHtml += '<div class="m-name">' + m.username + '</div>';
-                if (m.role === 'admin') listHtml += '<span class="m-role">群主</span>';
-                listHtml += '<button class="m-remove" onclick="removeGroupMember(' + m.id + ')">移除</button>';
-                listHtml += '</div>';
-            });
-            document.getElementById('groupMemberList').innerHTML = listHtml;
-        }
-    });
+function switchGmInviteTab(tab) {
+    document.getElementById('gmInviteTabFriends').className = 'gm-invite-tab' + (tab === 'friends' ? ' active' : '');
+    document.getElementById('gmInviteTabSearch').className = 'gm-invite-tab' + (tab === 'search' ? ' active' : '');
+    document.getElementById('gmInviteContentFriends').className = 'gm-invite-content' + (tab === 'friends' ? ' active' : '');
+    document.getElementById('gmInviteContentSearch').className = 'gm-invite-content' + (tab === 'search' ? ' active' : '');
+}
 
-    // 加载可添加的用户
-    fetch('/im/api/users').then(function(r){return r.json()}).then(function(res){
-        if(res.code === 0){
-            var selectHtml = '';
-            res.data.forEach(function(u){
-                selectHtml += '<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:rgba(255,255,255,0.6);cursor:pointer">';
-                selectHtml += '<input type="checkbox" value="' + u.id + '" style="accent-color:#7b2ff7"> ' + u.username;
-                selectHtml += '</label>';
-            });
-            document.getElementById('addMemberSelect').innerHTML = selectHtml;
+function loadGmInviteFriends() {
+    var groupId = _gmInviteGroupId;
+    fetch('/im/api/group/member/search?group_id=' + groupId).then(function(r){return r.json()}).then(function(res){
+        var container = document.getElementById('gmInviteFriendsList');
+        if (!container) return;
+        if (res.code !== 0) {
+            container.innerHTML = '<div class="add-friend-empty">加载失败</div>';
+            return;
         }
+        var users = res.data.users || [];
+        if (users.length === 0) {
+            container.innerHTML = '<div class="add-friend-empty">暂无可邀请的好友</div>';
+            return;
+        }
+        renderGmInviteUsers(container, users, true);
     });
 }
 
-function updateGroupInfo() {
-    var name = document.getElementById('editGroupName').value.trim();
-    if (!name) { showToast('请输入群名称', 'warn'); return; }
-    fetch('/im/api/group/manage', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-XSRFToken': getCsrfToken()},
-        body: JSON.stringify({action: 'update', group_id: currentConvId, name: name})
-    }).then(function(r){return r.json()}).then(function(res){
-        if(res.code === 0){
-            document.getElementById('chatTitle').textContent = name;
-            // 添加新成员
-            var checkboxes = document.querySelectorAll('#addMemberSelect input[type=checkbox]:checked');
-            var memberIds = Array.from(checkboxes).map(function(cb){return parseInt(cb.value)});
-            if (memberIds.length > 0) {
-                fetch('/im/api/group/manage', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-XSRFToken': getCsrfToken()},
-                    body: JSON.stringify({action: 'add', group_id: currentConvId, member_ids: memberIds})
-                }).then(function(){
-                    hideModal('groupManageModal');
-                    loadConversations();
-                });
+function gmInviteSearchUsers() {
+    var keyword = document.getElementById('gmInviteSearch').value.trim();
+    if (!keyword) { showToast('请输入搜索关键词', 'warn'); return; }
+    var groupId = _gmInviteGroupId;
+    var container = document.getElementById('gmInviteSearchResults');
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">搜索中...</div>';
+    switchGmInviteTab('search');
+
+    fetch('/im/api/group/member/search?group_id=' + groupId + '&keyword=' + encodeURIComponent(keyword)).then(function(r){return r.json()}).then(function(res){
+        if (!container) return;
+        if (res.code !== 0) {
+            container.innerHTML = '<div class="add-friend-empty">搜索失败</div>';
+            return;
+        }
+        var users = res.data.users || [];
+        if (users.length === 0) {
+            container.innerHTML = '<div class="add-friend-empty">未找到用户</div>';
+            return;
+        }
+        renderGmInviteUsers(container, users, false);
+    });
+}
+
+function renderGmInviteUsers(container, users, isFriendsTab) {
+    var groupId = _gmInviteGroupId;
+    var html = '';
+    users.forEach(function(u){
+        var statusBtn = '';
+        if (u.has_pending) {
+            statusBtn = '<button class="gm-invite-btn disabled" disabled>已发邀请</button>';
+        } else {
+            statusBtn = '<button class="gm-invite-btn" onclick="gmDoInvite(' + u.id + ',\'' + u.username.replace(/'/g,"\\'") + '\')">邀请</button>';
+        }
+        html += '<div class="gm-invite-item">';
+        html += '<div class="gm-invite-avatar">' + (u.username||'?')[0] + '</div>';
+        html += '<div class="gm-invite-info"><div class="gm-invite-name">' + u.username + '</div></div>';
+        html += '<div class="gm-invite-action">' + statusBtn + '</div>';
+        html += '</div>';
+    });
+    container.innerHTML = html;
+}
+
+function gmDoInvite(userId, userName) {
+    showPrompt('请输入邀请附言（可选）', '').then(function(msg){
+        if (msg === null) return;
+        var groupId = _gmInviteGroupId;
+        fetch('/im/api/group/invite', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-XSRFToken': getCsrfToken()},
+            body: JSON.stringify({action: 'send', group_id: groupId, invitee_id: userId, message: msg || ''})
+        }).then(function(r){return r.json()}).then(function(res){
+            if (res.code === 0) {
+                showToast('已向 ' + userName + ' 发送邀请', 'success');
+                loadGmInviteFriends();
             } else {
-                hideModal('groupManageModal');
+                showToast(res.msg || '邀请失败', 'error');
             }
-        } else {
-            showToast(res.msg || '操作失败', 'error');
-        }
+        });
     });
 }
 
-function removeGroupMember(memberId) {
-    showConfirm('确定移除该成员？', 'danger', '👤').then(function(ok){
-    if (!ok) return;
-    fetch('/im/api/group/manage', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-XSRFToken': getCsrfToken()},
-        body: JSON.stringify({action: 'remove', group_id: currentConvId, member_id: memberId})
-    }).then(function(r){return r.json()}).then(function(res){
-        if(res.code === 0){
-            showGroupModal(); // 刷新
-        } else {
-            showToast(res.msg || '操作失败', 'error');
-        }
-    });
+function filterGmMembers(){
+    var keyword = document.getElementById('gmMemberSearch').value.toLowerCase();
+    var items = document.querySelectorAll('#gmMemberList .gm-member-item');
+    items.forEach(function(item){
+        var name = (item.getAttribute('data-name')||'').toLowerCase();
+        item.style.display = name.indexOf(keyword)!==-1?'':'none';
     });
 }
 
@@ -1575,6 +2552,12 @@ function showFriendRequestModal() {
     _friendReqTab = 'received';
     renderFriendRequestModal();
     showModal('friendRequestModal');
+    // 标记已读
+    fetch('/im/api/friend/request', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-XSRFToken': getCsrfToken()},
+        body: JSON.stringify({action: 'mark_read', type: 'received'})
+    });
     loadFriendRequestBadge();
 }
 
@@ -1596,6 +2579,13 @@ function renderFriendRequestModal() {
 function switchFriendReqTab(tab) {
     _friendReqTab = tab;
     renderFriendRequestModal();
+    if (tab === 'sent') {
+        fetch('/im/api/friend/request', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-XSRFToken': getCsrfToken()},
+            body: JSON.stringify({action: 'mark_read', type: 'sent'})
+        }).then(function(){ loadFriendRequestBadge(); });
+    }
 }
 
 function loadFriendRequests(type) {
@@ -1696,7 +2686,7 @@ function searchAddFriend() {
         return;
     }
     list.innerHTML = '<div class="add-friend-empty">搜索中...</div>';
-    fetch('/im/api/search?keyword=' + encodeURIComponent(keyword)).then(function(r){return r.json()}).then(function(res){
+    fetch('/im/api/global-search?keyword=' + encodeURIComponent(keyword)).then(function(r){return r.json()}).then(function(res){
         if(res.code === 0){
             var users = res.data.users || [];
             if (users.length === 0) {
@@ -1777,11 +2767,29 @@ document.addEventListener('click', function(e) {
         return;
     }
     if (action === 'delete') {
-        deleteFriendRequest(parseInt(btn.getAttribute('data-id'), 10));
+        var friendReqList = document.getElementById('friendReqList');
+        var groupInviteList = document.getElementById('groupInviteList');
+        if (friendReqList && friendReqList.contains(btn)) {
+            deleteFriendRequest(parseInt(btn.getAttribute('data-id'), 10));
+        } else if (groupInviteList && groupInviteList.contains(btn)) {
+            deleteGroupInvite(parseInt(btn.getAttribute('data-id'), 10));
+        }
     } else if (action === 'accept') {
-        handleFriendRequest(parseInt(btn.getAttribute('data-id'), 10), 'accepted');
+        var friendReqList = document.getElementById('friendReqList');
+        var groupInviteList = document.getElementById('groupInviteList');
+        if (friendReqList && friendReqList.contains(btn)) {
+            handleFriendRequest(parseInt(btn.getAttribute('data-id'), 10), 'accepted');
+        } else if (groupInviteList && groupInviteList.contains(btn)) {
+            handleGroupInvite(parseInt(btn.getAttribute('data-id'), 10), 'accepted');
+        }
     } else if (action === 'reject') {
-        handleFriendRequest(parseInt(btn.getAttribute('data-id'), 10), 'rejected');
+        var friendReqList = document.getElementById('friendReqList');
+        var groupInviteList = document.getElementById('groupInviteList');
+        if (friendReqList && friendReqList.contains(btn)) {
+            handleFriendRequest(parseInt(btn.getAttribute('data-id'), 10), 'rejected');
+        } else if (groupInviteList && groupInviteList.contains(btn)) {
+            handleGroupInvite(parseInt(btn.getAttribute('data-id'), 10), 'rejected');
+        }
     }
 });
 
@@ -1835,30 +2843,36 @@ function sendFriendRequest(targetId, targetName) {
 }
 
 // ==================== 好友申请红点 ====================
+var _friendReqBadgeCount = 0;
+var _groupInviteBadgeCount = 0;
+
 function loadFriendRequestBadge() {
     fetch('/im/api/friend/request?type=received').then(function(r){return r.json()}).then(function(res){
         if(res.code === 0){
-            var pending = (res.data || []).filter(function(r){ return r.status === 'pending'; }).length;
-            // 查找好友申请入口元素
-            var items = document.querySelectorAll('.contact-item');
-            for (var i = 0; i < items.length; i++) {
-                var nameEl = items[i].querySelector('.name');
-                if (nameEl && nameEl.textContent === '好友申请') {
-                    // 移除旧红点
-                    var oldBadge = items[i].querySelector('.friend-req-badge');
-                    if (oldBadge) oldBadge.remove();
-                    if (pending > 0) {
-                        var badge = document.createElement('span');
-                        badge.className = 'friend-req-badge';
-                        badge.textContent = pending > 99 ? '99+' : pending;
-                        items[i].style.position = 'relative';
-                        items[i].appendChild(badge);
-                    }
-                    break;
-                }
-            }
+            var unread = res.unread || {};
+            _friendReqBadgeCount = (unread.received || 0) + (unread.sent || 0);
+            renderFriendReqBadge();
         }
     });
+}
+
+function renderFriendReqBadge() {
+    var items = document.querySelectorAll('.contact-item');
+    for (var i = 0; i < items.length; i++) {
+        var nameEl = items[i].querySelector('.name');
+        if (nameEl && nameEl.textContent === '好友申请') {
+            var oldBadge = items[i].querySelector('.friend-req-badge');
+            if (oldBadge) oldBadge.remove();
+            if (_friendReqBadgeCount > 0) {
+                var badge = document.createElement('span');
+                badge.className = 'friend-req-badge';
+                badge.textContent = _friendReqBadgeCount > 99 ? '99+' : _friendReqBadgeCount;
+                items[i].style.position = 'relative';
+                items[i].appendChild(badge);
+            }
+            break;
+        }
+    }
 }
 
 // ==================== WebSocket 消息处理 ====================
@@ -1871,8 +2885,27 @@ function handleMsgAck(data) {
         if (tempEl) {
             tempEl.removeAttribute('data-pending-conv');
             tempEl.classList.remove('msg-sending');
+            // 更新消息中的名称和角色标识（确保与服务器一致）
+            var senderEl = tempEl.querySelector('.msg-sender');
+            if (senderEl && currentConvType === 'group') {
+                var selfName = getCurrentUserName();
+                var selfRole = getCurrentUserRole();
+                var roleBadge = '';
+                if (selfRole === 'owner') {
+                    roleBadge = '<span class="role-badge role-owner">群主</span>';
+                } else if (selfRole === 'admin') {
+                    roleBadge = '<span class="role-badge role-admin">管理员</span>';
+                }
+                senderEl.innerHTML = selfName + roleBadge;
+            }
         }
         delete _pendingMessages[convId];
+    }
+    // 清理文件pending状态
+    var pendingFileEl = document.querySelector('[data-pending-upload]');
+    if (pendingFileEl) {
+        pendingFileEl.classList.remove('msg-sending');
+        pendingFileEl.removeAttribute('data-pending-upload');
     }
 }
 
@@ -1902,6 +2935,439 @@ function onFriendRequestRejected(data) {
     if (document.getElementById('friendRequestModal').classList.contains('show')) {
         loadFriendRequests(_friendReqTab);
     }
+}
+
+// 收到新的群邀请
+function onNewGroupInvite(data) {
+    loadGroupInviteBadge();
+    if (document.getElementById('groupInviteModal').classList.contains('show')) {
+        loadGroupInvites(_groupInviteTab);
+    }
+    showToast(data.inviter_name + ' 邀请你加入群聊 ' + data.group_name, 'info');
+}
+
+// 群邀请被同意
+function onGroupInviteAccepted(data) {
+    loadContacts();
+    loadGroupInviteBadge();
+    showToast(data.invitee_name + ' 加入了群聊 ' + data.group_name, 'success');
+}
+
+// 群邀请被拒绝
+function onGroupInviteRejected(data) {
+    loadGroupInviteBadge();
+    if (document.getElementById('groupInviteModal').classList.contains('show')) {
+        loadGroupInvites(_groupInviteTab);
+    }
+    showToast(data.invitee_name + ' 拒绝了群聊 ' + data.group_name + ' 的邀请', 'info');
+}
+
+// 加入群聊（邀请被同意后）
+function onGroupJoined(data) {
+    loadContacts();
+    loadConversations();
+    showToast('你已加入群聊 ' + data.group_name, 'success');
+}
+
+// 群成员被添加
+function onMemberAdded(data) {
+    if (currentConvType === 'group' && currentConvId === data.group_id) {
+        loadGroupMembers();
+    }
+}
+
+// 群成员被移除
+function onMemberRemoved(data) {
+    if (currentConvType === 'group' && currentConvId === data.group_id) {
+        loadGroupMembers();
+    }
+}
+
+// 群信息变更
+function onGroupInfoChanged(data) {
+    if (currentConvType === 'group' && currentConvId === data.group_id) {
+        loadConversations();
+        loadGroupMembers();
+    }
+}
+
+// 群成员角色变更
+function onMemberRoleChanged(data) {
+    if (currentConvType === 'group' && currentConvId === data.group_id) {
+        loadGroupMembers();
+    }
+}
+
+// ==================== 群邀请功能 ====================
+var _groupInviteTab = 'received';
+
+function showGroupInviteModal() {
+    _groupInviteTab = 'received';
+    renderGroupInviteModal();
+    showModal('groupInviteModal');
+    // 标记已读
+    fetch('/im/api/group/invite', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-XSRFToken': getCsrfToken()},
+        body: JSON.stringify({action: 'mark_read', type: 'received'})
+    });
+    loadGroupInviteBadge();
+}
+
+function renderGroupInviteModal() {
+    var html = '';
+    html += '<div class="group-invite-modal">';
+    html += '<div class="group-invite-header"><h3>群邀请</h3>';
+    html += '<button class="add-friend-close" onclick="hideModal(\'groupInviteModal\')">×</button></div>';
+    html += '<div class="group-invite-tabs">';
+    html += '<div class="group-invite-tab ' + (_groupInviteTab === 'received' ? 'active' : '') + '" onclick="switchGroupInviteTab(\'received\')">收到的邀请</div>';
+    html += '<div class="group-invite-tab ' + (_groupInviteTab === 'sent' ? 'active' : '') + '" onclick="switchGroupInviteTab(\'sent\')">我发出的</div>';
+    html += '</div>';
+    html += '<div class="group-invite-list" id="groupInviteList"><div class="group-invite-empty">加载中...</div></div>';
+    html += '</div>';
+    document.getElementById('groupInviteModal').innerHTML = html;
+    loadGroupInvites(_groupInviteTab);
+}
+
+function switchGroupInviteTab(tab) {
+    _groupInviteTab = tab;
+    renderGroupInviteModal();
+    if (tab === 'sent') {
+        fetch('/im/api/group/invite', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-XSRFToken': getCsrfToken()},
+            body: JSON.stringify({action: 'mark_read', type: 'sent'})
+        }).then(function(){ loadGroupInviteBadge(); });
+    }
+}
+
+function loadGroupInvites(type) {
+    fetch('/im/api/group/invite?type=' + type).then(function(r){return r.json()}).then(function(res){
+        var list = document.getElementById('groupInviteList');
+        if (!list) return;
+        if(res.code === 0){
+            var items = res.data || [];
+            if (items.length === 0) {
+                list.innerHTML = '<div class="group-invite-empty">暂无' + (type === 'received' ? '收到' : '发出') + '的邀请</div>';
+                return;
+            }
+            var html = '';
+            items.forEach(function(item){
+                if (type === 'received') {
+                    var name = item.inviter_name;
+                    var initial = (name || '?')[0];
+                    html += '<div class="group-invite-card" data-invite-id="' + item.id + '">';
+                    html += '<button class="group-invite-btn delete" data-action="delete" data-id="' + item.id + '" title="删除">×</button>';
+                    html += '<div class="group-invite-avatar">' + initial + '</div>';
+                    html += '<div class="group-invite-content">';
+                    html += '<div class="group-invite-name">' + name + ' 邀请你入群</div>';
+                    html += '<div class="group-invite-group">群：' + (item.group_name || '未知群') + '</div>';
+                    html += '<div class="group-invite-msg">' + (item.message || '无附加消息') + '</div>';
+                    html += '</div>';
+                    if (item.status === 'pending') {
+                        html += '<div class="group-invite-actions">';
+                        html += '<button class="group-invite-btn accept" data-action="accept" data-id="' + item.id + '">同意</button>';
+                        html += '<button class="group-invite-btn reject" data-action="reject" data-id="' + item.id + '">拒绝</button>';
+                        html += '</div>';
+                    } else {
+                        var statusClass = item.status === 'accepted' ? 'accepted' : (item.status === 'rejected' ? 'rejected' : 'pending');
+                        var statusText = item.status === 'accepted' ? '已同意' : (item.status === 'rejected' ? '已拒绝' : '待处理');
+                        html += '<div class="group-invite-status"><span class="status-badge ' + statusClass + '">' + statusText + '</span></div>';
+                    }
+                    html += '</div>';
+                } else {
+                    var name = item.invitee_name;
+                    var initial = (name || '?')[0];
+                    html += '<div class="group-invite-card" data-invite-id="' + item.id + '">';
+                    html += '<button class="group-invite-btn delete" data-action="delete" data-id="' + item.id + '" title="删除">×</button>';
+                    html += '<div class="group-invite-avatar">' + initial + '</div>';
+                    html += '<div class="group-invite-content">';
+                    html += '<div class="group-invite-name">邀请 ' + name + ' 入群</div>';
+                    html += '<div class="group-invite-group">群：' + (item.group_name || '未知群') + '</div>';
+                    html += '<div class="group-invite-msg">' + (item.message || '无附加消息') + '</div>';
+                    html += '</div>';
+                    var statusClass = item.status === 'accepted' ? 'accepted' : (item.status === 'rejected' ? 'rejected' : 'pending');
+                    var statusText = item.status === 'accepted' ? '已同意' : (item.status === 'rejected' ? '已拒绝' : '待处理');
+                    html += '<div class="group-invite-status"><span class="status-badge ' + statusClass + '">' + statusText + '</span></div>';
+                    html += '</div>';
+                }
+            });
+            list.innerHTML = html;
+        }
+    });
+}
+
+function handleGroupInvite(inviteId, status) {
+    fetch('/im/api/group/invite', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-XSRFToken': getCsrfToken()},
+        body: JSON.stringify({action: 'handle', invite_id: inviteId, status: status})
+    }).then(function(r){return r.json()}).then(function(res){
+        if(res.code === 0){
+            loadGroupInvites(_groupInviteTab);
+            loadGroupInviteBadge();
+            loadContacts();
+            loadConversations();
+        } else {
+            showToast(res.msg || '操作失败', 'error');
+        }
+    }).catch(function(){
+        showToast('网络错误，操作失败', 'error');
+    });
+}
+
+function deleteGroupInvite(inviteId) {
+    showConfirm('确定删除这条邀请记录吗？', '', '🗑️').then(function(ok){
+    if (!ok) return;
+    fetch('/im/api/group/invite', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-XSRFToken': getCsrfToken()},
+        body: JSON.stringify({action: 'delete', invite_id: inviteId})
+    }).then(function(r){return r.json()}).then(function(res){
+        if(res.code === 0){
+            loadGroupInvites(_groupInviteTab);
+            loadGroupInviteBadge();
+        } else {
+            showToast(res.msg || '删除失败', 'error');
+        }
+    });
+    });
+}
+
+function loadGroupInviteBadge() {
+    fetch('/im/api/group/invite?type=received').then(function(r){return r.json()}).then(function(res){
+        if(res.code === 0){
+            var unread = res.unread || {};
+            _groupInviteBadgeCount = (unread.received || 0) + (unread.sent || 0);
+            renderGroupInviteBadge();
+        }
+    });
+}
+
+function renderGroupInviteBadge() {
+    var items = document.querySelectorAll('.contact-item');
+    for (var i = 0; i < items.length; i++) {
+        var nameEl = items[i].querySelector('.name');
+        if (nameEl && nameEl.textContent === '群邀请') {
+            var oldBadge = items[i].querySelector('.group-invite-badge');
+            if (oldBadge) oldBadge.remove();
+            if (_groupInviteBadgeCount > 0) {
+                var badge = document.createElement('span');
+                badge.className = 'group-invite-badge';
+                badge.textContent = _groupInviteBadgeCount > 99 ? '99+' : _groupInviteBadgeCount;
+                items[i].style.position = 'relative';
+                items[i].appendChild(badge);
+            }
+            break;
+        }
+    }
+}
+
+// 收到新的群邀请
+function onNewGroupInvite(data) {
+    loadGroupInviteBadge();
+    if (document.getElementById('groupInviteModal').classList.contains('show')) {
+        loadGroupInvites(_groupInviteTab);
+    }
+}
+
+// 群邀请被同意
+function onGroupInviteAccepted(data) {
+    loadGroupInviteBadge();
+    if (document.getElementById('groupInviteModal').classList.contains('show')) {
+        loadGroupInvites(_groupInviteTab);
+    }
+}
+
+// 群邀请被拒绝
+function onGroupInviteRejected(data) {
+    loadGroupInviteBadge();
+    if (document.getElementById('groupInviteModal').classList.contains('show')) {
+        loadGroupInvites(_groupInviteTab);
+    }
+}
+
+// 加入群聊（邀请被同意后）
+function onGroupJoined(data) {
+    loadContacts();
+    loadConversations();
+}
+
+// ==================== 群管理 WebSocket 事件 ====================
+function onGroupInfoChanged(data) {
+    if (data.group_id === currentConvId) {
+        if (data.name) {
+            document.getElementById('chatTitle').textContent = data.name;
+        }
+    }
+    loadConversations();
+}
+
+function onMemberRemoved(data) {
+    if (data.group_id === currentConvId) {
+        appendSystemMessage(data.operator_name + ' 将 ' + data.member_name + ' 移出群聊');
+    }
+    if (_gmData.group && _gmData.group.id === data.group_id) {
+        showGroupModal();
+    }
+}
+
+function onMemberAdded(data) {
+    if (data.group_id === currentConvId) {
+        appendSystemMessage(data.operator_name + ' 邀请了新成员加入群聊');
+    }
+    if (_gmData.group && _gmData.group.id === data.group_id) {
+        showGroupModal();
+    }
+}
+
+function onMemberRoleChanged(data) {
+    if (data.group_id === currentConvId) {
+        var roleText = data.new_role === 'admin' ? '管理员' : '普通成员';
+        appendSystemMessage(data.operator_name + ' 将 ' + data.member_name + ' ' + (data.new_role === 'admin' ? '设为' : '撤销') + roleText);
+    }
+    if (_gmData.group && _gmData.group.id === data.group_id) {
+        showGroupModal();
+    }
+}
+
+function onMemberMuted(data) {
+    if (data.group_id === currentConvId) {
+        if (data.mute_until) {
+            appendSystemMessage(data.operator_name + ' 禁言了 ' + data.member_name);
+        } else {
+            appendSystemMessage(data.operator_name + ' 解除了 ' + data.member_name + ' 的禁言');
+        }
+    }
+    if (_gmData.group && _gmData.group.id === data.group_id) {
+        showGroupModal();
+    }
+}
+
+function onGroupMuteAll(data) {
+    if (data.group_id === currentConvId) {
+        if (data.enabled) {
+            appendSystemMessage(data.operator_name + ' 开启了全体禁言');
+        } else {
+            appendSystemMessage(data.operator_name + ' 关闭了全体禁言');
+        }
+    }
+    if (_gmData.group && _gmData.group.id === data.group_id) {
+        showGroupModal();
+    }
+}
+
+function onGroupDismissed(data) {
+    showToast('群聊 "' + (data.group_name || '') + '" 已被解散', 'error');
+    if (data.group_id === currentConvId) {
+        currentConvId = 0;
+        currentConvType = '';
+        document.getElementById('chatMessages').innerHTML = '<div class="chat-empty"><div class="placeholder"><div class="icon">💬</div><h3>暂无会话</h3><p>从左侧选择一个会话开始聊天</p></div></div>';
+        document.getElementById('chatInput').style.display = 'none';
+        document.getElementById('btnGroupManage').style.display = 'none';
+    }
+    loadConversations();
+}
+
+function onNewAnnouncement(data) {
+    if (data.group_id === currentConvId) {
+        appendSystemMessage('【群公告】' + data.content);
+    }
+    if (_gmData.group && _gmData.group.id === data.group_id) {
+        showGroupModal();
+    }
+    // 弹出公告确认框（非发布者、非数字员工）
+    var selfUserId = getCurrentUserId();
+    if (data.publisher_id && selfUserId !== data.publisher_id) {
+        setTimeout(function(){
+            checkUnconfirmedAnnouncement(data.group_id);
+        }, 500);
+    }
+}
+
+function onAnnouncementDeleted(data) {
+    if (data.group_id === currentConvId) {
+        appendSystemMessage(data.operator_name + ' 删除了一条群公告');
+    }
+    if (_gmData.group && _gmData.group.id === data.group_id) {
+        showGroupModal();
+    }
+}
+
+function onYouRemoved(data) {
+    showToast('你被 ' + data.operator_name + ' 移出群聊', 'error');
+    if (data.group_id === currentConvId) {
+        currentConvId = 0;
+        currentConvType = '';
+        document.getElementById('chatMessages').innerHTML = '<div class="chat-empty"><div class="placeholder"><div class="icon">💬</div><h3>暂无会话</h3><p>从左侧选择一个会话开始聊天</p></div></div>';
+        document.getElementById('chatInput').style.display = 'none';
+        document.getElementById('btnGroupManage').style.display = 'none';
+    }
+    loadConversations();
+}
+
+function onGroupTransferred(data) {
+    if (data.group_id === currentConvId) {
+        appendSystemMessage(data.old_owner_name + ' 将群主转让给了 ' + data.new_owner_name);
+    }
+    if (_gmData.group && _gmData.group.id === data.group_id) {
+        showGroupModal();
+    }
+}
+
+function onAnnouncementConfirmed(data) {
+    if (data.group_id === currentConvId) {
+        appendSystemMessage(data.username + ' 已确认公告');
+    }
+}
+
+function checkUnconfirmedAnnouncement(groupId) {
+    fetch('/im/api/announcement/unconfirmed?group_id=' + groupId)
+        .then(function(r){return r.json()})
+        .then(function(res){
+            if (res.code === 0 && res.data && res.data.need_confirm && res.data.announcement && res.data.announcement.id) {
+                showAnnounceConfirm(res.data.announcement);
+            }
+        });
+}
+
+function showAnnounceConfirm(announcement) {
+    _pendingAnnounceConfirm = {id: announcement.id, group_id: currentConvId};
+    document.getElementById('announceConfirmBody').textContent = announcement.content || '';
+    showModal('announceConfirmModal');
+}
+
+function doConfirmAnnouncement() {
+    if (!_pendingAnnounceConfirm) return;
+    var data = _pendingAnnounceConfirm;
+    _pendingAnnounceConfirm = null;
+    fetch('/im/api/announcement/confirm', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-XSRFToken': getCsrfToken()},
+        body: JSON.stringify({announcement_id: data.id, group_id: data.group_id})
+    }).then(function(r){return r.json()}).then(function(res){
+        if (res.code === 0) {
+            hideModal('announceConfirmModal');
+            showToast('已确认公告', 'success');
+        } else {
+            showToast(res.msg || '操作失败', 'error');
+        }
+    });
+}
+
+function closeAnnounceConfirm() {
+    _pendingAnnounceConfirm = null;
+    hideModal('announceConfirmModal');
+}
+
+function appendSystemMessage(text) {
+    var container = document.getElementById('chatMessages');
+    if (!container) return;
+    var div = document.createElement('div');
+    div.className = 'msg-divider';
+    div.innerHTML = '<span>' + text + '</span>';
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
 }
 
 // 删除好友

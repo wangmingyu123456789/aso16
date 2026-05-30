@@ -1,11 +1,13 @@
 import json
 import time
+import datetime
 import httpx
 import tornado.websocket
 import tornado.web
 from app.models.im import IMRepository
 from app.models.assistant import AssistantRepository
 from app.models.model import ModelRepository
+from app.models.db import get_connection
 
 
 # 全局连接池：user_id -> set of WebSocket connections
@@ -119,11 +121,35 @@ class IMWebSocketHandler(tornado.websocket.WebSocketHandler):
             }))
             return
 
+        # 群聊禁言检查
+        conv_info = IMRepository.get_conversation_info(conv_id)
+        if conv_info and conv_info.get("type") == "group":
+            mute_check = IMRepository.is_muted(conv_id, self.user_id)
+            if mute_check["is_muted"]:
+                await self.write_message(json.dumps({
+                    "type": "error",
+                    "message": mute_check["reason"]
+                }))
+                return
+            # 更新最后发言时间
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with get_connection() as conn:
+                conn.execute(
+                    "UPDATE im_conversation_members SET last_speak_at=? WHERE conversation_id=? AND user_id=?",
+                    (now, conv_id, self.user_id)
+                )
+
         # 保存消息到数据库
         msg_id = IMRepository.save_message(conv_id, self.user_id, msg_type, content, client_msg_id)
 
         # 获取发送者名称
         sender_name = self.username
+
+        # 获取发送者在当前群中的角色（如果是群聊）
+        sender_role = ""
+        if conv_info and conv_info.get("type") == "group":
+            role_info = IMRepository.get_member_role(conv_id, self.user_id)
+            sender_role = role_info if role_info else ""
 
         # 构造消息对象
         msg_obj = {
@@ -132,6 +158,7 @@ class IMWebSocketHandler(tornado.websocket.WebSocketHandler):
             "conversation_id": conv_id,
             "sender_id": self.user_id,
             "sender_name": sender_name,
+            "sender_role": sender_role,
             "msg_type": msg_type,
             "content": content,
             "create_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())

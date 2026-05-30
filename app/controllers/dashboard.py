@@ -3,6 +3,7 @@ import sys
 import traceback
 import datetime
 import tornado.web
+from app.controllers.base import BaseHandler
 from app.models.db import get_connection
 
 print(f"[DASHBOARD-MODULE] dashboard.py 模块已加载", flush=True)
@@ -12,6 +13,12 @@ tornado.log.app_log.info("[DASHBOARD-MODULE] dashboard.py 模块已加载")
 class DashboardPageHandler(tornado.web.RequestHandler):
 	def get(self):
 		self.render("admin/dashboard.html", title="数智大屏")
+
+
+class UserDashboardPageHandler(BaseHandler):
+	@tornado.web.authenticated
+	def get(self):
+		self.render("user/dashboard.html", title="数智大屏", current_page="dashboard")
 
 
 class DashboardStatsHandler(tornado.web.RequestHandler):

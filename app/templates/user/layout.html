@@ -87,6 +87,15 @@ body{font-family:'PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif;bac
                 <div class="nav-icon im">👥</div>
                 <span class="nav-label">智能聊天</span>
             </a>
+            <div class="nav-section-title" style="margin-top:16px">数据大屏</div>
+            <a href="/user/dashboard" class="nav-item{% if current_page == 'dashboard' %} active{% end %}" data-page="dashboard">
+                <div class="nav-icon" style="background:rgba(24,144,255,0.15);color:#1890ff">📊</div>
+                <span class="nav-label">数智大屏</span>
+            </a>
+            <a href="/user/sentiment" class="nav-item{% if current_page == 'sentiment' %} active{% end %}" data-page="sentiment">
+                <div class="nav-icon" style="background:rgba(123,47,247,0.15);color:#a78bfa">🧠</div>
+                <span class="nav-label">智慧舆情</span>
+            </a>
             <div class="nav-section-title" style="margin-top:16px">瞭望系统</div>
             <a href="/user/outlook/collect" class="nav-item{% if current_page == 'outlook_collect' %} active{% end %}" data-page="outlook_collect">
                 <div class="nav-icon collect">📡</div>

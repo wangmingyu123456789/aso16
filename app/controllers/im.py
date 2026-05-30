@@ -1,6 +1,7 @@
 import json
 import os
 import uuid
+import hashlib
 import tornado.web
 from app.controllers.base import BaseHandler
 from app.models.im import IMRepository
@@ -50,6 +51,21 @@ class IMConversationsHandler(BaseHandler):
         ok = IMRepository.delete_conversation(conv_id, user_id)
         self.set_header("Content-Type", "application/json")
         self.write({"code": 0 if ok else 500, "msg": "" if ok else "删除失败"})
+
+
+class IMRestoreConversationHandler(BaseHandler):
+    """恢复已删除的会话"""
+    @tornado.web.authenticated
+    def post(self):
+        conv_id = int(self.get_argument("conversation_id", "0"))
+        user_id = IMRepository.get_user_id_by_username(self.current_user)
+        if not conv_id:
+            self.set_header("Content-Type", "application/json")
+            self.write({"code": 400, "msg": "参数错误"})
+            return
+        IMRepository.restore_conversation(conv_id, user_id)
+        self.set_header("Content-Type", "application/json")
+        self.write({"code": 0, "msg": ""})
 
 
 class IMHistoryHandler(BaseHandler):
@@ -109,6 +125,12 @@ class IMCreatePrivateHandler(BaseHandler):
             self.write({"code": 400, "msg": "参数错误"})
             return
 
+        # 检查是否为好友
+        if not IMRepository.is_friend(user_id, target_id):
+            self.set_header("Content-Type", "application/json")
+            self.write({"code": 403, "msg": "只能和好友聊天"})
+            return
+
         conv_id = IMRepository.create_private_conversation(user_id, target_id)
         self.set_header("Content-Type", "application/json")
         self.write({"code": 0, "data": {"conversation_id": conv_id}})
@@ -147,6 +169,9 @@ class IMCreateGroupHandler(BaseHandler):
     """创建群聊会话"""
     @tornado.web.authenticated
     def post(self):
+        from app.controllers.im_ws import broadcast_to_user
+        import json as json_mod
+
         data = json.loads(self.request.body)
         name = data.get("name", "")
         member_ids = data.get("member_ids", [])
@@ -159,6 +184,21 @@ class IMCreateGroupHandler(BaseHandler):
             return
 
         conv_id = IMRepository.create_group_conversation(name, user_id, member_ids, assistant_ids)
+
+        for mid in member_ids:
+            if mid != user_id:
+                invite = IMRepository.get_pending_invite(conv_id, mid)
+                if invite:
+                    broadcast_to_user(mid, json_mod.dumps({
+                        "type": "group_invite",
+                        "invite_id": invite["id"],
+                        "group_id": conv_id,
+                        "group_name": name,
+                        "inviter_id": user_id,
+                        "inviter_name": self.current_user,
+                        "message": ""
+                    }))
+
         self.set_header("Content-Type", "application/json")
         self.write({"code": 0, "data": {"conversation_id": conv_id}})
 
@@ -193,7 +233,7 @@ class IMAssistantsHandler(BaseHandler):
 
 
 class IMSearchHandler(BaseHandler):
-    """全局搜索"""
+    """全局搜索（仅搜索好友和群聊）"""
     @tornado.web.authenticated
     def get(self):
         keyword = self.get_argument("keyword", "").strip()
@@ -205,6 +245,24 @@ class IMSearchHandler(BaseHandler):
             return
 
         users = IMRepository.search_users(keyword, user_id)
+        groups = IMRepository.search_groups(keyword, user_id)
+        self.set_header("Content-Type", "application/json")
+        self.write({"code": 0, "data": {"users": users, "groups": groups}})
+
+
+class IMGlobalSearchHandler(BaseHandler):
+    """全局搜索所有用户（用于添加好友）"""
+    @tornado.web.authenticated
+    def get(self):
+        keyword = self.get_argument("keyword", "").strip()
+        user_id = IMRepository.get_user_id_by_username(self.current_user)
+
+        if not keyword:
+            self.set_header("Content-Type", "application/json")
+            self.write({"code": 0, "data": {"users": [], "groups": []}})
+            return
+
+        users = IMRepository.search_all_users(keyword, user_id)
         groups = IMRepository.search_groups(keyword, user_id)
         self.set_header("Content-Type", "application/json")
         self.write({"code": 0, "data": {"users": users, "groups": groups}})
@@ -317,6 +375,12 @@ class IMFriendRequestHandler(BaseHandler):
             else:
                 self.write({"code": 403, "msg": "无权操作"})
 
+        elif action == "mark_read":
+            req_type = data.get("type", "received")
+            IMRepository.mark_friend_req_read(user_id, req_type)
+            self.set_header("Content-Type", "application/json")
+            self.write({"code": 0})
+
     @tornado.web.authenticated
     def get(self):
         """获取好友申请列表"""
@@ -324,8 +388,130 @@ class IMFriendRequestHandler(BaseHandler):
         req_type = self.get_argument("type", "received")
         received = req_type == "received"
         requests = IMRepository.get_friend_requests(user_id, received)
+        unread = IMRepository.get_unread_friend_req_count(user_id)
         self.set_header("Content-Type", "application/json")
-        self.write({"code": 0, "data": requests})
+        self.write({"code": 0, "data": requests, "unread": unread})
+
+
+class IMGroupInviteHandler(BaseHandler):
+    """发送/处理群邀请"""
+    @tornado.web.authenticated
+    def get(self):
+        """获取群邀请列表"""
+        user_id = IMRepository.get_user_id_by_username(self.current_user)
+        req_type = self.get_argument("type", "received")
+        received = req_type == "received"
+        invites = IMRepository.get_group_invites(user_id, received)
+        unread = IMRepository.get_unread_group_invite_count(user_id)
+        self.set_header("Content-Type", "application/json")
+        self.write({"code": 0, "data": invites, "unread": unread})
+
+    @tornado.web.authenticated
+    def post(self):
+        from app.controllers.im_ws import broadcast_to_user
+        import json as json_mod
+
+        data = json.loads(self.request.body)
+        action = data.get("action", "")
+        user_id = IMRepository.get_user_id_by_username(self.current_user)
+
+        if action == "send":
+            group_id = data.get("group_id", 0)
+            invitee_id = data.get("invitee_id", 0)
+            message = data.get("message", "")
+            if not group_id or not invitee_id or invitee_id == user_id:
+                self.set_header("Content-Type", "application/json")
+                self.write({"code": 400, "msg": "参数错误"})
+                return
+            if IMRepository.is_user_in_group(group_id, invitee_id):
+                self.set_header("Content-Type", "application/json")
+                self.write({"code": 400, "msg": "该用户已在群中"})
+                return
+            if IMRepository.has_pending_invite(group_id, invitee_id):
+                self.set_header("Content-Type", "application/json")
+                self.write({"code": 400, "msg": "已有待处理邀请"})
+                return
+            invite_id = IMRepository.create_group_invite(group_id, user_id, invitee_id, message)
+            group_name = IMRepository.get_conversation_info(group_id).get("name", "")
+            broadcast_to_user(invitee_id, json_mod.dumps({
+                "type": "group_invite",
+                "invite_id": invite_id,
+                "group_id": group_id,
+                "group_name": group_name,
+                "inviter_id": user_id,
+                "inviter_name": self.current_user,
+                "message": message
+            }))
+            self.set_header("Content-Type", "application/json")
+            self.write({"code": 0, "data": {"invite_id": invite_id}})
+
+        elif action == "handle":
+            invite_id = data.get("invite_id", 0)
+            status = data.get("status", "")
+            if not invite_id or status not in ("accepted", "rejected"):
+                self.set_header("Content-Type", "application/json")
+                self.write({"code": 400, "msg": "参数错误"})
+                return
+            success = IMRepository.handle_group_invite(invite_id, user_id, status)
+            self.set_header("Content-Type", "application/json")
+            if success:
+                invite_info = IMRepository.get_invite_by_id(invite_id)
+                if invite_info:
+                    group_name = IMRepository.get_conversation_info(invite_info["group_id"]).get("name", "")
+                    ws_type = "group_invite_accepted" if status == "accepted" else "group_invite_rejected"
+                    broadcast_to_user(invite_info["inviter_id"], json_mod.dumps({
+                        "type": ws_type,
+                        "invite_id": invite_id,
+                        "group_id": invite_info["group_id"],
+                        "group_name": group_name,
+                        "invitee_id": user_id,
+                        "invitee_name": self.current_user
+                    }))
+                    if status == "accepted":
+                        broadcast_to_user(user_id, json_mod.dumps({
+                            "type": "group_joined",
+                            "group_id": invite_info["group_id"],
+                            "group_name": group_name
+                        }))
+                        from app.controllers.im_ws import broadcast_to_all_members
+                        broadcast_to_all_members(invite_info["group_id"], json_mod.dumps({
+                            "type": "member_added",
+                            "group_id": invite_info["group_id"],
+                            "user_id": user_id,
+                            "username": self.current_user
+                        }))
+                        IMRepository.add_system_message(invite_info["group_id"], f"{self.current_user} 加入了群聊")
+                self.write({"code": 0})
+            else:
+                self.write({"code": 403, "msg": "无权操作"})
+
+        elif action == "delete":
+            invite_id = data.get("invite_id", 0)
+            if not invite_id:
+                self.set_header("Content-Type", "application/json")
+                self.write({"code": 400, "msg": "参数错误"})
+                return
+            success = IMRepository.delete_group_invite(invite_id, user_id)
+            self.set_header("Content-Type", "application/json")
+            if success:
+                self.write({"code": 0})
+            else:
+                self.write({"code": 403, "msg": "无权操作"})
+
+        elif action == "mark_read":
+            invite_type = data.get("type", "received")
+            IMRepository.mark_group_invite_read(user_id, invite_type)
+            self.set_header("Content-Type", "application/json")
+            self.write({"code": 0})
+
+    @tornado.web.authenticated
+    def get(self):
+        """获取群邀请列表"""
+        user_id = IMRepository.get_user_id_by_username(self.current_user)
+        invite_type = self.get_argument("type", "received")
+        invites = IMRepository.get_group_invites(user_id, invite_type)
+        self.set_header("Content-Type", "application/json")
+        self.write({"code": 0, "data": invites})
 
 
 class IMRemoveFriendHandler(BaseHandler):
@@ -395,13 +581,13 @@ class IMGroupManageHandler(BaseHandler):
 
         elif action == "update":
             name = data.get("name")
-            IMRepository.update_group_info(group_id, name=name)
+            IMRepository.update_group_info(group_id, name=name, operator_id=user_id)
             self.set_header("Content-Type", "application/json")
             self.write({"code": 0})
 
 
 class IMFileUploadHandler(BaseHandler):
-    """文件上传"""
+    """文件上传（支持去重存储，支持所有文件类型）"""
     @tornado.web.authenticated
     def post(self):
         files = self.request.files.get("file", [])
@@ -411,53 +597,148 @@ class IMFileUploadHandler(BaseHandler):
             return
 
         file_info = files[0]
-        # 生成唯一文件名
-        ext = os.path.splitext(file_info["filename"])[1] if "." in file_info["filename"] else ""
-        filename = str(uuid.uuid4()) + ext
-        filepath = os.path.join(UPLOAD_DIR, filename)
-
-        with open(filepath, "wb") as f:
-            f.write(file_info["body"])
+        body = file_info["body"]
+        file_size = len(body)
+        original_name = file_info["filename"]
+        if isinstance(original_name, bytes):
+            original_name = original_name.decode('utf-8', errors='replace')
 
         # 限制 10MB
-        file_size = len(file_info["body"])
         if file_size > 10 * 1024 * 1024:
-            os.remove(filepath)
             self.set_header("Content-Type", "application/json")
             self.write({"code": 400, "msg": "文件大小不能超过10MB"})
             return
 
+        # 获取扩展名，支持 .tar.gz 等多级扩展
+        name_lower = original_name.lower()
+        ext = ""
+        if name_lower.endswith('.tar.gz'):
+            ext = '.tar.gz'
+        elif name_lower.endswith('.tar.bz2'):
+            ext = '.tar.bz2'
+        else:
+            ext = os.path.splitext(original_name)[1].lower() if "." in original_name else ""
+
+        file_hash = hashlib.sha256(body).hexdigest()
+        user_id = IMRepository.get_user_id_by_username(self.current_user)
+
+        # 检测是否已有相同哈希的文件
+        existing = IMRepository.find_file_by_hash(file_hash)
+        if existing:
+            IMRepository.increment_file_ref(existing["id"])
+            file_id = existing["id"]
+        else:
+            sub_dir = file_hash[:2]
+            target_dir = os.path.join(UPLOAD_DIR, sub_dir)
+            os.makedirs(target_dir, exist_ok=True)
+            filename = file_hash + ext
+            filepath = os.path.join(target_dir, filename)
+            with open(filepath, "wb") as f:
+                f.write(body)
+
+            storage_rel = os.path.join("uploads", "im", sub_dir, filename)
+            mime_type = file_info.get("content_type", "")
+            file_id = IMRepository.save_file_record(
+                original_name, file_size, file_hash, ext, mime_type, storage_rel, user_id
+            )
+
+        is_image = ext in (".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg")
         self.set_header("Content-Type", "application/json")
         self.write({"code": 0, "data": {
-            "filename": file_info["filename"],
-            "url": "/im/api/file/" + filename,
+            "file_id": file_id,
+            "filename": original_name,
+            "url": "/im/api/file/" + file_hash + ext,
             "size": file_size,
-            "type": "file" if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp") else "image"
+            "type": "image" if is_image else "file"
         }})
 
 
 class IMFileDownloadHandler(BaseHandler):
-    """文件下载"""
+    """文件下载（支持 hash 路径和旧路径）"""
     @tornado.web.authenticated
     def get(self, filename):
-        filepath = os.path.join(UPLOAD_DIR, filename)
+        import urllib.parse
+
+        # 尝试从 im_files 查找
+        file_info = None
+        name_no_ext = os.path.splitext(filename)[0]
+        if len(name_no_ext) == 64:
+            try:
+                int(name_no_ext, 16)
+                file_info = IMRepository.find_file_by_hash(name_no_ext)
+            except ValueError:
+                pass
+
+        if file_info:
+            filepath = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), file_info["storage_path"])
+        else:
+            # 兼容旧路径
+            filepath = os.path.join(UPLOAD_DIR, filename)
+
         if not os.path.exists(filepath):
             self.set_status(404)
             self.write("文件不存在")
             return
 
-        # 设置正确的 Content-Type
         ext = os.path.splitext(filename)[1].lower()
         content_types = {
             ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
-            ".gif": "image/gif", ".webp": "image/webp", ".pdf": "application/pdf",
+            ".gif": "image/gif", ".webp": "image/webp", ".bmp": "image/bmp",
+            ".pdf": "application/pdf",
             ".txt": "text/plain", ".doc": "application/msword",
             ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             ".xls": "application/vnd.ms-excel",
             ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            ".zip": "application/zip", ".rar": "application/x-rar-compressed"
+            ".zip": "application/zip", ".rar": "application/x-rar-compressed",
+            ".mp3": "audio/mpeg", ".wav": "audio/wav", ".flac": "audio/flac", ".aac": "audio/aac",
+            ".mp4": "video/mp4", ".avi": "video/x-msvideo", ".mov": "video/quicktime", ".mkv": "video/x-matroska",
+            ".csv": "text/csv", ".json": "application/json", ".xml": "application/xml",
+            ".py": "text/plain", ".js": "text/plain", ".ts": "text/plain", ".html": "text/plain", ".css": "text/plain",
+            ".md": "text/markdown", ".yml": "text/plain", ".yaml": "text/plain",
+            ".7z": "application/x-7z-compressed", ".tar": "application/x-tar", ".gz": "application/gzip"
         }
         self.set_header("Content-Type", content_types.get(ext, "application/octet-stream"))
-        self.set_header("Content-Disposition", f'attachment; filename="{filename}"')
+
+        # 获取原始文件名（用于下载显示）
+        raw_name = file_info["file_name"] if file_info else filename
+        safe_name = os.path.basename(raw_name)
+        # 使用 RFC 5987 编码非ASCII文件名
+        encoded_name = urllib.parse.quote(safe_name, safe='')
+        self.set_header("Content-Disposition", f"attachment; filename*=UTF-8''{encoded_name}")
+
         with open(filepath, "rb") as f:
             self.write(f.read())
+
+
+class IMFilesHandler(BaseHandler):
+    """文件列表查询"""
+    @tornado.web.authenticated
+    def get(self):
+        user_id = IMRepository.get_user_id_by_username(self.current_user)
+        scope = self.get_argument("scope", "")
+        conv_id = self.get_argument("conversation_id", "0")
+        group_id = self.get_argument("group_id", "0")
+        page = int(self.get_argument("page", "1"))
+        page_size = int(self.get_argument("page_size", "50"))
+
+        self.set_header("Content-Type", "application/json")
+
+        if scope == "group" and group_id:
+            # 群聊文件
+            members = IMRepository.get_conversation_members(int(group_id))
+            if user_id not in [m["id"] for m in members]:
+                self.write({"code": 403, "msg": "无权访问"})
+                return
+            result = IMRepository.get_group_files(int(group_id), page, page_size)
+        elif conv_id and int(conv_id) > 0:
+            # 会话文件
+            members = IMRepository.get_conversation_members(int(conv_id))
+            if user_id not in [m["id"] for m in members]:
+                self.write({"code": 403, "msg": "无权访问"})
+                return
+            result = IMRepository.get_conversation_files(int(conv_id), user_id, page, page_size)
+        else:
+            # 用户所有文件
+            result = IMRepository.get_all_user_files(user_id, page, page_size)
+
+        self.write({"code": 0, "data": result["data"], "total": result["total"]})

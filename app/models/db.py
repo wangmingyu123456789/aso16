@@ -240,11 +240,34 @@ def init_db():
 				VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
 			('百度新闻', 'baidu_news', 'https://www.baidu.com/s?tn=news&word={keyword}&pn={page}',
 				'GET', default_headers, 'html',
-				'div.result', 'h3', 'h3 a', 'div.content-right > span', 'span.c-color-gray2', 'p.author-text',
+				'//div[contains(@class,"result")]', './/h3', './/h3/a', './/div[contains(@class,"content-right")]//span', './/span[contains(@class,"c-color-gray2")]', './/p[contains(@class,"author-text")]',
 				10, 0, 1,
 				'请对采集到的新闻标题和内容进行AI清洗，去除无关信息，提取核心要点，并以JSON格式返回：[{"title":"标题","content":"摘要","author":"作者","date":"日期"}]',
 				1, '百度新闻搜索引擎采集源')
 			)
+			# 更多采集源
+			_more_sources = [
+				('搜狗新闻', 'sogou_news', 'https://news.sogou.com/news?query={keyword}&page={page}',
+				'GET', 'html',
+				'//div[contains(@class,"vrwrap")]',
+				'.//h3', './/h3/a', '', '', '',
+				1, 1, 0, '', 0, '', 1, '搜狗新闻搜索引擎采集源'),
+			('360新闻', 'so_news', 'https://www.so.com/s?q={keyword}&pn={page}',
+				'GET', 'html',
+				'//li[contains(@class,"res-list")]',
+				'.//h3', './/a', './/p[contains(@class,"summary")]', './/p[contains(@class,"g-linkinfo")]', '',
+				1, 1, 0, '', 0, '', 1, '360搜索引擎采集源（https://www.so.com）'),
+			]
+			for ms in _more_sources:
+				conn.execute(
+					"""INSERT INTO outlook_sources(
+					name,code,entry_url,method,parser_type,
+					html_selector,title_selector,url_selector,content_selector,date_selector,author_selector,
+					page_size_step,page_start,ai_expand_keyword,ai_expand_prompt,ai_clean_data,ai_clean_prompt,
+					status,description)
+					VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+					ms
+				)
 
 		# 初始化默认用户
 		cursor = conn.execute("SELECT COUNT(*) as cnt FROM users").fetchone()
@@ -1085,6 +1108,169 @@ def upgrade_db():
 				)
 				"""
 			)
+
+		# 创建 im_friend_req_reads 表（好友申请已读记录）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_friend_req_reads'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_friend_req_reads(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					user_id INTEGER NOT NULL,
+					req_id INTEGER NOT NULL,
+					req_type TEXT NOT NULL,
+					read_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# 创建 im_group_invite_reads 表（群邀请已读记录）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_group_invite_reads'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_group_invite_reads(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					user_id INTEGER NOT NULL,
+					invite_id INTEGER NOT NULL,
+					invite_type TEXT NOT NULL,
+					read_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# ==================== 群管理功能扩展 ====================
+
+		# im_conversations 表新增字段
+		for col, col_def in [
+			('is_muted_all', 'INTEGER DEFAULT 0'),
+			('allow_join', 'INTEGER DEFAULT 1'),
+			('announcement', 'TEXT'),
+			('announcement_time', 'TEXT'),
+			('announcement_publisher_id', 'INTEGER'),
+			('is_deleted', 'INTEGER DEFAULT 0'),
+			('deleted_at', 'TEXT'),
+		]:
+			cursor = conn.execute(f"PRAGMA table_info(im_conversations)")
+			existing_cols = [r[1] for r in cursor.fetchall()]
+			if col not in existing_cols:
+				conn.execute(f"ALTER TABLE im_conversations ADD COLUMN {col} {col_def}")
+
+		# im_conversation_members 表新增字段
+		for col, col_def in [
+			('mute_until', 'TEXT'),
+			('last_speak_at', 'TEXT'),
+			('is_deleted', 'INTEGER NOT NULL DEFAULT 0'),
+		]:
+			cursor = conn.execute(f"PRAGMA table_info(im_conversation_members)")
+			existing_cols = [r[1] for r in cursor.fetchall()]
+			if col not in existing_cols:
+				conn.execute(f"ALTER TABLE im_conversation_members ADD COLUMN {col} {col_def}")
+
+		# im_group_invites 表新增字段
+		for col, col_def in [
+			('message', 'TEXT DEFAULT ""'),
+		]:
+			cursor = conn.execute(f"PRAGMA table_info(im_group_invites)")
+			existing_cols = [r[1] for r in cursor.fetchall()]
+			if col not in existing_cols:
+				conn.execute(f"ALTER TABLE im_group_invites ADD COLUMN {col} {col_def}")
+
+		# 将现有群创建者的 role 从 admin 改为 owner
+		conn.execute(
+			"""
+			UPDATE im_conversation_members
+			SET role = 'owner'
+			WHERE conversation_id IN (SELECT id FROM im_conversations WHERE type='group')
+			  AND user_id = (SELECT creator_id FROM im_conversations WHERE type='group' AND id = conversation_id)
+			  AND role = 'admin'
+			"""
+		)
+
+		# 创建 group_announcements 表（公告历史）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='group_announcements'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE group_announcements(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					group_id INTEGER NOT NULL,
+					content TEXT NOT NULL,
+					publisher_id INTEGER NOT NULL,
+					create_at TEXT NOT NULL DEFAULT(datetime('now')),
+					is_active INTEGER NOT NULL DEFAULT 1
+				)
+				"""
+			)
+
+		# 创建 announcement_confirmations 表（公告确认记录）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='announcement_confirmations'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE announcement_confirmations(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					announcement_id INTEGER NOT NULL,
+					group_id INTEGER NOT NULL,
+					user_id INTEGER NOT NULL,
+					create_at TEXT NOT NULL DEFAULT(datetime('now')),
+					UNIQUE(announcement_id, user_id)
+				)
+				"""
+			)
+
+		# 创建 group_operation_logs 表（操作日志）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='group_operation_logs'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE group_operation_logs(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					group_id INTEGER NOT NULL,
+					operator_id INTEGER NOT NULL,
+					operation_type TEXT NOT NULL,
+					target_id INTEGER,
+					detail TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# 创建 im_files 表（文件去重存储）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_files'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_files(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					file_name TEXT NOT NULL,
+					file_size INTEGER NOT NULL,
+					file_hash TEXT NOT NULL UNIQUE,
+					file_ext TEXT NOT NULL DEFAULT '',
+					mime_type TEXT DEFAULT '',
+					storage_path TEXT NOT NULL,
+					uploader_id INTEGER NOT NULL,
+					ref_count INTEGER NOT NULL DEFAULT 1,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# im_files 表字段升级
+
+		# 数据迁移：将 im_messages 中旧的 UTC 时间转为本地时间（仅执行一次）
+		import datetime
+		need_migrate = conn.execute("SELECT COUNT(*) as cnt FROM im_messages WHERE create_at > datetime('now', '+7 hours')").fetchone()['cnt']
+		if need_migrate == 0:
+			rows = conn.execute("SELECT id, create_at FROM im_messages").fetchall()
+			if rows:
+				for row in rows:
+					try:
+						utc_dt = datetime.datetime.strptime(row['create_at'], '%Y-%m-%d %H:%M:%S')
+						local_dt = utc_dt + datetime.timedelta(hours=8)
+						conn.execute("UPDATE im_messages SET create_at=? WHERE id=?", (local_dt.strftime('%Y-%m-%d %H:%M:%S'), row['id']))
+					except (ValueError, KeyError):
+						pass
 
 		# 初始化默认数据
 		_init_default_data(conn)
