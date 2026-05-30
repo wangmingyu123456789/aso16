@@ -119,6 +119,8 @@ body{font-family:'PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif;bac
         </div>
     </div>
 
+    {% include '../components/gesture_panel.html' %}
+
     <!-- 设置模态框 -->
     <div class="modal-overlay" id="settingsModal">
         <div class="modal-box">
@@ -209,5 +211,11 @@ function logout(){if(!confirm('确定要退出登录吗？'))return;var xhr=new 
 })();
 </script>
 {% block extra_script %}{% end %}
+<script src="/static/js/gesture-settings.js"></script>
+<script src="/static/js/gesture-rule-engine.js"></script>
+<script src="/static/js/gesture-feedback.js"></script>
+<script src="/static/js/gesture-event-bus.js"></script>
+<script src="/static/js/gesture.js"></script>
+<script src="/static/js/voice-broadcast.js"></script>
 </body>
 </html>

@@ -1,0 +1,132 @@
+<div id="gesturePanel" class="gesture-panel">
+	<div class="gp-header">
+		<span class="gp-title"><span id="gpIcon">🖐️</span> 手势识别</span>
+		<div class="gp-header-actions">
+			<button class="gp-btn gp-btn-settings" onclick="GestureController.toggleSettings()" title="设置">⚙️</button>
+			<button class="gp-btn gp-btn-collapse" onclick="GestureController.toggleCollapse()" title="折叠">◀</button>
+		</div>
+	</div>
+	<div class="gp-body">
+		<div class="gp-status-row">
+			<span class="gp-dot" id="gpDot"></span>
+			<span class="gp-status-text" id="gpStatusText">等待启动</span>
+		</div>
+		<div class="gp-video-wrap" id="gpVideoWrap">
+			<video id="gpVideo" playsinline></video>
+			<canvas id="gpCanvas"></canvas>
+		</div>
+		<div class="gp-live-status" id="gpLiveStatus">
+			<div class="gp-live-gesture waiting" id="gpLiveGesture">等待识别...</div>
+			<div class="gp-live-confidence" id="gpLiveConfidence"></div>
+		</div>
+		<button class="gp-btn gp-btn-toggle" id="gpToggleBtn" onclick="GestureController.toggleCamera()">📷 启动摄像头</button>
+		<div class="gp-gesture-list">
+			<div class="gp-section-title">支持的手势</div>
+			<div class="gp-gesture-item"><span>☝️</span> 食指向上</div>
+			<div class="gp-gesture-item"><span>👇</span> 食指向下</div>
+			<div class="gp-gesture-item"><span>✊</span> 握拳</div>
+			<div class="gp-gesture-item"><span>👈</span> 左滑</div>
+			<div class="gp-gesture-item"><span>👉</span> 右滑</div>
+			<div class="gp-gesture-item"><span>🖐️</span> 上滑/下滑</div>
+		</div>
+		<button class="gp-btn gp-btn-guide" onclick="GestureController.showGuide()">🎓 新手引导</button>
+		<button class="gp-btn gp-btn-speech" onclick="GestureController.toggleSpeech()" id="gpSpeechBtn">🔊 语音播报</button>
+	</div>
+	<div class="gp-settings-overlay" id="gpSettingsOverlay">
+		<div class="gp-settings-panel">
+			<div class="gp-settings-header"><span>手势设置</span><button class="gp-btn" onclick="GestureController.toggleSettings()">✕</button></div>
+			<div class="gp-settings-body">
+				<label class="gp-settings-row"><span>手势识别</span><input type="checkbox" id="gsEnabled" checked onchange="GestureSettings.toggleAll(this.checked);GestureController.updateUIState()"></label>
+				<label class="gp-settings-row"><span>帧率</span><select id="gsFrameRate" onchange="GestureSettings.set('frameRate',parseInt(this.value))"><option value="10">10 FPS</option><option value="15" selected>15 FPS</option><option value="20">20 FPS</option><option value="30">30 FPS</option></select></label>
+				<div class="gp-settings-divider"></div>
+				<label class="gp-settings-row"><span>☝️ 食指向上</span><input type="checkbox" id="gsIndexUp" checked onchange="GestureSettings.set('gestures.index_up',this.checked)"></label>
+				<label class="gp-settings-row"><span>👇 食指向下</span><input type="checkbox" id="gsIndexDown" checked onchange="GestureSettings.set('gestures.index_down',this.checked)"></label>
+				<label class="gp-settings-row"><span>✊ 握拳</span><input type="checkbox" id="gsFist" checked onchange="GestureSettings.set('gestures.fist',this.checked)"></label>
+				<label class="gp-settings-row"><span>👈 左滑</span><input type="checkbox" id="gsSwipeLeft" checked onchange="GestureSettings.set('gestures.swipe_left',this.checked)"></label>
+				<label class="gp-settings-row"><span>👉 右滑</span><input type="checkbox" id="gsSwipeRight" checked onchange="GestureSettings.set('gestures.swipe_right',this.checked)"></label>
+				<label class="gp-settings-row"><span>🖐️ 上滑</span><input type="checkbox" id="gsSwipeUp" checked onchange="GestureSettings.set('gestures.swipe_up',this.checked)"></label>
+				<label class="gp-settings-row"><span>🖐️ 下滑</span><input type="checkbox" id="gsSwipeDown" checked onchange="GestureSettings.set('gestures.swipe_down',this.checked)"></label>
+				<div class="gp-settings-divider"></div>
+				<button class="gp-btn gp-btn-reset" onclick="GestureSettings.reset();GestureController.loadSettings();GestureController.updateUIState()">重置为默认</button>
+			</div>
+		</div>
+	</div>
+</div>
+<div id="gpGuideOverlay" class="gp-guide-overlay">
+	<div class="gp-guide-box">
+		<div class="gp-guide-header">🎓 新手引导</div>
+		<div class="gp-guide-steps">
+			<div class="gp-guide-step active"><span class="step-num">1</span><span>点击"启动摄像头"</span></div>
+			<div class="gp-guide-step"><span class="step-num">2</span><span>允许浏览器授权摄像头</span></div>
+			<div class="gp-guide-step"><span class="step-num">3</span><span>将手掌对准摄像头约30cm</span></div>
+			<div class="gp-guide-step"><span class="step-num">4</span><span>确保光线充足，背景简洁</span></div>
+			<div class="gp-guide-step"><span class="step-num">5</span><span>尝试：☝️ 👇 ✊ 👈 👉 🖐️</span></div>
+		</div>
+		<div class="gp-guide-tips">
+			<p>💡 食指向上/向下：翻页选择</p>
+			<p>💡 握拳：暂停/恢复自动轮播</p>
+			<p>💡 左滑/右滑：切换功能模块</p>
+			<p>💡 上滑/下滑：滚动页面</p>
+		</div>
+		<button class="gp-btn gp-btn-guide-close" onclick="GestureController.hideGuide()">我知道了</button>
+	</div>
+</div>
+<style>
+.gesture-panel{position:fixed;top:80px;right:16px;width:220px;background:rgba(15,20,40,0.92);border:1px solid rgba(100,120,200,0.2);border-radius:12px;z-index:9999;backdrop-filter:blur(12px);box-shadow:0 8px 32px rgba(0,0,0,0.4);transition:all 0.3s;overflow:hidden;font-family:'Microsoft YaHei',sans-serif}
+.gesture-panel.collapsed{width:48px;height:48px;border-radius:50%;cursor:pointer}
+.gesture-panel.collapsed .gp-body{display:none}
+.gesture-panel.collapsed .gp-header{padding:0;justify-content:center;height:48px}
+.gesture-panel.collapsed .gp-header-actions{display:none}
+.gesture-panel.collapsed .gp-title{font-size:0}
+.gesture-panel.collapsed .gp-title #gpIcon{font-size:20px}
+.gp-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.gp-title{font-size:13px;font-weight:600;color:#e0e0f0;display:flex;align-items:center;gap:6px}
+.gp-header-actions{display:flex;gap:4px}
+.gp-btn{background:transparent;border:none;color:rgba(255,255,255,0.4);cursor:pointer;padding:4px 8px;border-radius:6px;font-size:12px;transition:all 0.2s}
+.gp-btn:hover{background:rgba(255,255,255,0.06);color:#fff}
+.gp-body{padding:10px 12px 14px}
+.gp-status-row{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.gp-dot{width:6px;height:6px;border-radius:50%;background:#556;transition:background 0.3s}
+.gp-dot.active{background:#00e676;box-shadow:0 0 8px rgba(0,230,118,0.5)}
+.gp-dot.error{background:#ff5252;box-shadow:0 0 8px rgba(255,82,82,0.5)}
+.gp-status-text{font-size:11px;color:rgba(255,255,255,0.4)}
+.gp-video-wrap{position:relative;width:100%;aspect-ratio:4/3;border-radius:8px;overflow:hidden;background:#000;margin-bottom:8px}
+.gp-video-wrap video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.gp-video-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%;transform:scaleX(-1)}
+.gp-live-status{margin-bottom:8px;padding:6px 8px;background:rgba(0,0,0,0.3);border-radius:6px;text-align:center;border:1px solid rgba(100,120,200,0.1);min-height:36px}
+.gp-live-gesture{font-size:13px;font-weight:600;color:#00e676;min-height:20px;display:flex;align-items:center;justify-content:center;gap:4px}
+.gp-live-gesture.waiting{color:#556;font-size:11px}
+.gp-live-confidence{font-size:10px;color:#7788aa;margin-top:2px}
+.gp-btn-toggle{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,212,255,0.2);background:rgba(0,212,255,0.06);color:#00d4ff;font-size:12px;cursor:pointer;transition:all 0.2s;margin-bottom:8px}
+.gp-btn-toggle:hover{background:rgba(0,212,255,0.12)}
+.gp-btn-toggle.active{background:#00d4ff;color:#fff;border-color:#00d4ff}
+.gp-section-title{font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.gp-gesture-list{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:8px}
+.gp-gesture-item{padding:4px 6px;border-radius:4px;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:4px}
+.gp-gesture-item:hover{background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.7)}
+.gp-btn-guide,.gp-btn-speech{width:100%;padding:6px;border-radius:6px;font-size:11px;margin-bottom:4px}
+.gp-btn-guide{background:rgba(123,47,247,0.06);color:#a78bfa;border:1px solid rgba(123,47,247,0.15)}
+.gp-btn-speech{background:rgba(0,212,255,0.06);color:#00d4ff;border:1px solid rgba(0,212,255,0.15)}
+.gp-btn-speech.muted{background:rgba(255,77,79,0.06);color:#ff4d4f;border-color:rgba(255,77,79,0.15)}
+.gp-btn-reset{width:100%;padding:6px;border-radius:6px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.4);font-size:11px}
+.gp-settings-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(10,14,26,0.95);z-index:10;display:none;border-radius:12px}
+.gp-settings-overlay.show{display:block}
+.gp-settings-panel{padding:12px}
+.gp-settings-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:#e0e0f0;font-weight:600}
+.gp-settings-body{max-height:350px;overflow-y:auto}
+.gp-settings-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12px;color:rgba(255,255,255,0.6);cursor:pointer}
+.gp-settings-row input[type=checkbox]{width:16px;height:16px;accent-color:#00d4ff}
+.gp-settings-row select{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#e0e0f0;font-size:11px;padding:2px 4px}
+.gp-settings-divider{height:1px;background:rgba(255,255,255,0.06);margin:6px 0}
+.gp-guide-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,14,26,0.85);z-index:99999;display:none;align-items:center;justify-content:center}
+.gp-guide-overlay.show{display:flex}
+.gp-guide-box{background:#1a1f35;border:1px solid rgba(100,120,200,0.2);border-radius:16px;padding:28px 24px;width:380px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.gp-guide-header{font-size:18px;font-weight:700;color:#fff;margin-bottom:16px}
+.gp-guide-steps{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.gp-guide-step{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;font-size:13px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.02)}
+.gp-guide-step.active{background:rgba(0,212,255,0.06);color:#e0e0f0}
+.step-num{width:22px;height:22px;border-radius:50%;background:rgba(0,212,255,0.15);color:#00d4ff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.gp-guide-tips p{font-size:12px;color:rgba(255,255,255,0.4);margin:4px 0;line-height:1.5}
+.gp-btn-guide-close{width:100%;padding:10px;border-radius:8px;background:linear-gradient(135deg,#00d4ff,#7b2ff7);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer;margin-top:12px;transition:all 0.2s}
+.gp-btn-guide-close:hover{opacity:0.9}
+</style>

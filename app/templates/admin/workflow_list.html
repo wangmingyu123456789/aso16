@@ -1,0 +1,105 @@
+{% extends "layout.html" %}
+{% block body %}
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
+	<div>
+		<h3>⚙ 自动化工作流</h3>
+		<p>配置自动化的数据采集、舆情分析、通知等任务链</p>
+	</div>
+	<a href="/admin/workflow/edit" class="btn" style="padding:8px 20px;background:linear-gradient(135deg,#00d4ff,#7b2ff7);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;text-decoration:none;">➕ 新建工作流</a>
+</div>
+
+<div class="workflow-list">
+{% if workflows %}
+	{% for wf in workflows %}
+	<div class="wf-card">
+		<div class="wf-header">
+			<div class="wf-info">
+				<span class="wf-name">{{ wf['name'] }}</span>
+				<span class="wf-desc">{{ wf['description'] or '无描述' }}</span>
+			</div>
+			<div class="wf-badges">
+				<span class="wf-badge {{ 'active' if wf['is_enabled'] else 'disabled' }}">{{ '已启用' if wf['is_enabled'] else '已禁用' }}</span>
+				{% if wf['cron_expression'] %}
+				<span class="wf-badge cron">⏰ {{ wf['cron_expression'] }}</span>
+				{% end %}
+			</div>
+		</div>
+		<div class="wf-steps">
+			{% for step in wf['steps'] %}
+			<span class="wf-step">{{ step['_label'] }}</span>
+			{% end %}
+		</div>
+		<div class="wf-footer">
+			<span class="wf-time">创建: {{ wf['create_at'][:16] if wf.get('create_at') else '' }}</span>
+			{% if wf.get('last_run_at') %}<span class="wf-time">上次执行: {{ wf['last_run_at'][:16] }}</span>{% end %}
+			<div class="wf-actions">
+				<button class="wf-btn wf-run" data-id="{{ wf['id'] }}">▶ 执行</button>
+				<a href="/admin/workflow/edit/{{ wf['id'] }}" class="wf-btn">编辑</a>
+				<button class="wf-btn wf-toggle" data-id="{{ wf['id'] }}">{{ '禁用' if wf['is_enabled'] else '启用' }}</button>
+				<button class="wf-btn danger wf-delete" data-id="{{ wf['id'] }}">删除</button>
+			</div>
+		</div>
+	</div>
+	{% end %}
+{% else %}
+<div class="empty-state" style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.3);">
+	<div style="font-size:48px;margin-bottom:16px;">⚙</div>
+	<h4 style="font-size:16px;color:rgba(255,255,255,0.5);margin-bottom:8px;">暂无工作流</h4>
+	<p style="font-size:13px;">创建一个自动化工作流，让系统自动完成数据采集、分析和通知</p>
+</div>
+{% end %}
+</div>
+
+<style>
+.workflow-list{display:flex;flex-direction:column;gap:12px;}
+.wf-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;transition:all 0.2s;}
+.wf-card:hover{border-color:rgba(0,212,255,0.2);}
+.wf-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.wf-info{display:flex;flex-direction:column;gap:2px;}
+.wf-name{font-size:15px;font-weight:600;color:#e0e0f0;}
+.wf-desc{font-size:12px;color:rgba(255,255,255,0.35);}
+.wf-badges{display:flex;gap:6px;flex-wrap:wrap;}
+.wf-badge{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:500;}
+.wf-badge.active{background:rgba(82,196,26,0.15);color:#52c41a;}
+.wf-badge.disabled{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.3);}
+.wf-badge.cron{background:rgba(255,193,7,0.1);color:#ffc107;}
+.wf-steps{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.wf-step{padding:4px 10px;border-radius:6px;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.1);font-size:12px;color:#00d4ff;}
+.wf-arrow{color:rgba(255,255,255,0.2);font-size:14px;}
+.wf-footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.04);}
+.wf-time{font-size:11px;color:rgba(255,255,255,0.3);}
+.wf-actions{display:flex;gap:6px;}
+.wf-btn{padding:5px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.6);font-size:11px;cursor:pointer;transition:all 0.2s;text-decoration:none;}
+.wf-btn:hover{background:rgba(0,212,255,0.08);border-color:rgba(0,212,255,0.2);color:#00d4ff;}
+.wf-btn.danger:hover{background:rgba(255,77,79,0.1);border-color:rgba(255,77,79,0.3);color:#ff4d4f;}
+.btn{display:inline-flex;align-items:center;gap:6px;}
+</style>
+
+<script>
+document.addEventListener('click', function(e){
+	var target = e.target.closest('.wf-run, .wf-toggle, .wf-delete');
+	if(!target) return;
+	var id = parseInt(target.getAttribute('data-id'));
+	if(target.classList.contains('wf-run')){
+		if(!confirm('确定要立即执行此工作流吗？'))return;
+		target.textContent='执行中...'; target.disabled=true;
+		fetch('/admin/workflow/api',{method:'POST',body:new URLSearchParams({action:'run',id:id})})
+			.then(function(r){return r.json();})
+			.then(function(res){
+				target.textContent='▶ 执行'; target.disabled=false;
+				if(res.code===0){
+					alert('✅ 工作流执行成功！');
+					location.reload();
+				}else{alert('❌ 执行失败: '+res.msg);}
+			}).catch(function(){target.textContent='▶ 执行';target.disabled=false;alert('请求失败');});
+	} else if(target.classList.contains('wf-toggle')){
+		fetch('/admin/workflow/api',{method:'POST',body:new URLSearchParams({action:'toggle',id:id})})
+			.then(function(r){return r.json();}).then(function(res){if(res.code===0)location.reload();else alert(res.msg);});
+	} else if(target.classList.contains('wf-delete')){
+		if(!confirm('确定要删除此工作流吗？'))return;
+		fetch('/admin/workflow/api',{method:'POST',body:new URLSearchParams({action:'delete',id:id})})
+			.then(function(r){return r.json();}).then(function(res){if(res.code===0)location.reload();else alert(res.msg);});
+	}
+});
+</script>
+{% end %}

@@ -20,8 +20,9 @@ from app.controllers.admin.watch import AdminCrawlLogHandler,AdminCrawlLogApiHan
 from app.controllers.user.outlook import UserOutlookCollectPageHandler,UserOutlookCollectHandler,UserOutlookStatusApiHandler,UserOutlookLatestDataApiHandler,UserOutlookDataListHandler,UserOutlookDataApiHandler,UserOutlookTaskApiHandler,UserOutlookTaskDeleteHandler,UserOutlookTaskDataHandler,UserOutlookTaskDataApiHandler,UserOutlookDeepCollectHandler,UserOutlookDeepCollectStatusHandler,UserOutlookDeepDetailHandler,UserOutlookSourceApiHandler,UserOutlookSourceAddHandler,UserOutlookSourceEditHandler,UserOutlookSourceDeleteHandler,UserOutlookDataDeleteHandler,UserCrawlLogHandler,UserCrawlLogApiHandler,UserCrawlLogClearHandler,UserCrawlLogStatsHandler,UserCrawlScheduleHandler,UserCrawlScheduleApiHandler
 from app.controllers.admin.assistant import AdminAssistantConfigHandler,AdminAssistantApiHandler,AdminAssistantChatHandler,AdminAssistantUsageHandler,AdminChatSendHandler,AdminChatHistoryHandler,AdminChatClearHandler
 from app.controllers.admin.settings import AdminSettingsHandler
+from app.controllers.admin.workflow import AdminWorkflowListHandler,AdminWorkflowEditHandler,AdminWorkflowApiHandler
 from app.controllers.dashboard import DashboardPageHandler,UserDashboardPageHandler,DashboardStatsHandler
-from app.controllers.user.sentiment import SentimentHandler,DashboardChartsHandler,SentimentStatsHandler,SentimentAnalyzeHandler
+from app.controllers.user.sentiment import SentimentHandler,DashboardChartsHandler,SentimentStatsHandler,SentimentAnalyzeHandler,SentimentResultHandler,WordCloudHandler
 from app.controllers.chat import ChatPageHandler,ChatStreamHandler,ChatAssistantsHandler,ChatHistoryHandler,ChatModelsHandler
 from app.controllers.im import IMPageHandler,IMConversationsHandler,IMRestoreConversationHandler,IMHistoryHandler,IMSendHandler,IMCreatePrivateHandler,IMAssistantChatHandler,IMCreateGroupHandler,IMMembersHandler,IMUsersHandler,IMAssistantsHandler,IMSearchHandler,IMGlobalSearchHandler,IMMarkReadHandler,IMFriendsHandler,IMFriendRequestHandler,IMGroupInviteHandler,IMRemoveFriendHandler,IMGroupsHandler,IMGroupManageHandler as IMGroupManageOldHandler,IMFileUploadHandler,IMFileDownloadHandler,IMFilesHandler
 from app.controllers.im_ws import IMWebSocketHandler
@@ -224,6 +225,11 @@ def make_app():
 			# 系统设置
 			(r"/admin/settings",AdminSettingsHandler),
 
+			# 自动化工作流
+			(r"/admin/workflow",AdminWorkflowListHandler),
+			(r"/admin/workflow/edit/?(\d*)",AdminWorkflowEditHandler),
+			(r"/admin/workflow/api",AdminWorkflowApiHandler),
+
 			# 数智大屏
 			(r"/dashboard",DashboardPageHandler),
 			(r"/user/dashboard",UserDashboardPageHandler),
@@ -234,6 +240,8 @@ def make_app():
 			(r"/api/dashboard/charts",DashboardChartsHandler),
 			(r"/api/sentiment/stats",SentimentStatsHandler),
 			(r"/api/sentiment/analyze",SentimentAnalyzeHandler),
+			(r"/api/sentiment/result",SentimentResultHandler),
+			(r"/api/wordcloud",WordCloudHandler),
 
 			# 用户侧-瞭望系统
 			(r"/user/outlook/collect",UserOutlookCollectPageHandler),

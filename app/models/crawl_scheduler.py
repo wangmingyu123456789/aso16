@@ -177,10 +177,36 @@ def start_scheduler():
 		print("[Scheduler] Starting scheduler...", flush=True)
 		sched.start()
 		print(f"[Scheduler] Started OK, {len(sched.get_jobs())} jobs", flush=True)
+		# 启动工作流引擎定时检查
+		_check_workflow_engine()
 	elif sched:
 		print(f"[Scheduler] already running, {len(sched.get_jobs())} jobs", flush=True)
 	else:
 		print("[Scheduler] no scheduler to start", flush=True)
+
+def _check_workflow_engine():
+	"""每分钟检查一次定时工作流"""
+	try:
+		from apscheduler.triggers.interval import IntervalTrigger
+		sched = _get_scheduler()
+		if sched and not sched.get_job('workflow_engine_check'):
+			sched.add_job(
+				_run_workflow_engine,
+				IntervalTrigger(minutes=1),
+				id='workflow_engine_check',
+				replace_existing=True,
+				coalesce=True
+			)
+			print("[Scheduler] Workflow engine check added (every 1 min)", flush=True)
+	except Exception as e:
+		print(f"[Scheduler] workflow engine setup error: {e}", flush=True)
+
+def _run_workflow_engine():
+	try:
+		from app.controllers.admin.workflow import AdminWorkflowEngineHandler
+		AdminWorkflowEngineHandler.check_and_run()
+	except Exception as e:
+		print(f"[WorkflowEngine] check error: {e}", flush=True)
 
 def reload_schedules():
 	print("[Scheduler] reload_schedules called", flush=True)

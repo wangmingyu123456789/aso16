@@ -1,0 +1,173 @@
+{% extends "layout.html" %}
+{% block body %}
+<div class="page-header">
+	<h3>{{ '编辑工作流' if workflow else '新建工作流' }}</h3>
+	<p>配置自动化任务链的各个步骤</p>
+</div>
+
+<form id="wfForm" onsubmit="return saveWorkflow()">
+<input type="hidden" name="id" value="{{ workflow['id'] if workflow else '' }}">
+
+<div class="form-section">
+	<div class="form-group">
+		<label>工作流名称 <span class="required">*</span></label>
+		<input type="text" id="wfName" value="{{ workflow['name'] if workflow else '' }}" placeholder="例如：每日舆情分析" required style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:#e0e0f0;font-size:13px;">
+	</div>
+	<div class="form-group">
+		<label>描述</label>
+		<input type="text" id="wfDesc" value="{{ workflow['description'] if workflow else '' }}" placeholder="简要描述工作流的作用" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:#e0e0f0;font-size:13px;">
+	</div>
+	<div class="form-group">
+		<label>Cron 表达式（留空为手动触发）</label>
+		<input type="text" id="wfCron" value="{{ workflow['cron_expression'] if workflow else '' }}" placeholder="例如：0 8 * * *（每天8点）" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:#e0e0f0;font-size:13px;">
+		<div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px;">格式: 分钟 小时 日 月 周 (如 0 8 * * * 表示每天8点)</div>
+	</div>
+</div>
+
+<div class="form-section">
+	<div class="section-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+		<label style="font-size:14px;font-weight:600;color:#e0e0f0;">步骤链</label>
+		<button type="button" class="btn-add-step" onclick="addStep()">➕ 添加步骤</button>
+	</div>
+	<div id="stepList"></div>
+	<div class="empty-steps" id="emptySteps" style="text-align:center;padding:30px;color:rgba(255,255,255,0.2);border:2px dashed rgba(255,255,255,0.06);border-radius:12px;">
+		<p>暂未添加步骤，点击上方按钮添加</p>
+	</div>
+</div>
+
+<div class="form-actions" style="display:flex;gap:12px;margin-top:20px;">
+	<button type="submit" class="btn-save">💾 保存</button>
+	<a href="/admin/workflow" class="btn-cancel">取消</a>
+</div>
+</form>
+
+<style>
+.form-section{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;margin-bottom:16px;}
+.form-group{margin-bottom:14px;}
+.form-group:last-child{margin-bottom:0;}
+.form-group label{display:block;font-size:12px;font-weight:500;color:rgba(255,255,255,0.5);margin-bottom:6px;}
+.required{color:#ff4d4f;}
+.step-card{background:rgba(0,212,255,0.03);border:1px solid rgba(0,212,255,0.1);border-radius:10px;padding:14px;margin-bottom:10px;position:relative;}
+.step-card .step-remove{position:absolute;top:8px;right:10px;background:rgba(255,77,79,0.1);border:none;color:#ff4d4f;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:11px;}
+.step-card .step-row{display:flex;gap:10px;margin-bottom:8px;align-items:center;flex-wrap:wrap;}
+.step-card .step-row:last-child{margin-bottom:0;}
+.step-card select,.step-card input{padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#e0e0f0;font-size:12px;}
+.step-card select{min-width:120px;}
+.step-card .step-label{font-size:11px;color:rgba(255,255,255,0.4);min-width:60px;}
+.step-card .step-arrow{color:rgba(0,212,255,0.5);font-size:16px;text-align:center;padding:4px 0;}
+.btn-add-step{padding:6px 16px;border-radius:6px;border:1px solid rgba(0,212,255,0.2);background:rgba(0,212,255,0.06);color:#00d4ff;font-size:12px;cursor:pointer;transition:all 0.2s;}
+.btn-add-step:hover{background:rgba(0,212,255,0.12);}
+.btn-save{padding:10px 28px;border-radius:8px;border:none;background:linear-gradient(135deg,#00d4ff,#7b2ff7);color:#fff;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-cancel{padding:10px 28px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:13px;text-decoration:none;cursor:pointer;}
+</style>
+
+<script>
+var sources = {{ sources_json if workflow else '[]' }};
+
+var stepTypes = [
+	{value:'crawl',label:'📡 数据采集'},
+	{value:'analyze',label:'🧠 舆情分析'},
+	{value:'notify',label:'📧 系统通知'}
+];
+
+var steps = [];
+{% if workflow %}
+{% set wf_steps = json.loads(workflow['steps']) if isinstance(workflow['steps'], str) else workflow['steps'] %}
+steps = {{ json.dumps(wf_steps) }};
+{% end %}
+
+function renderSteps(){
+	var list = document.getElementById('stepList');
+	var empty = document.getElementById('emptySteps');
+	list.innerHTML = '';
+	if(steps.length === 0){
+		empty.style.display = 'block';
+		return;
+	}
+	empty.style.display = 'none';
+	for(var i=0;i<steps.length;i++){
+		var s = steps[i];
+		var div = document.createElement('div');
+		div.className = 'step-card';
+		var html = '<button class="step-remove" onclick="removeStep('+i+')">✕</button>';
+		html += '<div class="step-row">';
+		html += '<span class="step-label">步骤 '+(i+1)+'</span>';
+		html += '<select onchange="updateStep('+i+',\'type\',this.value)">';
+		for(var t=0;t<stepTypes.length;t++){
+			html += '<option value="'+stepTypes[t].value+'" '+(s.type===stepTypes[t].value?'selected':'')+'>'+stepTypes[t].label+'</option>';
+		}
+		html += '</select>';
+		html += '</div>';
+
+		if(s.type === 'crawl'){
+			html += '<div class="step-row">';
+			html += '<span class="step-label">数据源</span>';
+			html += '<select onchange="updateStep('+i+',\'source_id\',parseInt(this.value))">';
+			html += '<option value="">选择数据源...</option>';
+			for(var k=0;k<sources.length;k++){
+				html += '<option value="'+sources[k].id+'" '+(s.source_id===sources[k].id?'selected':'')+'>'+ (sources[k].name||sources[k].source_type) +'</option>';
+			}
+			html += '</select>';
+			html += '<span class="step-label">关键词</span>';
+			html += '<input type="text" value="'+(s.keyword||'')+'" placeholder="可选" onchange="updateStep('+i+',\'keyword\',this.value)" style="width:120px;">';
+			html += '</div>';
+		} else if(s.type === 'analyze'){
+			html += '<div class="step-row" style="color:rgba(255,255,255,0.3);font-size:12px;">对瞭望采集的数据进行舆情分析</div>';
+		} else if(s.type === 'notify'){
+			html += '<div class="step-row">';
+			html += '<span class="step-label">消息</span>';
+			html += '<input type="text" value="'+(s.message||'')+'" placeholder="通知内容" onchange="updateStep('+i+',\'message\',this.value)" style="flex:1;">';
+			html += '</div>';
+		}
+		html += '</div>';
+		div.innerHTML = html;
+		list.appendChild(div);
+	}
+}
+
+function addStep(){
+	steps.push({type:'crawl',source_id:null,keyword:''});
+	renderSteps();
+}
+
+function removeStep(idx){
+	steps.splice(idx,1);
+	renderSteps();
+}
+
+function updateStep(idx, key, val){
+	steps[idx][key] = val;
+}
+
+function saveWorkflow(){
+	var name = document.getElementById('wfName').value.trim();
+	if(!name){alert('请输入工作流名称');return false;}
+	if(steps.length === 0){alert('请至少添加一个步骤');return false;}
+
+	var id = document.querySelector('input[name="id"]').value;
+	var action = id ? 'update' : 'create';
+	var body = new URLSearchParams({
+		action: action,
+		name: name,
+		description: document.getElementById('wfDesc').value.trim(),
+		steps: JSON.stringify(steps),
+		cron_expression: document.getElementById('wfCron').value.trim()
+	});
+	if(id) body.append('id', id);
+
+	fetch('/admin/workflow/api', {method:'POST', body:body})
+		.then(function(r){return r.json();})
+		.then(function(res){
+			if(res.code===0){
+				alert('✅ 保存成功！');
+				window.location.href = '/admin/workflow';
+			} else {
+				alert('❌ 保存失败: '+res.msg);
+			}
+		});
+	return false;
+}
+
+renderSteps();
+</script>
+{% end %}

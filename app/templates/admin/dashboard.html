@@ -75,6 +75,7 @@ body{background:#070b1a;color:#fff;font-family:'Microsoft YaHei',sans-serif;}
 <script src="/static/dist/echarts-5.5.0.min.js"></script>
 </head>
 <body>
+{% include '../components/gesture_panel.html' %}
 
 <!-- 返回按钮 -->
 <a class="back-btn" href="/admin">
@@ -205,6 +206,11 @@ body{background:#070b1a;color:#fff;font-family:'Microsoft YaHei',sans-serif;}
 				}else{
 					document.getElementById('chartRecent').innerHTML='<div class="recent-empty">暂无数据</div>';
 				}
+				setTimeout(function(){
+					if(window.SpeechManager&&window.SpeechManager.isEnabled()){
+						window.SpeechManager.speak('数智大屏数据已更新，今日采集'+d.today_collect+'条，累计'+d.total_collect+'条');
+					}
+				},600);
 			}
 		}).catch(function(err){console.log('Dashboard stats fetch error:',err);});
 	}
@@ -427,5 +433,11 @@ body{background:#070b1a;color:#fff;font-family:'Microsoft YaHei',sans-serif;}
 
 })();
 </script>
+<script src="/static/js/gesture-settings.js"></script>
+<script src="/static/js/gesture-rule-engine.js"></script>
+<script src="/static/js/gesture-feedback.js"></script>
+<script src="/static/js/gesture-event-bus.js"></script>
+<script src="/static/js/gesture.js"></script>
+<script src="/static/js/voice-broadcast.js"></script>
 </body>
 </html>

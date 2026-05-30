@@ -136,6 +136,7 @@ class SentimentAnalyzeHandler(BaseHandler):
                     "data": None
                 })
             else:
+                SentimentRepository.save_analysis_cache(analysis)
                 self.write({
                     "code": 0,
                     "msg": "分析成功",
@@ -147,6 +148,77 @@ class SentimentAnalyzeHandler(BaseHandler):
                 "msg": f"分析失败: {str(e)}",
                 "data": None
             })
+
+
+class SentimentResultHandler(BaseHandler):
+    """获取已保存的舆情分析结果"""
+    @tornado.web.authenticated
+    def get(self):
+        try:
+            cache = SentimentRepository.get_analysis_cache()
+            if cache:
+                self.write({
+                    "code": 0,
+                    "msg": "success",
+                    "data": cache
+                })
+            else:
+                self.write({
+                    "code": 1,
+                    "msg": "暂无缓存的分析结果",
+                    "data": None
+                })
+        except Exception as e:
+            self.write({
+                "code": 1,
+                "msg": f"获取缓存失败: {str(e)}",
+                "data": None
+            })
+
+
+class WordCloudHandler(BaseHandler):
+    """词云数据 API"""
+    @tornado.web.authenticated
+    def get(self):
+        try:
+            import jieba
+            from collections import Counter
+
+            with get_connection() as conn:
+                rows = conn.execute(
+                    "SELECT title, content FROM outlook_data ORDER BY id DESC LIMIT 10000"
+                ).fetchall()
+
+            all_text = []
+            for r in rows:
+                if r["title"]:
+                    all_text.append(r["title"])
+                if r["content"]:
+                    all_text.append(r["content"])
+
+            text = " ".join(all_text)
+            words = jieba.lcut(text)
+
+            stopwords = set()
+            common_stop = "的 了 在 是 我 有 和 就 不 人 都 一 一个 上 也 很 到 说 要 去 你 会 着 没有 看 好 自己 这 他 她 它 们 那 里 为 与 及 但 或 而 被 把 对 从 以 又 还 将 能 所 得 地 着 过 个 之 中 大 小 多 少 做 做 用 让 让 给 向 拿 下 出 来 更 最 已 已经 可以 这个 那个 什么 怎么 如何 如果 因为 所以 但是 然而 虽然 而且 并 并且 或者 还是 只是 不过 不仅 而且 然后 之后 可能 应该 能够 需要 没有 还是 而是 都 已经 通过 进行 以及 及其 等".split()
+            stopwords.update(common_stop)
+
+            filtered = []
+            for w in words:
+                w = w.strip()
+                if len(w) < 2:
+                    continue
+                if w in stopwords:
+                    continue
+                filtered.append(w)
+
+            word_freq = Counter(filtered)
+            top_words = word_freq.most_common(100)
+
+            data = [{"name": w, "value": v} for w, v in top_words]
+            self.write({"code": 0, "msg": "success", "data": data})
+        except Exception as e:
+            self.write({"code": 1, "msg": f"词云数据生成失败: {str(e)}", "data": []})
 
 
 class SentimentRepository:
@@ -215,10 +287,34 @@ class SentimentRepository:
             return [dict(r) for r in rows]
 
     @staticmethod
+    def save_analysis_cache(result_dict):
+        with get_connection() as conn:
+            conn.execute("DELETE FROM outlook_sentiment_cache")
+            conn.execute(
+                "INSERT INTO outlook_sentiment_cache(result_json) VALUES(?)",
+                (json.dumps(result_dict, ensure_ascii=False),)
+            )
+
+    @staticmethod
+    def get_analysis_cache():
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT result_json, create_at FROM outlook_sentiment_cache ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+            if row:
+                return {
+                    "result": json.loads(row["result_json"]),
+                    "create_at": row["create_at"]
+                }
+            return None
+
+    @staticmethod
     def analyze_with_ai(data_context):
-        model = ModelRepository.get_default_model()
+        model = ModelRepository.get_model_by_code('deepseek-r1-distill-qwen-7b')
         if not model:
-            return {"error": "未配置默认 AI 模型，请先在管理后台配置模型"}
+            model = ModelRepository.get_default_model()
+        if not model:
+            return {"error": "未配置 AI 模型，请先在管理后台配置模型"}
 
         prompt = f"""你是一个专业的舆情分析专家。请分析以下数据并提供风险评估报告。
 

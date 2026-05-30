@@ -10,6 +10,14 @@ MODELS_CONFIG = [
         'status': 1,
         'is_system_default': 1,
     },
+    {
+        'name': 'DeepSeek-R1-Distill-Qwen-7B',
+        'code': 'deepseek-r1-distill-qwen-7b',
+        'api_url': 'https://aigc-api.aitoolcore.com/api/v1/chat/completions',
+        'api_key': 'sk-aigc-c0725a1b8a1b205154867945a3c667ce9d232fa7',
+        'status': 1,
+        'is_system_default': 0,
+    },
 ]
 
 def get_model_config(code):

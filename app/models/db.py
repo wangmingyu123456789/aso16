@@ -189,6 +189,19 @@ def init_db():
 				"""
 			)
 
+		# 创建 outlook_sentiment_cache 表（舆情分析结果缓存）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='outlook_sentiment_cache'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE outlook_sentiment_cache(
+					id integer PRIMARY KEY AUTOINCREMENT,
+					result_json TEXT NOT NULL,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
 		# 创建 api_interfaces 表（第三方接口管理）
 		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='api_interfaces'")
 		if not cursor.fetchone():
@@ -469,27 +482,6 @@ def init_db():
 				"""
 			)
 
-		# 创建 dashboard_components 表
-		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='dashboard_components'")
-		if not cursor.fetchone():
-			conn.execute(
-				"""
-				CREATE TABLE dashboard_components(
-					id integer PRIMARY KEY AUTOINCREMENT,
-					name TEXT NOT NULL,
-					type TEXT NOT NULL DEFAULT 'line',
-					color TEXT NOT NULL DEFAULT '#1890ff',
-					refresh_interval INTEGER NOT NULL DEFAULT 30,
-					grid_x INTEGER NOT NULL DEFAULT 0,
-					grid_y INTEGER NOT NULL DEFAULT 0,
-					grid_w INTEGER NOT NULL DEFAULT 4,
-					grid_h INTEGER NOT NULL DEFAULT 4,
-					is_enabled INTEGER NOT NULL DEFAULT 1,
-					sort_order INTEGER NOT NULL DEFAULT 0
-				)
-				"""
-			)
-
 		# 初始化默认数据
 		_init_default_data(conn)
 
@@ -589,9 +581,7 @@ def _init_default_data(conn):
 		(3, '定时采集', 'outlook_schedule', 'layui-icon-log', '/admin/outlook/schedule', 4, 1),
 		(3, '采集日志', 'outlook_log', 'layui-icon-file', '/admin/outlook/log', 5, 1),
 		(4, '数智大屏', 'biz_dashboard_home', 'layui-icon-home', '/dashboard', 1, 1),
-		(4, '组件管理', 'biz_dashboard_components', 'layui-icon-set', '/admin/dashboard/components', 2, 1),
 		(5, '系统设置', 'sys_settings', 'layui-icon-set', '/admin/settings', 1, 1),
-		(5, '系统统计', 'sys_stats', 'layui-icon-chart', '/admin/stats', 2, 1),
 	]
 	for f in functions:
 		conn.execute(
@@ -893,14 +883,6 @@ def upgrade_db():
 			if admin_role:
 				conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], db_parent_id))
 				conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], home_id))
-			# 组件管理
-			conn.execute(
-				"INSERT INTO functions(parent_id,name,code,icon,url,sort_order,status) VALUES(?,?,?,?,?,?,?)",
-				(db_parent_id, "组件管理", "biz_dashboard_components", "layui-icon-set", "/admin/dashboard/components", 2, 1)
-			)
-			comp_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
-			if admin_role:
-				conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], comp_id))
 		else:
 			db_parent_id = db_row["id"]
 			# 确保子菜单存在
@@ -914,16 +896,6 @@ def upgrade_db():
 				admin_role = conn.execute("SELECT id FROM roles WHERE code='admin'").fetchone()
 				if admin_role:
 					conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], home_id2))
-			comp_row = conn.execute("SELECT id FROM functions WHERE code='biz_dashboard_components'").fetchone()
-			if not comp_row:
-				conn.execute(
-					"INSERT INTO functions(parent_id,name,code,icon,url,sort_order,status) VALUES(?,?,?,?,?,?,?)",
-					(db_parent_id, "组件管理", "biz_dashboard_components", "layui-icon-set", "/admin/dashboard/components", 2, 1)
-				)
-				comp_id2 = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
-				admin_role = conn.execute("SELECT id FROM roles WHERE code='admin'").fetchone()
-				if admin_role:
-					conn.execute("INSERT OR IGNORE INTO role_functions(role_id,function_id) VALUES(?,?)", (admin_role["id"], comp_id2))
 
 		# 创建 api_interfaces 表
 		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='api_interfaces'")
@@ -1274,4 +1246,38 @@ def upgrade_db():
 
 		# 初始化默认数据
 		_init_default_data(conn)
+
+		# 创建自动化工作流表
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='auto_workflows'")
+		if not cursor.fetchone():
+			conn.execute("""
+				CREATE TABLE auto_workflows(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					name TEXT NOT NULL,
+					description TEXT DEFAULT '',
+					steps TEXT NOT NULL DEFAULT '[]',
+					cron_expression TEXT DEFAULT '',
+					is_enabled INTEGER DEFAULT 1,
+					last_run_at TEXT,
+					last_result TEXT DEFAULT '',
+					create_at TEXT DEFAULT (datetime('now'))
+				)
+			""")
+			conn.execute("""
+				CREATE TABLE workflow_logs(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					workflow_id INTEGER NOT NULL,
+					status TEXT DEFAULT 'running',
+					result TEXT DEFAULT '',
+					started_at TEXT DEFAULT (datetime('now')),
+					finished_at TEXT
+				)
+			""")
+
+		# 清理已删除的功能菜单（避免已有数据库残留）
+		for del_code in ('biz_dashboard_components', 'sys_stats'):
+			del_row = conn.execute("SELECT id FROM functions WHERE code=?", (del_code,)).fetchone()
+			if del_row:
+				conn.execute("DELETE FROM role_functions WHERE function_id=?", (del_row["id"],))
+				conn.execute("DELETE FROM functions WHERE id=?", (del_row["id"],))
 		conn.commit()

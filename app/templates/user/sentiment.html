@@ -78,7 +78,7 @@
     <button class="tab-btn" onclick="switchTab('sentiment', this)">🧠 智慧舆情</button>
 </div>
 
-<!-- Tab 1: 数智大屏 -->
+<!-- Tab 1: 舆情大屏 -->
 <div class="tab-content active" id="tab-dashboard">
     <div class="stats-grid" id="dashStats">
         <div class="stat-card"><div class="stat-value" id="dashTotal">-</div><div class="stat-label">数据总量</div></div>
@@ -147,6 +147,7 @@
         </div>
 
         <div style="text-align:center;margin-top:16px">
+            <div id="analysisTime" style="font-size:12px;color:rgba(255,255,255,0.3);margin-bottom:12px"></div>
             <button class="btn-analyze" onclick="startAnalysis()">🔄 重新分析</button>
         </div>
     </div>
@@ -168,7 +169,7 @@ function switchTab(tabName, btn) {
     document.getElementById('tab-' + tabName).classList.add('active');
 
     if (tabName === 'dashboard') {
-        document.querySelector('.content-header h3').textContent = '数智大屏';
+        document.querySelector('.content-header h3').textContent = '舆情大屏';
         initDashboardCharts();
     } else {
         document.querySelector('.content-header h3').textContent = '智慧舆情分析';
@@ -191,114 +192,43 @@ function initDashboardCharts() {
 
             document.getElementById('dashTotal').textContent = data.total || 0;
             document.getElementById('dashToday').textContent = data.today || 0;
-            document.getElementById('dashSources').textContent = (data.sources || []).length;
+            document.getElementById('dashSources').textContent = (data.sources || []).length || 0;
             document.getElementById('dashTasks').textContent = data.tasks || 0;
 
-            chartSource.setOption({
-                tooltip: { trigger: 'item' },
-                legend: { bottom: '0%', left: 'center', textStyle: { color: '#8899bb', fontSize: 11 } },
-                series: [{
-                    type: 'pie', radius: ['40%', '70%'],
-                    itemStyle: { borderRadius: 8, borderColor: '#0a0e1a', borderWidth: 2 },
-                    label: { show: false },
-                    data: data.sources || []
-                }]
-            });
-
             chartTrend.setOption({
-                tooltip: { trigger: 'axis' },
-                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-                xAxis: {
-                    type: 'category', boundaryGap: false,
-                    data: data.trend.dates || [],
-                    axisLine: { lineStyle: { color: '#334' } },
-                    axisLabel: { color: '#8899bb', fontSize: 10 }
-                },
-                yAxis: {
-                    type: 'value',
-                    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-                    axisLabel: { color: '#8899bb', fontSize: 10 }
-                },
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: '8%', right: '6%', top: '12%', bottom: '10%' },
+                xAxis: { type: 'category', data: data.trend.dates || [], axisLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 10 }, axisLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } } },
+                yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } }, axisLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 10 } },
+                series: [{ type: 'bar', barWidth: '45%', data: data.trend.values || [], itemStyle: { borderRadius: [4,4,0,0], color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#00d4ff' }, { offset: 1, color: '#00d4ff33' }] } } }]
+            });
+
+            chartSource.setOption({
+                tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
                 series: [{
-                    data: data.trend.values || [], type: 'line', smooth: true,
-                    lineStyle: { color: '#1890ff', width: 2 },
-                    itemStyle: { color: '#1890ff' },
-                    areaStyle: {
-                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                            { offset: 0, color: 'rgba(24,144,255,0.3)' },
-                            { offset: 1, color: 'rgba(24,144,255,0)' }
-                        ])
-                    }
+                    type: 'pie', radius: ['45%', '72%'], center: ['50%', '55%'],
+                    label: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
+                    labelLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+                    data: (data.sources || []).map(function(s) {
+                        var colors = ['#00d4ff','#7b2ff7','#52c41a','#ff4d4f','#ffc107','#1890ff','#f5222d','#722ed1','#13c2c2','#fa8c16'];
+                        return { value: s.value, name: s.name, itemStyle: { color: colors[Math.floor(Math.random() * colors.length)] } };
+                    })
                 }]
             });
 
-            var rankingData = (data.sources || []).slice(0, 10);
-            rankingData.sort(function(a, b) { return b.value - a.value; });
-            var rankNames = rankingData.map(function(d) { return d.name; });
-            var rankValues = rankingData.map(function(d) { return d.value; });
-            var rankColors = [];
-            var medalColors = ['#ffd700','#c0c0c0','#cd7f32','#1890ff','#52c41a','#faad14','#a78bfa','#ff6b6b','#00d4ff','#ff85c0'];
-            for (var i = 0; i < rankingData.length; i++) {
-                rankColors.push(medalColors[i % medalColors.length]);
-            }
-
+            var rankNames = (data.sources || []).map(function(s) { return s.name; }).reverse();
+            var rankValues = (data.sources || []).map(function(s) { return s.value; }).reverse();
             chartRanking.setOption({
-                tooltip: {
-                    trigger: 'axis',
-                    axisPointer: { type: 'shadow' },
-                    formatter: function(params) {
-                        var p = params[0];
-                        var idx = p.dataIndex;
-                        var medal = idx === 0 ? '🥇 ' : (idx === 1 ? '🥈 ' : (idx === 2 ? '🥉 ' : ''));
-                        return medal + p.name + '<br/>采集量: <strong>' + p.value + '</strong> 条';
-                    }
-                },
-                grid: { left: '10%', right: '10%', bottom: '8%', top: '5%', containLabel: true },
-                xAxis: {
-                    type: 'value',
-                    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
-                    axisLabel: { color: 'rgba(255,255,255,0.35)', fontSize: 10 }
-                },
-                yAxis: {
-                    type: 'category',
-                    data: rankNames.slice().reverse(),
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: 'rgba(255,255,255,0.6)', fontSize: 11,
-                        formatter: function(name) {
-                            var idx = rankNames.indexOf(name);
-                            if (idx === 0) return '🥇 ' + name;
-                            if (idx === 1) return '🥈 ' + name;
-                            if (idx === 2) return '🥉 ' + name;
-                            return name;
-                        }
-                    }
-                },
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: '20%', right: '12%', top: '8%', bottom: '8%' },
+                xAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } }, axisLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 10 } },
+                yAxis: { type: 'category', data: rankNames, axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 11 }, axisLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } } },
                 series: [{
-                    type: 'bar',
-                    data: rankValues.slice().reverse().map(function(v, i) {
-                        var idx = rankValues.length - 1 - i;
-                        return {
-                            value: v,
-                            itemStyle: {
-                                color: {
-                                    type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
-                                    colorStops: [
-                                        { offset: 0, color: rankColors[idx] },
-                                        { offset: 1, color: rankColors[idx] + '88' }
-                                    ]
-                                },
-                                borderRadius: [0, 6, 6, 0]
-                            }
-                        };
+                    type: 'bar', data: rankValues.map(function(v, i) {
+                        return { value: v, itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: '#00d4ff' }, { offset: 1, color: '#00d4ff88' }] }, borderRadius: [0, 6, 6, 0] } };
                     }),
                     barWidth: '55%',
-                    label: {
-                        show: true, position: 'right',
-                        color: 'rgba(255,255,255,0.5)', fontSize: 11,
-                        formatter: function(p) { return p.value + ' 条'; }
-                    },
+                    label: { show: true, position: 'right', color: 'rgba(255,255,255,0.5)', fontSize: 11, formatter: function(p) { return p.value + ' 条'; } },
                     animationDuration: 800,
                     animationEasing: 'elasticOut'
                 }]
@@ -324,7 +254,6 @@ function initDashboardCharts() {
         .catch(function(err) { console.error('加载图表数据失败:', err); });
 }
 
-
 function loadSentimentStats() {
     fetch('/api/sentiment/stats')
         .then(function(r) { return r.json(); })
@@ -337,6 +266,21 @@ function loadSentimentStats() {
             }
         })
         .catch(function(err) { console.error('加载统计失败:', err); });
+
+    fetch('/api/sentiment/result')
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.code === 0 && res.data && res.data.result) {
+                renderAnalysis(res.data.result);
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('analysisResult').style.display = 'block';
+                var t = res.data.create_at || '';
+                if (t) {
+                    document.getElementById('analysisTime').textContent = '上次分析时间：' + t;
+                }
+            }
+        })
+        .catch(function(err) { console.error('加载已保存结果失败:', err); });
 }
 
 function getXsrfToken() {
@@ -364,6 +308,7 @@ function startAnalysis() {
             renderAnalysis(res.data);
             document.getElementById('emptyState').style.display = 'none';
             document.getElementById('analysisResult').style.display = 'block';
+            document.getElementById('analysisTime').textContent = '本次分析时间：' + new Date().toLocaleString();
             if (typeof layer !== 'undefined') layer.msg('分析完成', { icon: 1 });
         } else {
             if (typeof layer !== 'undefined') layer.msg(res.msg || '分析失败', { icon: 2, time: 3000 });
@@ -440,6 +385,18 @@ function renderAnalysis(data) {
     document.getElementById('trendPrediction').innerHTML = trendHtml;
 
     document.getElementById('summaryBox').textContent = data.summary || '暂无总结';
+
+    // 语音播报分析结果
+    setTimeout(function(){
+        if(window.SpeechManager && window.SpeechManager.isEnabled()){
+            var hotCount = (data.hot_topics || []).length;
+            var highRisks = (data.risks || []).filter(function(r){return r.level==='高';}).length;
+            var text = '舆情分析完成，共发现' + hotCount + '个热点话题';
+            if(highRisks > 0) text += '，其中' + highRisks + '个高风险事件';
+            text += '。' + (data.summary || '').substring(0, 60);
+            window.SpeechManager.speak(text);
+        }
+    }, 500);
 }
 
 document.addEventListener('DOMContentLoaded', function() {

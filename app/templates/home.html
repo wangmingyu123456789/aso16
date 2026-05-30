@@ -86,6 +86,8 @@
     </style>
 </head>
 <body>
+
+{% include 'components/gesture_panel.html' %}
 <div class="app">
     <!-- 左侧导航栏 -->
     <div class="sidebar">
@@ -269,5 +271,11 @@ function logout() {
     });
 })();
 </script>
+<script src="/static/js/gesture-settings.js"></script>
+<script src="/static/js/gesture-rule-engine.js"></script>
+<script src="/static/js/gesture-feedback.js"></script>
+<script src="/static/js/gesture-event-bus.js"></script>
+<script src="/static/js/gesture.js"></script>
+<script src="/static/js/voice-broadcast.js"></script>
 </body>
 </html>
