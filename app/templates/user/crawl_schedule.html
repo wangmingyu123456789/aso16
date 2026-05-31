@@ -109,7 +109,9 @@
 <div class="layui-form-item"><label class="layui-form-label">数据源</label><div class="layui-input-block"><select name="source_id" lay-filter="sourceChange" lay-search><option value="0">请选择数据源</option></select></div></div>
 <div class="layui-form-item"><label class="layui-form-label">数据源名称</label><div class="layui-input-block"><input type="text" name="source_name" class="layui-input" readonly></div></div>
 <div class="layui-form-item"><label class="layui-form-label">关键词</label><div class="layui-input-block"><input type="text" name="keyword" class="layui-input" placeholder="可选，支持URL模板关键词替换"></div></div>
-<div class="layui-form-item"><label class="layui-form-label">执行时间</label><div class="layui-input-block"><div class="cron-input-group"><div class="cron-input-item"><input type="number" name="sch_year" class="layui-input" placeholder="年" min="2026" max="2099"><span class="cron-unit">年</span></div><div class="cron-input-item"><input type="number" name="sch_month" class="layui-input" placeholder="月" min="1" max="12"><span class="cron-unit">月</span></div><div class="cron-input-item"><input type="number" name="sch_day" class="layui-input" placeholder="日" min="1" max="31"><span class="cron-unit">日</span></div><div class="cron-input-item"><input type="number" name="sch_hour" class="layui-input" placeholder="时" min="0" max="23"><span class="cron-unit">时</span></div><div class="cron-input-item"><input type="number" name="sch_minute" class="layui-input" placeholder="分" min="0" max="59"><span class="cron-unit">分</span></div></div></div></div>
+<div class="layui-form-item"><label class="layui-form-label">采集类型</label><div class="layui-input-block"><input type="radio" name="schedule_type" value="once" title="一次性" checked lay-filter="schedule_type"><input type="radio" name="schedule_type" value="daily" title="每日采集" lay-filter="schedule_type"></div></div>
+<div class="layui-form-item" id="onceTimeGroup"><label class="layui-form-label">执行时间</label><div class="layui-input-block"><div class="cron-input-group"><div class="cron-input-item"><input type="number" name="sch_year" class="layui-input" placeholder="年" min="2026" max="2099"><span class="cron-unit">年</span></div><div class="cron-input-item"><input type="number" name="sch_month" class="layui-input" placeholder="月" min="1" max="12"><span class="cron-unit">月</span></div><div class="cron-input-item"><input type="number" name="sch_day" class="layui-input" placeholder="日" min="1" max="31"><span class="cron-unit">日</span></div><div class="cron-input-item"><input type="number" name="sch_hour" class="layui-input" placeholder="时" min="0" max="23"><span class="cron-unit">时</span></div><div class="cron-input-item"><input type="number" name="sch_minute" class="layui-input" placeholder="分" min="0" max="59"><span class="cron-unit">分</span></div></div></div></div>
+<div class="layui-form-item" id="dailyTimeGroup" style="display:none"><label class="layui-form-label">每日时间</label><div class="layui-input-block"><div class="cron-input-group"><div class="cron-input-item"><input type="number" name="daily_hour" class="layui-input" placeholder="时" min="0" max="23"><span class="cron-unit">时</span></div><div class="cron-input-item"><input type="number" name="daily_minute" class="layui-input" placeholder="分" min="0" max="59"><span class="cron-unit">分</span></div></div></div></div>
 <div class="layui-form-item"><label class="layui-form-label">采集页数</label><div class="layui-input-block"><input type="number" name="pages" value="1" class="layui-input" min="1"></div></div>
 <div class="layui-form-item"><label class="layui-form-label">每页条数</label><div class="layui-input-block"><input type="number" name="per_page" value="10" class="layui-input" min="1"></div></div>
 <div class="layui-form-item"><label class="layui-form-label">启用</label><div class="layui-input-block"><input type="checkbox" name="is_enabled" value="1" lay-skin="switch" lay-text="ON|OFF" checked></div></div>
@@ -177,8 +179,14 @@ layui.use(['form','layer','laypage'], function(){
 
 	function escHtml(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
-	function formatCronDisplay(cron){
+	function formatCronDisplay(cron, type){
 		if(!cron) return '未设置';
+		if(type === 'daily'){
+			var parts=cron.trim().split(/\s+/);
+			var mn=parseInt(parts[0]), h=parseInt(parts[1]);
+			if(isNaN(mn)||isNaN(h)) return escHtml(cron);
+			return '每日 '+String(h).padStart(2,'0')+':'+String(mn).padStart(2,'0');
+		}
 		var parts=cron.trim().split(/\s+/);
 		if(parts.length<4) return escHtml(cron);
 		var mn=parseInt(parts[0]), h=parseInt(parts[1]), d=parseInt(parts[2]), m=parseInt(parts[3]);
@@ -207,7 +215,7 @@ layui.use(['form','layer','laypage'], function(){
 						html+='<input type="checkbox" class="card-check" value="'+d.id+'">';
 						html+='<div class="card-top"><span class="card-source">'+escHtml(srcLabel)+'</span><span class="card-badge '+badgeCls+'">'+badgeText+'</span></div>';
 						html+='<div class="card-meta">';
-						html+='<div class="card-meta-row"><span class="card-meta-label">执行</span><span class="card-time">'+formatCronDisplay(d.cron_expression||'')+'</span></div>';
+						html+='<div class="card-meta-row"><span class="card-meta-label">执行</span><span class="card-time">'+formatCronDisplay(d.cron_expression||'', d.schedule_type)+'</span></div>';
 						if(d.keyword) html+='<div class="card-meta-row"><span class="card-meta-label">关键词</span><span class="card-kw">'+escHtml(d.keyword)+'</span></div>';
 						html+='<div class="card-meta-row"><span class="card-meta-label">采集</span><span class="card-pages">'+d.pages+' 页 × '+d.per_page+' 条/页</span></div>';
 						html+='</div>';
@@ -231,9 +239,23 @@ layui.use(['form','layer','laypage'], function(){
 	$('#btnAdd').on('click', function(){
 		layerIdx=layer.open({type:1,title:'新增定时任务',area:'580px',content:$('#formLayer')});
 		var now=new Date();
-		form.val('schForm',{id:'',source_id:'0',source_name:'',keyword:'',sch_year:String(now.getFullYear()),sch_month:String(now.getMonth()+1),sch_day:String(now.getDate()),sch_hour:String(now.getHours()),sch_minute:String(now.getMinutes()),pages:'1',per_page:'10'});
+		form.val('schForm',{id:'',source_id:'0',source_name:'',keyword:'',schedule_type:'once',sch_year:String(now.getFullYear()),sch_month:String(now.getMonth()+1),sch_day:String(now.getDate()),sch_hour:String(now.getHours()),sch_minute:String(now.getMinutes()),daily_hour:'08',daily_minute:'00',pages:'1',per_page:'10'});
 		$('#formLayer input[name=is_enabled]').prop('checked',true);
+		$('#onceTimeGroup').show();
+		$('#dailyTimeGroup').hide();
 		form.render();
+		form.render('radio');
+	});
+
+	// 采集类型切换
+	form.on('radio(schedule_type)', function(data){
+		if(data.value === 'daily'){
+			$('#onceTimeGroup').hide();
+			$('#dailyTimeGroup').show();
+		} else {
+			$('#onceTimeGroup').show();
+			$('#dailyTimeGroup').hide();
+		}
 	});
 
 	window.editSch=function(id){
@@ -246,9 +268,18 @@ layui.use(['form','layer','laypage'], function(){
 				var sch_day=cronParts.length>=3?parseInt(cronParts[2])||1:1;
 				var sch_hour=cronParts.length>=2?parseInt(cronParts[1])||0:0;
 				var sch_minute=cronParts.length>=1?parseInt(cronParts[0])||0:0;
-				form.val('schForm',{id:d.id,source_id:String(d.source_id||''),source_name:d.source_name||'',keyword:d.keyword||'',sch_year:String(new Date().getFullYear()),sch_month:String(sch_month),sch_day:String(sch_day),sch_hour:String(sch_hour),sch_minute:String(sch_minute),pages:String(d.pages||1),per_page:String(d.per_page||10)});
+				var st = d.schedule_type || 'once';
+				form.val('schForm',{id:d.id,source_id:String(d.source_id||''),source_name:d.source_name||'',keyword:d.keyword||'',schedule_type:st,sch_year:String(new Date().getFullYear()),sch_month:String(sch_month),sch_day:String(sch_day),sch_hour:String(sch_hour),sch_minute:String(sch_minute),daily_hour:String(sch_hour),daily_minute:String(sch_minute),pages:String(d.pages||1),per_page:String(d.per_page||10)});
 				$('#formLayer input[name=is_enabled]').prop('checked',d.is_enabled==1);
+				if(st === 'daily'){
+					$('#onceTimeGroup').hide();
+					$('#dailyTimeGroup').show();
+				} else {
+					$('#onceTimeGroup').show();
+					$('#dailyTimeGroup').hide();
+				}
 				form.render();
+				form.render('radio');
 			}
 		});
 	};
@@ -295,17 +326,27 @@ layui.use(['form','layer','laypage'], function(){
 		data.per_page=parseInt(data.per_page)||10;
 		data.source_id=parseInt(data.source_id)||0;
 		if(!data.source_id){ layer.msg('请选择数据源'); return false; }
-		var sch_year=parseInt(data.sch_year);
-		var sch_month=parseInt(data.sch_month);
-		var sch_day=parseInt(data.sch_day);
-		var sch_hour=parseInt(data.sch_hour);
-		var sch_minute=parseInt(data.sch_minute);
-		if(isNaN(sch_year)||sch_year<2026||sch_year>2099){ layer.msg('请输入有效的年份(2026-2099)'); return false; }
-		if(isNaN(sch_month)||sch_month<1||sch_month>12){ layer.msg('请输入有效的月份(1-12)'); return false; }
-		if(isNaN(sch_day)||sch_day<1||sch_day>31){ layer.msg('请输入有效的日期(1-31)'); return false; }
-		if(isNaN(sch_hour)||sch_hour<0||sch_hour>23){ layer.msg('请输入有效的小时(0-23)'); return false; }
-		if(isNaN(sch_minute)||sch_minute<0||sch_minute>59){ layer.msg('请输入有效的分钟(0-59)'); return false; }
-		data.cron_expression=sch_minute+' '+sch_hour+' '+sch_day+' '+sch_month+' *';
+
+		if(data.schedule_type === 'daily'){
+			var dh=parseInt($('input[name=daily_hour]').val());
+			var dm=parseInt($('input[name=daily_minute]').val());
+			if(isNaN(dh)||dh<0||dh>23){ layer.msg('请输入有效的小时(0-23)'); return false; }
+			if(isNaN(dm)||dm<0||dm>59){ layer.msg('请输入有效的分钟(0-59)'); return false; }
+			data.cron_expression=dm+' '+dh+' 0 0 0';
+			data.sch_year=0;
+		} else {
+			var sch_year=parseInt($('input[name=sch_year]').val());
+			var sch_month=parseInt($('input[name=sch_month]').val());
+			var sch_day=parseInt($('input[name=sch_day]').val());
+			var sch_hour=parseInt($('input[name=sch_hour]').val());
+			var sch_minute=parseInt($('input[name=sch_minute]').val());
+			if(isNaN(sch_year)||sch_year<2026||sch_year>2099){ layer.msg('请输入有效的年份(2026-2099)'); return false; }
+			if(isNaN(sch_month)||sch_month<1||sch_month>12){ layer.msg('请输入有效的月份(1-12)'); return false; }
+			if(isNaN(sch_day)||sch_day<1||sch_day>31){ layer.msg('请输入有效的日期(1-31)'); return false; }
+			if(isNaN(sch_hour)||sch_hour<0||sch_hour>23){ layer.msg('请输入有效的小时(0-23)'); return false; }
+			if(isNaN(sch_minute)||sch_minute<0||sch_minute>59){ layer.msg('请输入有效的分钟(0-59)'); return false; }
+			data.cron_expression=sch_minute+' '+sch_hour+' '+sch_day+' '+sch_month+' *';
+		}
 		data._xsrf=getCsrfToken();
 		var act=data.id?'edit':'add';
 		$.post('/user/outlook/schedule/api?action='+act,data,function(r){

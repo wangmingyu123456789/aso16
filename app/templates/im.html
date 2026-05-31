@@ -280,8 +280,8 @@
         .add-friend-header h3{font-size:18px;font-weight:600;background:linear-gradient(135deg,#a78bfa,#00d4ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
         .add-friend-close{width:32px;height:32px;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .2s}
         .add-friend-close:hover{background:rgba(255,77,79,0.2);color:#ff4d4f}
-        .add-friend-search{padding:16px 24px}
-        .add-friend-search input{width:100%;height:44px;border-radius:12px;border:1.5px solid rgba(123,47,247,0.3);background:rgba(255,255,255,0.06);color:#f0f0f0;padding:0 16px;font-size:14px;outline:none;transition:all .3s}
+        .add-friend-search{display:flex;gap:10px;padding:16px 24px}
+        .add-friend-search input{flex:1;height:44px;border-radius:12px;border:1.5px solid rgba(123,47,247,0.3);background:rgba(255,255,255,0.06);color:#f0f0f0;padding:0 16px;font-size:14px;outline:none;transition:all .3s}
         .add-friend-search input:focus{border-color:#7b2ff7;box-shadow:0 0 20px rgba(123,47,247,0.15)}
         .add-friend-search input::placeholder{color:rgba(255,255,255,0.25)}
         .add-friend-list{padding:0 24px 20px;flex:1;min-height:0;overflow-y:auto}
@@ -324,13 +324,6 @@
 
         /* ===== 群管理-邀请成员弹窗 ===== */
         .gm-add-member-modal{width:500px;max-height:75vh;background:#2a324a;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.4);display:flex;flex-direction:column}
-        .gm-invite-tabs{display:flex;padding:0 24px;border-bottom:1px solid rgba(255,255,255,0.06)}
-        .gm-invite-tab{flex:1;padding:12px 0;text-align:center;font-size:13px;color:rgba(255,255,255,0.4);cursor:pointer;position:relative;transition:all .25s}
-        .gm-invite-tab.active{color:#a78bfa}
-        .gm-invite-tab.active::after{content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,#7b2ff7,#00d4ff);border-radius:1px}
-        .gm-invite-tab:hover{color:rgba(255,255,255,0.7)}
-        .gm-invite-content{display:none}
-        .gm-invite-content.active{display:block}
         .gm-invite-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;margin-bottom:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);transition:all .25s}
         .gm-invite-item:hover{background:rgba(255,255,255,0.07)}
         .gm-invite-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7b2ff7,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#fff;flex-shrink:0}
@@ -949,6 +942,12 @@ function onReceiveMessage(data) {
         // 标记已读
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({type: 'read', conversation_id: currentConvId}));
+        }
+    }
+    // 如果是毒鸡汤助手发送的消息，使用语音播报
+    if (data.sender_name && data.sender_name.indexOf('毒鸡汤') !== -1 && data.content) {
+        if (window.SpeechManager) {
+            window.SpeechManager.speak(data.content);
         }
     }
     loadConversations();
@@ -2437,53 +2436,17 @@ function showGmAddMember(){
     html += '<input type="text" id="gmInviteSearch" placeholder="搜索用户名..." onkeyup="if(event.keyCode===13)gmInviteSearchUsers()">';
     html += '<button class="add-friend-btn" style="padding:8px 16px" onclick="gmInviteSearchUsers()">搜索</button>';
     html += '</div>';
-    html += '<div class="gm-invite-tabs">';
-    html += '<div class="gm-invite-tab active" id="gmInviteTabFriends" onclick="switchGmInviteTab(\'friends\')">好友</div>';
-    html += '<div class="gm-invite-tab" id="gmInviteTabSearch" onclick="switchGmInviteTab(\'search\')">搜索结果</div>';
-    html += '</div>';
-    html += '<div class="gm-invite-content active" id="gmInviteContentFriends">';
-    html += '<div class="add-friend-list" id="gmInviteFriendsList"><div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">加载中...</div></div>';
-    html += '</div>';
-    html += '<div class="gm-invite-content" id="gmInviteContentSearch">';
-    html += '<div class="add-friend-list" id="gmInviteSearchResults"><div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">搜索用户后显示</div></div>';
-    html += '</div>';
+    html += '<div class="add-friend-list" id="gmInviteResults"><div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">输入用户名搜索可邀请的成员</div></div>';
     html += '</div>';
     document.getElementById('groupManageModal').innerHTML = html;
-    loadGmInviteFriends();
-}
-
-function switchGmInviteTab(tab) {
-    document.getElementById('gmInviteTabFriends').className = 'gm-invite-tab' + (tab === 'friends' ? ' active' : '');
-    document.getElementById('gmInviteTabSearch').className = 'gm-invite-tab' + (tab === 'search' ? ' active' : '');
-    document.getElementById('gmInviteContentFriends').className = 'gm-invite-content' + (tab === 'friends' ? ' active' : '');
-    document.getElementById('gmInviteContentSearch').className = 'gm-invite-content' + (tab === 'search' ? ' active' : '');
-}
-
-function loadGmInviteFriends() {
-    var groupId = _gmInviteGroupId;
-    fetch('/im/api/group/member/search?group_id=' + groupId).then(function(r){return r.json()}).then(function(res){
-        var container = document.getElementById('gmInviteFriendsList');
-        if (!container) return;
-        if (res.code !== 0) {
-            container.innerHTML = '<div class="add-friend-empty">加载失败</div>';
-            return;
-        }
-        var users = res.data.users || [];
-        if (users.length === 0) {
-            container.innerHTML = '<div class="add-friend-empty">暂无可邀请的好友</div>';
-            return;
-        }
-        renderGmInviteUsers(container, users, true);
-    });
 }
 
 function gmInviteSearchUsers() {
     var keyword = document.getElementById('gmInviteSearch').value.trim();
     if (!keyword) { showToast('请输入搜索关键词', 'warn'); return; }
     var groupId = _gmInviteGroupId;
-    var container = document.getElementById('gmInviteSearchResults');
+    var container = document.getElementById('gmInviteResults');
     container.innerHTML = '<div style="text-align:center;padding:20px;color:rgba(255,255,255,0.2);font-size:13px">搜索中...</div>';
-    switchGmInviteTab('search');
 
     fetch('/im/api/group/member/search?group_id=' + groupId + '&keyword=' + encodeURIComponent(keyword)).then(function(r){return r.json()}).then(function(res){
         if (!container) return;
@@ -2496,11 +2459,11 @@ function gmInviteSearchUsers() {
             container.innerHTML = '<div class="add-friend-empty">未找到用户</div>';
             return;
         }
-        renderGmInviteUsers(container, users, false);
+        renderGmInviteUsers(container, users);
     });
 }
 
-function renderGmInviteUsers(container, users, isFriendsTab) {
+function renderGmInviteUsers(container, users) {
     var groupId = _gmInviteGroupId;
     var html = '';
     users.forEach(function(u){
@@ -2530,7 +2493,11 @@ function gmDoInvite(userId, userName) {
         }).then(function(r){return r.json()}).then(function(res){
             if (res.code === 0) {
                 showToast('已向 ' + userName + ' 发送邀请', 'success');
-                loadGmInviteFriends();
+                // 刷新搜索结果，更新已发邀请状态
+                var keyword = document.getElementById('gmInviteSearch').value.trim();
+                if (keyword) {
+                    gmInviteSearchUsers();
+                }
             } else {
                 showToast(res.msg || '邀请失败', 'error');
             }
@@ -3419,7 +3386,7 @@ function removeFriend(friendId, friendName) {
 })();
 </script>
 
-<script src="/static/js/speech-manager.js"></script>
+<script src="/static/js/voice-broadcast.js"></script>
 <script src="/static/js/gesture-settings.js"></script>
 <script src="/static/js/gesture-feedback.js"></script>
 <script src="/static/js/gesture-rule-engine.js"></script>

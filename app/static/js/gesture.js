@@ -5,16 +5,22 @@ var hands = null;
 var isRunning = false;
 var handDetected = false;
 var frameTimer = null;
+var mediaPipeLoading = false;
 
 var GestureController = {
 	init: function(){
 		this.loadSettings();
 		this.bindEvents();
+		this.restoreSpeechState();
+		this.restorePanelState();
+		// 提前预加载MediaPipe，不阻塞摄像头启动
+		this.preloadMediaPipe();
 		setTimeout(function(){
-			if(localStorage.getItem('gesture_auto_start') === 'true'){
+			var panelCollapsed = localStorage.getItem('gesture_panel_collapsed') === 'true';
+			if(localStorage.getItem('gesture_auto_start') === 'true' && !panelCollapsed){
 				GestureController.toggleCamera();
 			}
-		}, 1000);
+		}, 300);
 	},
 
 	loadSettings: function(){
@@ -28,8 +34,6 @@ var GestureController = {
 		if(el('gsFist')) el('gsFist').checked = s.get('gestures.fist') !== false;
 		if(el('gsSwipeLeft')) el('gsSwipeLeft').checked = s.get('gestures.swipe_left') !== false;
 		if(el('gsSwipeRight')) el('gsSwipeRight').checked = s.get('gestures.swipe_right') !== false;
-		if(el('gsSwipeUp')) el('gsSwipeUp').checked = s.get('gestures.swipe_up') !== false;
-		if(el('gsSwipeDown')) el('gsSwipeDown').checked = s.get('gestures.swipe_down') !== false;
 		this.updateUIState();
 	},
 
@@ -42,6 +46,11 @@ var GestureController = {
 		panel.classList.toggle('collapsed');
 		var btn = panel.querySelector('.gp-btn-collapse');
 		if(btn) btn.textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
+		var isCollapsed = panel.classList.contains('collapsed');
+		localStorage.setItem('gesture_panel_collapsed', isCollapsed ? 'true' : 'false');
+		if(isCollapsed && isRunning){
+			this.stopCamera();
+		}
 	},
 
 	toggleSettings: function(){
@@ -71,6 +80,21 @@ var GestureController = {
 		var self = this;
 
 		if(typeof Hands === 'undefined'){
+			if(mediaPipeLoading){
+				this.setStatus(null, 'MediaPipe加载中...');
+				// 等待加载完成后再启动
+				var waitInterval = setInterval(function(){
+					if(typeof Hands !== 'undefined' || !mediaPipeLoading){
+						clearInterval(waitInterval);
+						if(typeof Hands !== 'undefined'){
+							self.startCamera();
+						} else {
+							self.setStatus('error', 'MediaPipe加载失败');
+						}
+					}
+				}, 100);
+				return;
+			}
 			this.setStatus(null, '加载MediaPipe中...');
 			this.loadMediaPipe(function(success){
 				if(success){
@@ -91,8 +115,8 @@ var GestureController = {
 			hands.setOptions({
 				maxNumHands: 1,
 				modelComplexity: 1,
-				minDetectionConfidence: 0.75,
-				minTrackingConfidence: 0.7
+				minDetectionConfidence: 0.7,
+				minTrackingConfidence: 0.6
 			});
 			hands.onResults(function(results){ self.onResults(results); });
 		}
@@ -101,26 +125,30 @@ var GestureController = {
 			navigator.mediaDevices.getUserMedia({video:{width:{ideal:320},height:{ideal:240},facingMode:'user'}})
 				.then(function(stream){
 					video.srcObject = stream;
-					video.play().then(function(){
-						var wrap = document.getElementById('gpVideoWrap');
-						if(wrap){
-							var rect = wrap.getBoundingClientRect();
-							var canvas = document.getElementById('gpCanvas');
-							if(canvas){
-								canvas.width = rect.width * (window.devicePixelRatio || 1);
-								canvas.height = rect.height * (window.devicePixelRatio || 1);
-								canvas.style.width = rect.width + 'px';
-								canvas.style.height = rect.height + 'px';
-							}
-							window.GestureFeedback.init(canvas);
-							window.GestureFeedback.start();
+					var wrap = document.getElementById('gpVideoWrap');
+					if(wrap){
+						var rect = wrap.getBoundingClientRect();
+						var canvas = document.getElementById('gpCanvas');
+						if(canvas){
+							canvas.width = rect.width * (window.devicePixelRatio || 1);
+							canvas.height = rect.height * (window.devicePixelRatio || 1);
+							canvas.style.width = rect.width + 'px';
+							canvas.style.height = rect.height + 'px';
 						}
-						isRunning = true;
-						handDetected = false;
-						self.setStatus(null, '等待手部...');
-						document.getElementById('gpToggleBtn').textContent = '⏹ 停止摄像头';
-						document.getElementById('gpToggleBtn').classList.add('active');
-						localStorage.setItem('gesture_auto_start', 'true');
+						window.GestureFeedback.init(canvas);
+						window.GestureFeedback.start();
+					}
+					isRunning = true;
+					handDetected = false;
+					self.setStatus(null, '等待手部...');
+					document.getElementById('gpToggleBtn').textContent = '⏹ 停止摄像头';
+					document.getElementById('gpToggleBtn').classList.add('active');
+					self.expand();
+					localStorage.setItem('gesture_auto_start', 'true');
+					// 等视频播放完成后才开始发送帧
+					video.play().then(function(){
+						self.sendFrame();
+					}).catch(function(){
 						self.sendFrame();
 					});
 				})
@@ -158,12 +186,31 @@ var GestureController = {
 		document.getElementById('gpLiveGesture').className = 'gp-live-gesture waiting';
 		document.getElementById('gpLiveConfidence').textContent = '';
 		localStorage.setItem('gesture_auto_start', 'false');
+		// 手动关闭后自动折叠面板
+		this.collapse();
+	},
+
+	collapse: function(){
+		var panel = document.getElementById('gesturePanel');
+		if(!panel) return;
+		panel.classList.add('collapsed');
+		var btn = panel.querySelector('.gp-btn-collapse');
+		if(btn) btn.textContent = '▶';
+		localStorage.setItem('gesture_panel_collapsed', 'true');
+	},
+
+	expand: function(){
+		var panel = document.getElementById('gesturePanel');
+		if(!panel) return;
+		panel.classList.remove('collapsed');
+		var btn = panel.querySelector('.gp-btn-collapse');
+		if(btn) btn.textContent = '◀';
+		localStorage.setItem('gesture_panel_collapsed', 'false');
 	},
 
 	sendFrame: function(){
 		if(!isRunning) return;
 		
-		// 清除任何现有的定时器，确保只有一个活跃
 		if(frameTimer){
 			clearTimeout(frameTimer);
 			frameTimer = null;
@@ -171,38 +218,29 @@ var GestureController = {
 		
 		var video = document.getElementById('gpVideo');
 		if(!video || video.readyState < 2 || !hands){
-			console.log('[Gesture] Video not ready, readyState:', video ? video.readyState : 'no video');
-			// 视频未准备好，延迟重试
 			frameTimer = setTimeout(function(){ 
 				GestureController.sendFrame(); 
-			}, 100);
+			}, 50);
 			return;
 		}
 		
-		console.log('[Gesture] Sending frame, video size:', video.videoWidth, 'x', video.videoHeight);
 		try{
 			hands.send({image: video});
 		}catch(e){
-			console.error('[Gesture] send error:', e);
-			// 发送失败，延迟后重试
 			frameTimer = setTimeout(function(){ 
 				GestureController.sendFrame(); 
-			}, 200);
+			}, 50);
 		}
 	},
 
 	onResults: function(results){
-		console.log('[Gesture] onResults called, results:', results);
 		
-		// 清除可能存在的旧定时器
 		if(frameTimer){
 			clearTimeout(frameTimer);
 			frameTimer = null;
 		}
 		
-		// 如果已停止，不再处理
 		if(!isRunning){
-			console.log('[Gesture] Stopped, ignoring results');
 			return;
 		}
 		
@@ -210,8 +248,6 @@ var GestureController = {
 		var confEl = document.getElementById('gpLiveConfidence');
 
 		if(!results || !results.multiHandLandmarks || results.multiHandLandmarks.length === 0){
-			// 没有检测到手
-			console.log('[Gesture] No hand detected');
 			handDetected = false;
 			this.setStatus(null, '等待手部...');
 			if(liveEl){
@@ -222,32 +258,25 @@ var GestureController = {
 			window.GestureFeedback.updateLandmarks(null);
 			window.GestureFeedback.updateGesture(null);
 		} else {
-			// 检测到手部
-			console.log('[Gesture] Hand detected! Landmarks count:', results.multiHandLandmarks[0].length);
 			var rawLandmarks = results.multiHandLandmarks[0];
 			var landmarks = [];
 			for(var i = 0; i < rawLandmarks.length; i++){
 				landmarks.push({
-					x: 1 - rawLandmarks[i].x,  // X轴镜像
+					x: 1 - rawLandmarks[i].x,
 					y: rawLandmarks[i].y,
 					z: rawLandmarks[i].z
 				});
 			}
 
-			// 只在首次检测到时更新状态
 			if(!handDetected){
 				handDetected = true;
 				this.setStatus('active', '已检测到手部');
-				console.log('[Gesture] First hand detection!');
 			}
 
-			// 更新21点可视化
 			window.GestureFeedback.updateLandmarks(landmarks);
 
-			// 手势识别
 			var gesture = window.GestureRuleEngine.detectAll(landmarks);
 			if(gesture){
-				console.log('[Gesture] Gesture recognized:', gesture.type);
 				window.GestureFeedback.updateGesture(gesture);
 				this.updateLiveStatus(gesture);
 				window.GestureBus.emit(gesture);
@@ -256,10 +285,8 @@ var GestureController = {
 			}
 		}
 
-		// 在onResults完成后，调度下一帧
 		var frameRate = window.GestureSettings.get('frameRate') || 15;
-		var delay = Math.max(33, Math.floor(1000 / frameRate));
-		console.log('[Gesture] Scheduling next frame in', delay, 'ms');
+		var delay = Math.max(16, Math.floor(1000 / frameRate));
 		frameTimer = setTimeout(function(){ 
 			GestureController.sendFrame(); 
 		}, delay);
@@ -269,13 +296,11 @@ var GestureController = {
 		var labels = {
 			index_up: '☝️ 食指向上',
 			index_down: '👇 食指向下',
-			fist: '✊ 握拳',
-			swipe_left: '👈 左滑',
-			swipe_right: '👉 右滑',
-			swipe_up: '🖐️ 上滑',
-			swipe_down: '🖐️ 下滑',
-			open_palm: '🖐️ 布',
-			two_fingers: '✌️ 二指'
+			fist: '✊ 握拳（回首页）',
+			swipe_left: '👈 左滑（上一模块）',
+			swipe_right: '👉 右滑（下一模块）',
+			open_palm: '🖐️ 布（下一模块）',
+			two_fingers: '✌️ 二指（瞭望采集）'
 		};
 		var el = document.getElementById('gpLiveGesture');
 		var confEl = document.getElementById('gpLiveConfidence');
@@ -324,6 +349,17 @@ var GestureController = {
 		});
 	},
 
+	preloadMediaPipe: function(){
+		if(typeof Hands !== 'undefined' || mediaPipeLoading) return;
+		mediaPipeLoading = true;
+		this.loadMediaPipe(function(success){
+			mediaPipeLoading = false;
+			if(success){
+				console.log('[Gesture] MediaPipe preloaded');
+			}
+		});
+	},
+
 	toggleSpeech: function(){
 		if(!window.SpeechManager) return;
 		var enabled = !window.SpeechManager.isEnabled();
@@ -332,6 +368,29 @@ var GestureController = {
 		if(btn){
 			btn.textContent = enabled ? '🔊 语音播报' : '🔇 已静音';
 			btn.classList.toggle('muted', !enabled);
+		}
+	},
+
+	restoreSpeechState: function(){
+		var btn = document.getElementById('gpSpeechBtn');
+		if(!btn) return;
+		var enabled = window.SpeechManager && window.SpeechManager.isEnabled();
+		btn.textContent = enabled ? '🔊 语音播报' : '🔇 已静音';
+		btn.classList.toggle('muted', !enabled);
+	},
+
+	restorePanelState: function(){
+		var panel = document.getElementById('gesturePanel');
+		if(!panel) return;
+		var wasCollapsed = localStorage.getItem('gesture_panel_collapsed') === 'true';
+		if(wasCollapsed){
+			panel.classList.add('collapsed');
+			var btn = panel.querySelector('.gp-btn-collapse');
+			if(btn) btn.textContent = '▶';
+		} else {
+			panel.classList.remove('collapsed');
+			var btn = panel.querySelector('.gp-btn-collapse');
+			if(btn) btn.textContent = '◀';
 		}
 	},
 

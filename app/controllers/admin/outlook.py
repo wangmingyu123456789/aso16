@@ -154,7 +154,6 @@ class AdminOutlookCollectHandler(AdminBaseHandler):
             pages, page_size_step, ai_expand, ai_clean
         )
 
-        # 初始化采集状态
         total_urls = len(selected_sources) * pages
         set_collect_status(task_id, {
             'task_id': task_id,
@@ -170,68 +169,74 @@ class AdminOutlookCollectHandler(AdminBaseHandler):
             'logs': [{'time': time.strftime('%H:%M:%S'), 'type': 'info', 'msg': f'开始采集: {keyword}'}]
         })
 
-        total_results = 0
-        url_offset = 0
-        for source in selected_sources:
-            step = page_size_step if page_size_step > 0 else source.get('page_size_step', 10)
-            log_id = CrawlLogRepository.create_log(task_id, source['id'], source['name'], keyword)
-            print(f"[Collect] source={source['name']}, keyword={keyword}, pages={pages}, step={step}")
-
-            # 更新当前源
-            status = get_collect_status(task_id)
-            status['current_source'] = source['name']
-            set_collect_status(task_id, status)
-
-            # 创建状态回调闭包，累计计数
-            def make_callback(tid, offset):
-                def callback(update):
-                    current = get_collect_status(tid)
-                    if 'success_count' in update:
-                        current['success_count'] = current.get('success_count', 0) + update['success_count']
-                    if 'fail_count' in update:
-                        current['fail_count'] = current.get('fail_count', 0) + update['fail_count']
-                    if 'total_count' in update:
-                        current['total_count'] = current.get('total_count', 0) + update['total_count']
-                    for k, v in update.items():
-                        if k not in ('success_count', 'fail_count', 'total_count'):
-                            current[k] = v
-                    # current_url 跨source累计
-                    if 'current_url' in update and offset > 0:
-                        current['current_url'] = update['current_url'] + offset
-                    set_collect_status(tid, current)
-                return callback
-
-            try:
-                count = OutlookCollector.collect_with_status(
-                    source, keyword, pages, step,
-                    use_ai_expand=ai_expand,
-                    use_ai_clean=ai_clean,
-                    task_id=task_id,
-                    status_callback=make_callback(task_id, url_offset)
-                )
-                total_results += count
-                CrawlLogRepository.complete_log(log_id, total_count=count, saved_count=count)
-                print(f"[Collect] source={source['name']}, saved={count}")
-            except Exception as e:
-                CrawlLogRepository.fail_log(log_id, str(e)[:500])
-                print(f"[Collect] source={source['name']}, FAILED: {e}")
-            url_offset += pages
-
-        # 更新最终状态
-        final_status = get_collect_status(task_id)
-        final_status['status'] = 'completed'
-        final_status['total_count'] = total_results
-        final_status['logs'].append({'time': time.strftime('%H:%M:%S'), 'type': 'success', 'msg': f'采集完成，共获取 {total_results} 条数据'})
-        set_collect_status(task_id, final_status)
-
-        OutlookTaskRepository.update_task(task_id, total_results)
+        # 后台线程执行采集，不阻塞 Tornado 事件循环
+        threading.Thread(
+            target=_run_collection_in_thread,
+            args=(task_id, selected_sources, keyword, pages, page_size_step, ai_expand, ai_clean),
+            daemon=True
+        ).start()
 
         return self.write({
             "code": 0,
-            "msg": f"采集完成，共获取 {total_results} 条数据",
-            "count": total_results,
+            "msg": "采集任务已启动",
+            "count": 0,
             "task_id": task_id
         })
+
+
+def _run_collection_in_thread(task_id, selected_sources, keyword, pages, page_size_step, ai_expand, ai_clean):
+    """在后台线程中执行采集，避免阻塞 Tornado 事件循环"""
+    total_results = 0
+    url_offset = 0
+    for source in selected_sources:
+        step = page_size_step if page_size_step > 0 else source.get('page_size_step', 10)
+        log_id = CrawlLogRepository.create_log(task_id, source['id'], source['name'], keyword)
+        print(f"[Collect] source={source['name']}, keyword={keyword}, pages={pages}, step={step}")
+
+        status = get_collect_status(task_id)
+        status['current_source'] = source['name']
+        set_collect_status(task_id, status)
+
+        def make_callback(tid, offset):
+            def callback(update):
+                current = get_collect_status(tid)
+                if 'success_count' in update:
+                    current['success_count'] = current.get('success_count', 0) + update['success_count']
+                if 'fail_count' in update:
+                    current['fail_count'] = current.get('fail_count', 0) + update['fail_count']
+                if 'total_count' in update:
+                    current['total_count'] = current.get('total_count', 0) + update['total_count']
+                for k, v in update.items():
+                    if k not in ('success_count', 'fail_count', 'total_count'):
+                        current[k] = v
+                if 'current_url' in update and offset > 0:
+                    current['current_url'] = update['current_url'] + offset
+                set_collect_status(tid, current)
+            return callback
+
+        try:
+            count = OutlookCollector.collect_with_status(
+                source, keyword, pages, step,
+                use_ai_expand=ai_expand,
+                use_ai_clean=ai_clean,
+                task_id=task_id,
+                status_callback=make_callback(task_id, url_offset)
+            )
+            total_results += count
+            CrawlLogRepository.complete_log(log_id, total_count=count, saved_count=count)
+            print(f"[Collect] source={source['name']}, saved={count}")
+        except Exception as e:
+            CrawlLogRepository.fail_log(log_id, str(e)[:500])
+            print(f"[Collect] source={source['name']}, FAILED: {e}")
+        url_offset += pages
+
+    final_status = get_collect_status(task_id)
+    final_status['status'] = 'completed'
+    final_status['total_count'] = total_results
+    final_status['logs'].append({'time': time.strftime('%H:%M:%S'), 'type': 'success', 'msg': f'采集完成，共获取 {total_results} 条数据'})
+    set_collect_status(task_id, final_status)
+
+    OutlookTaskRepository.update_task(task_id, total_results)
 
 class AdminOutlookDataListHandler(AdminBaseHandler):
     @tornado.web.authenticated

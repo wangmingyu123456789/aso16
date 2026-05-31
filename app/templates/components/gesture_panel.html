@@ -1,4 +1,4 @@
-<div id="gesturePanel" class="gesture-panel">
+<div id="gesturePanel" class="gesture-panel collapsed">
 	<div class="gp-header" onclick="GestureController.toggleCollapse();event.stopPropagation();">
 		<span class="gp-title"><span id="gpIcon">🖐️</span> 手势识别</span>
 		<div class="gp-header-actions">
@@ -22,12 +22,11 @@
 		<button class="gp-btn gp-btn-toggle" id="gpToggleBtn" onclick="GestureController.toggleCamera()">📷 启动摄像头</button>
 		<div class="gp-gesture-list">
 			<div class="gp-section-title">支持的手势</div>
-			<div class="gp-gesture-item"><span>☝️</span> 食指向上</div>
-			<div class="gp-gesture-item"><span>👇</span> 食指向下</div>
+			<div class="gp-gesture-item"><span>☝️</span> 食指向上（翻页/滚动）</div>
+			<div class="gp-gesture-item"><span>👇</span> 食指向下（翻页/滚动）</div>
 			<div class="gp-gesture-item"><span>✊</span> 握拳（返回首页）</div>
-			<div class="gp-gesture-item"><span>👈</span> 左滑</div>
-			<div class="gp-gesture-item"><span>👉</span> 右滑</div>
-			<div class="gp-gesture-item"><span>🖐️</span> 上滑/下滑</div>
+			<div class="gp-gesture-item"><span>👈</span> 左滑（上一模块）</div>
+			<div class="gp-gesture-item"><span>👉</span> 右滑/🖐️ 布（下一模块）</div>
 			<div class="gp-gesture-item"><span>✌️</span> 二指（瞭望采集）</div>
 		</div>
 		<button class="gp-btn gp-btn-guide" onclick="GestureController.showGuide()">🎓 新手引导</button>
@@ -45,8 +44,6 @@
 				<label class="gp-settings-row"><span>✊ 握拳</span><input type="checkbox" id="gsFist" checked onchange="GestureSettings.set('gestures.fist',this.checked)"></label>
 				<label class="gp-settings-row"><span>👈 左滑</span><input type="checkbox" id="gsSwipeLeft" checked onchange="GestureSettings.set('gestures.swipe_left',this.checked)"></label>
 				<label class="gp-settings-row"><span>👉 右滑</span><input type="checkbox" id="gsSwipeRight" checked onchange="GestureSettings.set('gestures.swipe_right',this.checked)"></label>
-				<label class="gp-settings-row"><span>🖐️ 上滑</span><input type="checkbox" id="gsSwipeUp" checked onchange="GestureSettings.set('gestures.swipe_up',this.checked)"></label>
-				<label class="gp-settings-row"><span>🖐️ 下滑</span><input type="checkbox" id="gsSwipeDown" checked onchange="GestureSettings.set('gestures.swipe_down',this.checked)"></label>
 				<div class="gp-settings-divider"></div>
 				<button class="gp-btn gp-btn-reset" onclick="GestureSettings.reset();GestureController.loadSettings();GestureController.updateUIState()">重置为默认</button>
 			</div>
@@ -61,13 +58,13 @@
 			<div class="gp-guide-step"><span class="step-num">2</span><span>允许浏览器授权摄像头</span></div>
 			<div class="gp-guide-step"><span class="step-num">3</span><span>将手掌对准摄像头约30cm</span></div>
 			<div class="gp-guide-step"><span class="step-num">4</span><span>确保光线充足，背景简洁</span></div>
-			<div class="gp-guide-step"><span class="step-num">5</span><span>尝试：☝️ 👇 ✊ 👈 👉 🖐️</span></div>
+			<div class="gp-guide-step"><span class="step-num">5</span><span>尝试：☝️ 👇 ✊ 👈 👉 🖐️ ✌️</span></div>
 		</div>
 		<div class="gp-guide-tips">
-			<p>💡 食指向上/向下：翻页选择</p>
+			<p>💡 食指向上/向下：翻页或滚动页面</p>
 			<p>💡 握拳：返回首页</p>
-			<p>💡 左滑/右滑：切换功能模块</p>
-			<p>💡 上滑/下滑：滚动页面</p>
+			<p>💡 右滑/布：切换下一模块</p>
+			<p>💡 左滑：切换上一模块</p>
 			<p>💡 二指：跳转到瞭望采集</p>
 		</div>
 		<button class="gp-btn gp-btn-guide-close" onclick="GestureController.hideGuide()">我知道了</button>

@@ -281,6 +281,44 @@ class OutlookDataRepository:
             return False
 
     @staticmethod
+    def batch_save_data(items):
+        if not items:
+            return 0
+        try:
+            import datetime
+            create_at = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+            saved = 0
+            with get_connection() as conn:
+                for item in items:
+                    try:
+                        conn.execute(
+                            """INSERT INTO outlook_data(source_id,source_name,title,url,content,author,publish_date,raw_html,ai_processed,task_id,source_keyword,create_at) 
+                            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+                            (
+                                item.get('source_id', 0),
+                                item.get('source_name', ''),
+                                item.get('title', ''),
+                                item.get('url', ''),
+                                item.get('content', ''),
+                                item.get('author', ''),
+                                item.get('publish_date', ''),
+                                item.get('raw_html_snippet', ''),
+                                item.get('ai_processed', 0),
+                                item.get('task_id', 0),
+                                item.get('source_keyword', ''),
+                                create_at
+                            )
+                        )
+                        saved += 1
+                    except Exception as e:
+                        title_preview = (item.get('title', '') or '')[:50]
+                        print(f"[batch_save] FAILED: {title_preview} error={e}", flush=True)
+            return saved
+        except Exception as e:
+            print(f"[batch_save] FAILED batch: {e}", flush=True)
+            return 0
+
+    @staticmethod
     def delete_data(data_id):
         try:
             with get_connection() as conn:
@@ -842,31 +880,30 @@ class OutlookCollector:
             t_clean_elapsed = round(time.time() - t_clean, 2)
             print(f"[Collect] Step 3: AI data cleaning completed in {t_clean_elapsed}s, {len(all_results)} items")
 
-        # Step 4: Save to database
+        # Step 4: Save to database (batch insert)
         t_save = time.time()
         saved_count = 0
-        for item in all_results:
-            if isinstance(item, dict):
-                ai_processed = 1 if (use_ai_clean or source.get('ai_clean_data', 0)) else 0
-                # Ensure source_keyword is never empty - fallback to search keyword
-                skw = item.get('source_keyword', '')
-                if not skw:
-                    skw = keyword
-                saved = OutlookDataRepository.save_data(
-                    source_id=source['id'],
-                    source_name=source['name'],
-                    title=item.get('title', ''),
-                    url=item.get('url', ''),
-                    content=item.get('content', ''),
-                    author=item.get('author', ''),
-                    publish_date=item.get('publish_date', ''),
-                    raw_html=item.get('raw_html_snippet', ''),
-                    ai_processed=ai_processed,
-                    task_id=task_id,
-                    source_keyword=skw
-                )
-                if saved:
-                    saved_count += 1
+        if all_results:
+            db_items = []
+            for item in all_results:
+                if isinstance(item, dict):
+                    ai_processed = 1 if (use_ai_clean or source.get('ai_clean_data', 0)) else 0
+                    skw = item.get('source_keyword', '') or keyword
+                    db_items.append({
+                        'source_id': source['id'],
+                        'source_name': source['name'],
+                        'title': item.get('title', ''),
+                        'url': item.get('url', ''),
+                        'content': item.get('content', ''),
+                        'author': item.get('author', ''),
+                        'publish_date': item.get('publish_date', ''),
+                        'raw_html_snippet': item.get('raw_html_snippet', ''),
+                        'ai_processed': ai_processed,
+                        'task_id': task_id,
+                        'source_keyword': skw,
+                    })
+            if db_items:
+                saved_count = OutlookDataRepository.batch_save_data(db_items)
         t_save_elapsed = round(time.time() - t_save, 2)
 
         t_total = round(time.time() - t_start, 2)
@@ -1445,16 +1482,16 @@ class CrawlScheduleRepository:
 		return [dict(r) for r in rows]
 
 	@staticmethod
-	def add_schedule(source_id, source_name, keyword, cron_expression, pages=1, per_page=10, is_enabled=1, sch_year=0):
+	def add_schedule(source_id, source_name, keyword, cron_expression, pages=1, per_page=10, is_enabled=1, sch_year=0, schedule_type='once'):
 		try:
 			import datetime
 			create_at = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
 			with get_connection() as conn:
 				conn.execute(
-					"INSERT INTO crawl_schedules(source_id,source_name,keyword,cron_expression,sch_year,pages,per_page,is_enabled,create_at) VALUES(?,?,?,?,?,?,?,?,?)",
-					(source_id, source_name, keyword, cron_expression, sch_year, pages, per_page, is_enabled, create_at)
+					"INSERT INTO crawl_schedules(source_id,source_name,keyword,cron_expression,sch_year,pages,per_page,is_enabled,schedule_type,create_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+					(source_id, source_name, keyword, cron_expression, sch_year, pages, per_page, is_enabled, schedule_type, create_at)
 				)
-			print(f"[add_schedule] OK: source_id={source_id}, cron={cron_expression}, sch_year={sch_year}, enabled={is_enabled}", flush=True)
+			print(f"[add_schedule] OK: source_id={source_id}, cron={cron_expression}, sch_year={sch_year}, enabled={is_enabled}, type={schedule_type}", flush=True)
 			return True
 		except Exception as e:
 			import traceback

@@ -39,6 +39,17 @@ GestureEventBus.prototype.getHistory = function(){
 
 var gestureBus = new GestureEventBus();
 
+/* ===== 页面加载导航冷却 ===== */
+var __pageLoadTime = Date.now();
+var __navCooldown = 3000; // 3秒内阻止手势触发的页面跳转，防止刷新时误检测跳回首页
+
+function canNavigate(){
+	if(Date.now() - __pageLoadTime < __navCooldown){
+		return false;
+	}
+	return true;
+}
+
 /* ===== 辅助函数 ===== */
 function getCurrentPage(){
 	var path = window.location.pathname;
@@ -59,7 +70,48 @@ function speak(text){
 	}
 }
 
+/* ===== 通用导航序列（覆盖所有页面，包括独立页面） ===== */
+var UNIVERSAL_NAV = [
+	{url: '/home', label: '首页'},
+	{url: '/qa', label: '智能问数'},
+	{url: '/im', label: '智能聊天'},
+	{url: '/user/dashboard', label: '数智大屏'},
+	{url: '/user/sentiment', label: '智慧舆情'},
+	{url: '/user/outlook/collect', label: '瞭望采集'},
+	{url: '/user/outlook/data', label: '数据仓库'},
+	{url: '/user/outlook/schedule', label: '定时采集'},
+	{url: '/user/outlook/log', label: '采集日志'}
+];
+
 function navigateModule(direction){
+	if(!canNavigate()) return;
+
+	// 先尝试用通用导航序列（适用于所有页面，包括独立页面/q/a、/im等）
+	var currentPath = window.location.pathname;
+	var foundIdx = -1;
+	for(var i = 0; i < UNIVERSAL_NAV.length; i++){
+		if(currentPath.indexOf(UNIVERSAL_NAV[i].url) !== -1){
+			foundIdx = i;
+			break;
+		}
+	}
+
+	// 如果在通用序列中找到了，直接使用通用序列导航
+ 	if(foundIdx !== -1){
+ 		var targetIdx = foundIdx + direction;
+ 		if(targetIdx < 0){
+ 			speak('已经是第一个模块');
+ 			return;
+ 		}
+ 		if(targetIdx >= UNIVERSAL_NAV.length){
+ 			speak('已经是最后一个模块');
+ 			return;
+ 		}
+ 		window.location.href = UNIVERSAL_NAV[targetIdx].url;
+ 		return;
+ 	}
+
+	// 回退方案：使用侧边栏导航（带layout的页面）
 	var navItems = document.querySelectorAll('.sidebar .nav-item');
 	if(navItems.length === 0) return;
 	
@@ -72,7 +124,6 @@ function navigateModule(direction){
 	}
 	
 	var currentIdx = -1;
-	var currentPath = window.location.pathname;
 	for(var j = 0; j < navArray.length; j++){
 		if(currentPath.indexOf(navArray[j].url) !== -1){
 			currentIdx = j;
@@ -175,10 +226,8 @@ function switchSentimentTab(direction){
 
 /* ===== 手势映射注册 ===== */
 function registerGestureMappings(){
-	console.log('[GestureBus] Registering gesture mappings');
 
 	gestureBus.on('index_up', function(e){
-		console.log('[GestureBus] index_up triggered');
 		var page = getCurrentPage();
 		
 		if(page === 'dashboard'){
@@ -192,7 +241,6 @@ function registerGestureMappings(){
 	}, 10);
 
 	gestureBus.on('index_down', function(e){
-		console.log('[GestureBus] index_down triggered');
 		var page = getCurrentPage();
 		
 		if(page === 'dashboard'){
@@ -206,39 +254,27 @@ function registerGestureMappings(){
 	}, 10);
 
 	gestureBus.on('fist', function(e){
-		console.log('[GestureBus] fist triggered - back to home');
+		if(!canNavigate()) return;
 		window.location.href = '/home';
 		speak('回到首页');
 	}, 10);
 
 	gestureBus.on('swipe_left', function(e){
-		console.log('[GestureBus] swipe_left triggered');
 		navigateModule(-1);
 	}, 10);
 
 	gestureBus.on('swipe_right', function(e){
-		console.log('[GestureBus] swipe_right triggered');
 		navigateModule(1);
 	}, 10);
 
-	gestureBus.on('swipe_up', function(e){
-		console.log('[GestureBus] swipe_up triggered');
-		window.scrollBy(0, -200);
-	}, 5);
-
-	gestureBus.on('swipe_down', function(e){
-		console.log('[GestureBus] swipe_down triggered');
-		window.scrollBy(0, 200);
-	}, 5);
-
 	gestureBus.on('open_palm', function(e){
-		console.log('[GestureBus] open_palm triggered - back to home');
-		window.location.href = '/home';
-		speak('回到首页');
+		if(!canNavigate()) return;
+		navigateModule(1);
+		speak('下一个模块');
 	}, 10);
 
 	gestureBus.on('two_fingers', function(e){
-		console.log('[GestureBus] two_fingers triggered - go to outlook collect');
+		if(!canNavigate()) return;
 		window.location.href = '/user/outlook/collect';
 		speak('瞭望采集');
 	}, 10);
@@ -265,8 +301,17 @@ window.startAutoSlide = function(){
 	var dots = document.querySelectorAll('.page-nav .dot');
 	if(dots.length === 0) return;
 	
-	console.log('[GestureBus] Starting auto-slide on dashboard');
+	// 检查用户是否关闭了自动轮播
+	var autoSlideEnabled = localStorage.getItem('dashboard_auto_slide') !== 'false';
+	if(!autoSlideEnabled){
+		console.log('[GestureBus] Auto-slide disabled by user setting');
+		window.__autoSlidePaused = true;
+	} else {
+		window.__autoSlidePaused = false;
+	}
 	
+	console.log('[GestureBus] Starting auto-slide on dashboard');
+
 	window.__autoSlideInterval = setInterval(function(){
 		if(window.__autoSlidePaused) return;
 		

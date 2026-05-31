@@ -431,6 +431,21 @@ class IMGroupInviteHandler(BaseHandler):
                 self.set_header("Content-Type", "application/json")
                 self.write({"code": 400, "msg": "已有待处理邀请"})
                 return
+            # 检测是否为数字员工，如果是直接拉进群
+            is_assistant = IMRepository.get_assistant_id_by_user_id(invitee_id) != 0
+            if is_assistant:
+                IMRepository.add_member_directly(group_id, invitee_id, user_id)
+                member_name = IMRepository.get_username_by_id(invitee_id)
+                IMRepository.add_system_message(group_id, f"{member_name} 已加入群聊")
+                broadcast_to_all_members(group_id, json_mod.dumps({
+                    "type": "member_added",
+                    "group_id": group_id,
+                    "user_id": invitee_id,
+                    "username": member_name
+                }))
+                self.set_header("Content-Type", "application/json")
+                self.write({"code": 0, "msg": f"已将数字员工 {member_name} 加入群聊"})
+                return
             invite_id = IMRepository.create_group_invite(group_id, user_id, invitee_id, message)
             group_name = IMRepository.get_conversation_info(group_id).get("name", "")
             broadcast_to_user(invitee_id, json_mod.dumps({

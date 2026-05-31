@@ -59,6 +59,13 @@ body{background:#070b1a;color:#fff;font-family:'Microsoft YaHei',sans-serif;}
 .back-btn:hover{background:rgba(24,144,255,.15);border-color:rgba(24,144,255,.3);color:#fff;}
 .back-btn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;}
 
+.workflow-toggle{position:fixed;top:16px;right:16px;z-index:200;display:flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:rgba(255,255,255,.6);font-size:13px;cursor:pointer;transition:all .3s;backdrop-filter:blur(8px);}
+.workflow-toggle:hover{background:rgba(24,144,255,.15);border-color:rgba(24,144,255,.3);color:#fff;}
+.workflow-toggle .toggle-icon{font-size:14px;transition:transform .3s;}
+.workflow-toggle.paused{border-color:rgba(255,77,79,.3);color:#ff6b6b;}
+.workflow-toggle.paused:hover{border-color:rgba(255,77,79,.5);background:rgba(255,77,79,.12);}
+.workflow-toggle.paused .toggle-icon{transform:rotate(90deg);}
+
 /* 词云页 */
 .page-wordcloud{background:linear-gradient(180deg,#070b1a 0%,#0d1035 50%,#070b1a 100%);}
 .page-wordcloud::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 30% 50%,rgba(24,144,255,.06) 0%,transparent 60%),radial-gradient(ellipse at 70% 20%,rgba(123,47,247,.06) 0%,transparent 60%),radial-gradient(ellipse at 50% 80%,rgba(82,196,26,.04) 0%,transparent 50%);z-index:0;pointer-events:none;}
@@ -87,6 +94,11 @@ body{background:#070b1a;color:#fff;font-family:'Microsoft YaHei',sans-serif;}
 <a class="back-btn" href="/home">
 	<svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>返回首页
 </a>
+
+<div class="workflow-toggle" id="workflowToggle" title="自动轮播开关" onclick="toggleWorkflow()">
+	<span class="toggle-icon" id="workflowToggleIcon">▶</span>
+	<span class="toggle-label" id="workflowToggleLabel">运行中</span>
+</div>
 
 <div class="page-nav">
 	<div class="dot active" onclick="document.querySelector('.page-dashboard').scrollIntoView({behavior:'smooth'})" title="数据监控"></div>
@@ -449,6 +461,40 @@ body{background:#070b1a;color:#fff;font-family:'Microsoft YaHei',sans-serif;}
 	}
 
 	setTimeout(initEarth,500);
+
+	// 工作流（自动轮播）开关
+	var workflowToggleEl = document.getElementById('workflowToggle');
+	var workflowIconEl = document.getElementById('workflowToggleIcon');
+	var workflowLabelEl = document.getElementById('workflowToggleLabel');
+	var workflowEnabled = localStorage.getItem('dashboard_auto_slide') !== 'false';
+
+	function updateWorkflowUI(){
+		if(!workflowToggleEl) return;
+		if(workflowEnabled){
+			workflowToggleEl.classList.remove('paused');
+			workflowIconEl.textContent = '▶';
+			workflowLabelEl.textContent = '运行中';
+		} else {
+			workflowToggleEl.classList.add('paused');
+			workflowIconEl.textContent = '⏸';
+			workflowLabelEl.textContent = '已暂停';
+		}
+	}
+
+	window.toggleWorkflow = function(){
+		workflowEnabled = !workflowEnabled;
+		localStorage.setItem('dashboard_auto_slide', workflowEnabled);
+		if(window.__autoSlidePaused !== undefined){
+			window.__autoSlidePaused = !workflowEnabled;
+		}
+		updateWorkflowUI();
+	};
+
+	// 初始化：如果用户关闭了轮播则立即暂停
+	if(!workflowEnabled && window.__autoSlidePaused !== undefined){
+		window.__autoSlidePaused = true;
+	}
+	updateWorkflowUI();
 
 	var pageNavDots=document.querySelectorAll('.page-nav .dot');
 	function updateNav(){

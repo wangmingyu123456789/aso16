@@ -652,7 +652,7 @@ class IMRepository:
         with get_connection() as conn:
             rows = conn.execute(
                 """
-                SELECT u.id, u.username
+                SELECT DISTINCT u.id, u.username
                 FROM im_friends f
                 JOIN users u ON (
                     CASE WHEN f.user_id = ? THEN f.friend_id = u.id
@@ -1263,6 +1263,32 @@ class IMRepository:
                 (group_id, invitee_id)
             ).fetchone()
             return dict(row) if row else {}
+
+    @staticmethod
+    def add_member_directly(group_id: int, user_id: int, operator_id: int) -> bool:
+        """直接将用户加入群聊（不经过邀请流程，用于数字员工）"""
+        import datetime
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        with get_connection() as conn:
+            existing = conn.execute(
+                "SELECT id FROM im_conversation_members WHERE conversation_id=? AND user_id=? AND is_deleted=0",
+                (group_id, user_id)
+            ).fetchone()
+            if existing:
+                return False
+            conn.execute(
+                "INSERT OR IGNORE INTO im_conversation_members(conversation_id, user_id, role, join_at) VALUES(?,?,?,?)",
+                (group_id, user_id, 'member', now)
+            )
+            conn.execute(
+                "INSERT OR IGNORE INTO im_unread_counts(conversation_id, user_id, count) VALUES(?,?,0)",
+                (group_id, user_id)
+            )
+            conn.execute(
+                "INSERT INTO group_operation_logs(group_id, operator_id, operation_type, target_id, detail, create_at) VALUES(?,?,?,?,?,?)",
+                (group_id, operator_id, 'add_member_direct', user_id, '数字员工直接加入', now)
+            )
+        return True
 
     @staticmethod
     def get_invite_by_id(invite_id: int) -> dict:

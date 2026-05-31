@@ -34,6 +34,15 @@ def run_main_server():
     except Exception as e:
         print(f"DB init error: {e}", flush=True)
 
+    # 启动定时调度器（APScheduler）
+    try:
+        from app.models import crawl_scheduler
+        crawl_scheduler.start_scheduler()
+    except Exception as e:
+        print(f"Scheduler start error: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+
     try:
         app = make_app()
         server = HTTPServer(app)

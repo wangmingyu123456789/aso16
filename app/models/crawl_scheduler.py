@@ -40,7 +40,7 @@ def execute_crawl_task(schedule_id):
 				print(f"[Scheduler] schedule_id={schedule_id} is disabled, skip", flush=True)
 				return
 
-			from app.models.outlook import OutlookSourceRepository, OutlookCollector, CrawlLogRepository
+			from app.models.outlook import OutlookSourceRepository, OutlookCollector, CrawlLogRepository, OutlookTaskRepository
 
 			source = OutlookSourceRepository.get_source_by_id(row["source_id"])
 			if not source:
@@ -49,13 +49,25 @@ def execute_crawl_task(schedule_id):
 				return
 
 			source_name = row["source_name"] or source.get("name", "")
-			keyword = row.get("keyword", "")
-			pages = row.get("pages", 1)
-			per_page = row.get("per_page", 10)
+			keyword = row["keyword"] or ""
+			pages = row["pages"] or 1
+			per_page = row["per_page"] or 10
 
 			print(f"[Scheduler] Task: source={source_name} keyword={keyword} pages={pages} per_page={per_page}", flush=True)
 
-			log_id = CrawlLogRepository.create_log(schedule_id, row["source_id"], source_name, keyword)
+			# 创建 outlook_tasks 记录，使数据能在数据仓库中展示
+			real_task_id = OutlookTaskRepository.create_task(
+				keyword=keyword,
+				source_ids=str(row["source_id"]),
+				source_names=source_name,
+				pages=pages,
+				page_size_step=per_page,
+				ai_expand=0,
+				ai_clean=0
+			)
+			print(f"[Scheduler] outlook_task id={real_task_id} created", flush=True)
+
+			log_id = CrawlLogRepository.create_log(real_task_id, row["source_id"], source_name, keyword)
 			print(f"[Scheduler] crawl_log id={log_id} created", flush=True)
 
 			t_start = datetime.now(timezone.utc)
@@ -66,25 +78,45 @@ def execute_crawl_task(schedule_id):
 				page_size_step=per_page,
 				use_ai_expand=False,
 				use_ai_clean=False,
-				task_id=schedule_id
+				task_id=real_task_id
 			)
 			t_elapsed = round((datetime.now(timezone.utc) - t_start).total_seconds(), 1)
 
 			print(f"[Scheduler] ===== DONE: saved={saved_count}, elapsed={t_elapsed}s =====", flush=True)
+			OutlookTaskRepository.update_task(real_task_id, saved_count, status='completed')
 			CrawlLogRepository.complete_log(log_id, total_count=saved_count, saved_count=saved_count)
-			conn.execute("UPDATE crawl_schedules SET last_run=?, is_enabled=0 WHERE id=?", (_utcnow(), schedule_id))
+			# 每日任务执行后保持启用，一次性任务执行后禁用
+			schedule_type = row["schedule_type"] or "once"
+			if schedule_type == "daily":
+				conn.execute("UPDATE crawl_schedules SET last_run=? WHERE id=?", (_utcnow(), schedule_id))
+				print(f"[Scheduler] #{schedule_id}: DAILY task kept enabled for next run", flush=True)
+			else:
+				conn.execute("UPDATE crawl_schedules SET last_run=?, is_enabled=0 WHERE id=?", (_utcnow(), schedule_id))
 	except Exception as e:
 		print(f"[Scheduler] schedule_id={schedule_id} FAILED: {e}", flush=True)
 		traceback.print_exc()
-		from app.models.outlook import CrawlLogRepository
+		from app.models.outlook import CrawlLogRepository, OutlookTaskRepository
 		try:
 			if 'log_id' in dir() and log_id:
 				CrawlLogRepository.fail_log(log_id, str(e)[:500])
 		except Exception:
 			pass
 		try:
+			if 'real_task_id' in dir() and real_task_id:
+				OutlookTaskRepository.update_task(real_task_id, 0, status='error', error_msg=str(e)[:200])
+		except Exception:
+			pass
+		try:
 			with get_connection() as conn:
-				conn.execute("UPDATE crawl_schedules SET last_run=?, is_enabled=0 WHERE id=?", (_utcnow(), schedule_id))
+				_st = "once"
+				try:
+					_st = schedule_type
+				except Exception:
+					pass
+				if _st == "daily":
+					conn.execute("UPDATE crawl_schedules SET last_run=? WHERE id=?", (_utcnow(), schedule_id))
+				else:
+					conn.execute("UPDATE crawl_schedules SET last_run=?, is_enabled=0 WHERE id=?", (_utcnow(), schedule_id))
 		except Exception:
 			pass
 
@@ -115,11 +147,29 @@ def load_schedules():
 		try:
 			cron_expr = row["cron_expression"].strip()
 			parts = cron_expr.split()
-			sch_year = row.get("sch_year", 0) or 0
+			sch_year = row["sch_year"] or 0
+			schedule_type = row["schedule_type"] or "once"
 			job_id = f"crawl_{row['id']}"
-			print(f"[Scheduler] #{row['id']}: cron='{cron_expr}' sch_year={sch_year}", flush=True)
+			print(f"[Scheduler] #{row['id']}: cron='{cron_expr}' sch_year={sch_year} type={schedule_type}", flush=True)
 
-			if sch_year > 0 and len(parts) >= 4:
+			if schedule_type == "daily":
+				# 每日定时：只用小时和分钟，每天执行
+				hour = int(parts[1]) if len(parts) >= 2 else 0
+				minute = int(parts[0]) if len(parts) >= 1 else 0
+				sched.add_job(
+					execute_crawl_task,
+					CronTrigger(hour=hour, minute=minute),
+					id=job_id,
+					args=[row["id"]],
+					replace_existing=True,
+					misfire_grace_time=3600,
+					coalesce=True
+				)
+				j = sched.get_job(job_id)
+				next_run = getattr(j, 'next_run_time', None) if j else None
+				print(f"[Scheduler] #{row['id']}: DAILY CronTrigger(H={hour}, M={minute}) next_run={next_run}", flush=True)
+
+			elif sch_year > 0 and len(parts) >= 4:
 				month = int(parts[3])
 				day = int(parts[2])
 				hour = int(parts[1])
@@ -158,7 +208,8 @@ def load_schedules():
 					coalesce=True
 				)
 				j = sched.get_job(job_id)
-				print(f"[Scheduler] #{row['id']}: CronTrigger next_run={j.next_run_time if j else 'N/A'}", flush=True)
+				next_run = getattr(j, 'next_run_time', None) if j else None
+				print(f"[Scheduler] #{row['id']}: CronTrigger next_run={next_run}", flush=True)
 			else:
 				print(f"[Scheduler] #{row['id']}: cannot parse cron", flush=True)
 				continue

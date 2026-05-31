@@ -17,19 +17,17 @@ var defaults = {
 		fist: true,
 		swipe_left: true,
 		swipe_right: true,
-		swipe_up: true,
-		swipe_down: true,
 		open_palm: true,
 		two_fingers: true
 	},
 	holdTimes: {
-		index_up: 400,
-		index_down: 400,
-		fist: 600,
-		open_palm: 500,
-		two_fingers: 500
+		index_up: 200,
+		index_down: 200,
+		fist: 300,
+		open_palm: 250,
+		two_fingers: 250
 	},
-	cooldownMs: 800
+	cooldownMs: 350
 };
 
 function load(){

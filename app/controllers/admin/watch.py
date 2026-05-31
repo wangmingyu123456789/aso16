@@ -77,6 +77,7 @@ class AdminCrawlScheduleApiHandler(AdminBaseHandler):
 				"pages": int(self.get_body_argument("pages", "1")),
 				"per_page": int(self.get_body_argument("per_page", "10")),
 				"is_enabled": int(self.get_body_argument("is_enabled", "1")),
+				"schedule_type": self.get_body_argument("schedule_type", "once"),
 			}
 			if CrawlScheduleRepository.update_schedule(sid, **data):
 				crawl_scheduler.reload_schedules()
@@ -93,6 +94,7 @@ class AdminCrawlScheduleApiHandler(AdminBaseHandler):
 				pages=int(self.get_body_argument("pages", "1")),
 				per_page=int(self.get_body_argument("per_page", "10")),
 				is_enabled=int(self.get_body_argument("is_enabled", "1")),
+				schedule_type=self.get_body_argument("schedule_type", "once"),
 			):
 				crawl_scheduler.reload_schedules()
 				self.write({"code": 0, "msg": "添加成功"})

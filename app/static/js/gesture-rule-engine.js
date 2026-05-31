@@ -17,16 +17,16 @@ var prevPalmCenter = null;
 var lastGestureTriggerTime = 0;
 var gestureHistory = [];
 var HISTORY_SIZE = 5;
-var CONSENSUS_THRESHOLD = 3;
+var CONSENSUS_THRESHOLD = 2;
 
 /* ===== 关键点平滑缓冲区 ===== */
 var keypointHistory = [];
-var SMOOTHING_FRAMES = 3;
+var SMOOTHING_FRAMES = 2;
 
 /* ===== 手势稳定状态机 ===== */
 var currentStableGesture = null;
 var stableGestureCount = 0;
-var GESTURE_STABLE_FRAMES = 3;
+var GESTURE_STABLE_FRAMES = 2;
 
 /* ===== 工具函数 ===== */
 function distance(a, b){
@@ -283,27 +283,33 @@ function detectOpenPalm(landmarks){
 function detectTwoFingers(landmarks){
 	if(!window.GestureSettings.isGestureEnabled('two_fingers')) return null;
 
-	var indexExt = isFingerExtended(landmarks, INDEX_MCP, INDEX_PIP, INDEX_DIP, INDEX_TIP);
-	var midExt = isFingerExtended(landmarks, MIDDLE_MCP, MIDDLE_PIP, MIDDLE_DIP, MIDDLE_TIP);
+	// 二指检测（和平手势）：食指和中指伸展，无名指和小指弯曲，拇指自然弯曲或放松
+	// 使用较宽松的角度阈值（不是完全伸直也能识别）
+	var indexAngle = getFingerAngle(landmarks, INDEX_MCP, INDEX_PIP, INDEX_TIP);
+	var midAngle = getFingerAngle(landmarks, MIDDLE_MCP, MIDDLE_PIP, MIDDLE_TIP);
+	var indexStraight = indexAngle > 145;
+	var midStraight = midAngle > 145;
+
 	var ringCur = isFingerCurled(landmarks, RING_MCP, RING_PIP, RING_DIP, RING_TIP);
 	var pinkyCur = isFingerCurled(landmarks, PINKY_MCP, PINKY_PIP, PINKY_DIP, PINKY_TIP);
-	var thumbCur = isThumbCurled(landmarks);
+	var thumbExt = isThumbExtended(landmarks);
 
-	var curledCount = (ringCur ? 1 : 0) + (pinkyCur ? 1 : 0);
+	if(indexStraight && midStraight && ringCur && pinkyCur && !thumbExt){
+		var iTip = landmarks[INDEX_TIP];
+		var mTip = landmarks[MIDDLE_TIP];
+		var fingerGap = distance(iTip, mTip);
 
-	if(indexExt && midExt && curledCount >= 2 && thumbCur){
-		var indexTip = landmarks[INDEX_TIP];
-		var midTip = landmarks[MIDDLE_TIP];
-		var fingerGap = distance(indexTip, midTip);
-		
-		if(fingerGap > 0.05){
+		// 二指特征：两指之间有适当间距（并拢但不重叠）
+		if(fingerGap > 0.025 && fingerGap < 0.2){
 			if(!holdStartTime['two_fingers']) holdStartTime['two_fingers'] = Date.now();
 			var held = Date.now() - holdStartTime['two_fingers'];
 			if(held >= window.GestureSettings.getHoldTime('two_fingers') && canTrigger('two_fingers')){
 				holdStartTime['two_fingers'] = null;
 				markTriggered('two_fingers');
-				return {type: 'two_fingers', confidence: 0.9, targetArea: 'global'};
+				return {type: 'two_fingers', confidence: 0.85, targetArea: 'global'};
 			}
+		} else {
+			holdStartTime['two_fingers'] = null;
 		}
 	} else {
 		holdStartTime['two_fingers'] = null;
@@ -429,14 +435,14 @@ function updateTrajectory(landmarks){
 }
 
 function detectSwipeLeft(){
-	if(!window.GestureSettings.isGestureEnabled('swipe_left') || trajectoryBuffer.length < 5) return null;
+	if(!window.GestureSettings.isGestureEnabled('swipe_left') || trajectoryBuffer.length < 3) return null;
 	var recent = trajectoryBuffer.slice(-8);
 	var first = recent[0];
 	var last = recent[recent.length - 1];
 	var deltaX = last.x - first.x;
 	var deltaY = Math.abs(last.y - first.y);
 	var deltaTime = last.time - first.time;
-	if(deltaX < -0.06 && deltaTime < 1500 && deltaTime > 80 && deltaY < Math.abs(deltaX) * 0.8 && canTrigger('swipe_left')){
+	if(deltaX < -0.04 && deltaTime < 1500 && deltaTime > 50 && deltaY < Math.abs(deltaX) * 0.8 && canTrigger('swipe_left')){
 		markTriggered('swipe_left');
 		trajectoryBuffer = [];
 		prevPalmCenter = null;
@@ -446,14 +452,14 @@ function detectSwipeLeft(){
 }
 
 function detectSwipeRight(){
-	if(!window.GestureSettings.isGestureEnabled('swipe_right') || trajectoryBuffer.length < 5) return null;
+	if(!window.GestureSettings.isGestureEnabled('swipe_right') || trajectoryBuffer.length < 3) return null;
 	var recent = trajectoryBuffer.slice(-8);
 	var first = recent[0];
 	var last = recent[recent.length - 1];
 	var deltaX = last.x - first.x;
 	var deltaY = Math.abs(last.y - first.y);
 	var deltaTime = last.time - first.time;
-	if(deltaX > 0.06 && deltaTime < 1500 && deltaTime > 80 && deltaY < deltaX * 0.8 && canTrigger('swipe_right')){
+	if(deltaX > 0.04 && deltaTime < 1500 && deltaTime > 50 && deltaY < deltaX * 0.8 && canTrigger('swipe_right')){
 		markTriggered('swipe_right');
 		trajectoryBuffer = [];
 		prevPalmCenter = null;
@@ -462,43 +468,10 @@ function detectSwipeRight(){
 	return null;
 }
 
-function detectSwipeUp(){
-	if(!window.GestureSettings.isGestureEnabled('swipe_up') || trajectoryBuffer.length < 5) return null;
-	var recent = trajectoryBuffer.slice(-8);
-	var first = recent[0];
-	var last = recent[recent.length - 1];
-	var deltaY = last.y - first.y;
-	var deltaX = Math.abs(last.x - first.x);
-	var deltaTime = last.time - first.time;
-	if(deltaY < -0.06 && deltaTime < 1500 && deltaTime > 80 && deltaX < Math.abs(deltaY) * 0.8 && canTrigger('swipe_up')){
-		markTriggered('swipe_up');
-		trajectoryBuffer = [];
-		prevPalmCenter = null;
-		return {type: 'swipe_up', confidence: Math.min(1, Math.abs(deltaY) / 0.12), targetArea: 'global'};
-	}
-	return null;
-}
-
-function detectSwipeDown(){
-	if(!window.GestureSettings.isGestureEnabled('swipe_down') || trajectoryBuffer.length < 5) return null;
-	var recent = trajectoryBuffer.slice(-8);
-	var first = recent[0];
-	var last = recent[recent.length - 1];
-	var deltaY = last.y - first.y;
-	var deltaX = Math.abs(last.x - first.x);
-	var deltaTime = last.time - first.time;
-	if(deltaY > 0.06 && deltaTime < 1500 && deltaTime > 80 && deltaX < deltaY * 0.8 && canTrigger('swipe_down')){
-		markTriggered('swipe_down');
-		trajectoryBuffer = [];
-		prevPalmCenter = null;
-		return {type: 'swipe_down', confidence: Math.min(1, deltaY / 0.12), targetArea: 'global'};
-	}
-	return null;
-}
 
 function detectSwipes(){
-	if(trajectoryBuffer.length < 5) return null;
-	return detectSwipeLeft() || detectSwipeRight() || detectSwipeUp() || detectSwipeDown();
+	if(trajectoryBuffer.length < 3) return null;
+	return detectSwipeLeft() || detectSwipeRight();
 }
 
 function resetTrajectory(){
@@ -519,7 +492,7 @@ var GestureRuleEngine = {
 		updateTrajectory(landmarks);
 
 		// 1. 优先检测滑动手势（动态手势）
-		var gesture = detectSwipeLeft() || detectSwipeRight() || detectSwipeUp() || detectSwipeDown();
+		var gesture = detectSwipeLeft() || detectSwipeRight();
 		if(gesture){
 			addToHistory(gesture.type);
 			return gesture;

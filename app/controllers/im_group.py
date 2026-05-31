@@ -314,7 +314,6 @@ class IMGroupManageHandler(BaseHandler):
         return _json_response(self, 0, msg)
 
     def _add_member(self, group_id, user_id, data):
-        print(f"[DEBUG] _add_member called: group_id={group_id}, user_id={user_id}, data={data}")
         ok, role, detail = _check_group_permission(group_id, user_id, ['owner', 'admin'])
         if not ok:
             return _json_response(self, 403, "无权操作")
@@ -326,17 +325,27 @@ class IMGroupManageHandler(BaseHandler):
         added = []
         invited = []
         for mid in member_ids:
-            print(f"[DEBUG] Processing member {mid}")
             is_member = IMRepository.is_group_member(group_id, mid)
-            print(f"[DEBUG] is_group_member: {is_member}")
             if is_member:
                 continue
             has_invite = IMRepository.has_pending_invite(group_id, mid)
-            print(f"[DEBUG] has_pending_invite: {has_invite}")
             if has_invite:
                 continue
+            # 检测是否为数字员工，如果是直接拉进群
+            is_assistant = IMRepository.get_assistant_id_by_user_id(mid) != 0
+            if is_assistant:
+                IMRepository.add_member_directly(group_id, mid, user_id)
+                member_name = IMRepository.get_username_by_id(mid)
+                IMRepository.add_system_message(group_id, f"{member_name} 已加入群聊")
+                broadcast_to_all_members(group_id, json.dumps({
+                    "type": "member_added",
+                    "group_id": group_id,
+                    "user_id": mid,
+                    "username": member_name
+                }))
+                added.append(mid)
+                continue
             invite_id = IMRepository.create_group_invite(group_id, user_id, mid, "")
-            print(f"[DEBUG] Created invite: {invite_id}")
             invited.append(mid)
             group_name = detail.get("name", "")
             broadcast_to_user(mid, json.dumps({
@@ -348,9 +357,13 @@ class IMGroupManageHandler(BaseHandler):
                 "inviter_name": self.current_user,
                 "message": ""
             }))
-        print(f"[DEBUG] Final result: invited={invited}")
+        parts = []
+        if added:
+            parts.append(f"已将 {len(added)} 名数字员工加入群聊")
         if invited:
-            return _json_response(self, 0, f"已向 {len(invited)} 名成员发送入群邀请")
+            parts.append(f"已向 {len(invited)} 名成员发送入群邀请")
+        if parts:
+            return _json_response(self, 0, "；".join(parts))
         return _json_response(self, 0, "所有成员已在群中或已有待处理邀请")
 
 

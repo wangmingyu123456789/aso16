@@ -232,7 +232,7 @@ class IMWebSocketHandler(tornado.websocket.WebSocketHandler):
                 asst = AssistantRepository.get_assistant_by_name(at_name) or AssistantRepository.get_assistant_by_code(at_name)
                 if asst:
                     asst_uid = IMRepository.get_or_create_assistant_user(asst["id"])
-                    if asst_uid:
+                    if asst_uid and IMRepository.is_group_member(conv_id, asst_uid):
                         user_msg = content.split("@" + at_name, 1)[-1].strip()
                         if not user_msg:
                             user_msg = "你好"

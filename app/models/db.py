@@ -431,6 +431,14 @@ def init_db():
 			if "sch_year" not in columns:
 				conn.execute("ALTER TABLE crawl_schedules ADD COLUMN sch_year INTEGER NOT NULL DEFAULT 0")
 
+		# crawl_schedules 表新增 schedule_type 字段
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='crawl_schedules'")
+		if cursor.fetchone():
+			cursor2 = conn.execute("PRAGMA table_info(crawl_schedules)")
+			columns = [row["name"] for row in cursor2.fetchall()]
+			if "schedule_type" not in columns:
+				conn.execute("ALTER TABLE crawl_schedules ADD COLUMN schedule_type TEXT NOT NULL DEFAULT 'once'")
+
 		# 创建 assistants 表
 		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='assistants'")
 		if not cursor.fetchone():

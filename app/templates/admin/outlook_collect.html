@@ -748,6 +748,8 @@ layui.use(['layer'], function(){
 
     var currentTaskId = null;
     var statusCheckInterval = null;
+    var _collectionCompleted = false;
+    var _pollRetryCount = 0;
 
     function clearStatusPolling(){
         if(statusCheckInterval){ clearInterval(statusCheckInterval); statusCheckInterval=null; }
@@ -755,17 +757,53 @@ layui.use(['layer'], function(){
 
     function startStatusPolling(){
         clearStatusPolling();
+        _collectionCompleted = false;
+        _pollRetryCount = 0;
         statusCheckInterval = setInterval(function(){
             if(!currentTaskId) return;
             $.get('/admin/outlook/status/api', {task_id: currentTaskId}, function(res){
-                if(res.code === 0 && res.data) updateMonitorStatus(res.data);
+                if(res.code === 0 && res.data) {
+                    updateMonitorStatus(res.data);
+                    _pollRetryCount = 0;
+                    if(res.data.status === 'completed' || res.data.status === 'error'){
+                        _collectionCompleted = true;
+                        clearStatusPolling();
+                        var count = res.data.total_count || 0;
+                        $('#resultCount').text(count);
+                        $('#resultPanel').addClass('active').slideDown(500);
+                        if(res.data.status === 'completed'){
+                            updateMonitorComplete(count);
+                        } else {
+                            updateMonitorError('采集异常');
+                        }
+                        $('#dataDisplayZone').slideDown(400);
+                        dataPage = 1;
+                        setTimeout(function(){ loadDataCards(1, currentTaskId); }, 500);
+                    }
+                } else {
+                    _pollRetryCount++;
+                    if(_pollRetryCount > 30){
+                        clearStatusPolling();
+                        updateMonitorError('采集状态获取超时');
+                        $('#btnCollect').prop('disabled', false).html('开 启 采 集');
+                        $('#loadingWrap').removeClass('active');
+                    }
+                }
+            }).fail(function(){
+                _pollRetryCount++;
+                if(_pollRetryCount > 30){
+                    clearStatusPolling();
+                    updateMonitorError('网络连接失败');
+                    $('#btnCollect').prop('disabled', false).html('开 启 采 集');
+                    $('#loadingWrap').removeClass('active');
+                }
             });
-        }, 1000);
+        }, 2000);
     }
 
     document.addEventListener("visibilitychange", function(){
         if(document.hidden){ clearStatusPolling(); }
-        else if(currentTaskId){ startStatusPolling(); }
+        else if(currentTaskId && !_collectionCompleted){ startStatusPolling(); }
     });
     window.addEventListener("beforeunload", clearStatusPolling);
     var dataPage = 1;
@@ -788,26 +826,20 @@ layui.use(['layer'], function(){
         $('#btnCollect').prop('disabled', true).html('采 集 中...');
         $('#loadingWrap').addClass('active');
         $('#resultPanel').removeClass('active').hide();
+        $('#dataDisplayZone').hide();
 
         $.post('/admin/outlook/collect/do', {
             keyword: keyword, sources: sources.join(','), pages: pages,
             page_size_step: step, ai_expand: aiExpand, ai_clean: aiClean,
             _xsrf: getCsrfToken()
         }, function(res){
-            $('#btnCollect').prop('disabled', false).html('开 启 采 集');
-            $('#loadingWrap').removeClass('active');
             if(res.code === 0){
-                var count = res.count || 0;
                 currentTaskId = res.task_id || null;
-                $('#resultCount').text(count);
-                $('#resultPanel').addClass('active').slideDown(500);
-                if(statusCheckInterval) clearStatusPolling();
-                updateMonitorComplete(count);
-                $('#dataDisplayZone').slideDown(400);
-                dataPage = 1;
-                loadDataCards(1, currentTaskId);
-                layer.msg(res.msg || '采集完成', {icon:1, time:2000});
+                layer.msg('采集任务已启动，请稍候...', {icon:1, time:2000});
+                startStatusPolling();
             } else {
+                $('#btnCollect').prop('disabled', false).html('开 启 采 集');
+                $('#loadingWrap').removeClass('active');
                 layer.msg(res.msg, {icon:2, time:3000});
                 updateMonitorError(res.msg);
             }
@@ -817,7 +849,6 @@ layui.use(['layer'], function(){
             layer.msg('请求失败，请检查网络连接', {icon:2, time:3000});
             updateMonitorError('请求失败');
         });
-        startStatusPolling();
     };
 
     function resetMonitor(keyword){
@@ -840,19 +871,23 @@ layui.use(['layer'], function(){
         $('#monitorProgressText').text('100%');
         $('#monitorTotalCount').text(count);
         $('#monitorPanel').addClass('celebrate');
-        // 采集完成后3秒自动隐藏监控面板
+        $('#btnCollect').prop('disabled', false).html('开 启 采 集');
+        $('#loadingWrap').removeClass('active');
         setTimeout(function(){
             $('#monitorPanel').slideUp(400);
-        }, 3000);
+        }, 5000);
     }
 
     function updateMonitorError(msg){
         $('#monitorStatusIcon').removeClass('idle running completed').addClass('error').html('✗');
         $('#monitorStatusText').text('采集失败');
         $('#monitorProgressBar').removeClass('active');
+        $('#btnCollect').prop('disabled', false).html('开 启 采 集');
+        $('#loadingWrap').removeClass('active');
     }
 
     function updateMonitorStatus(data){
+        if(!data) return;
         if(data.status === 'running'){
             $('#monitorStatusIcon').removeClass('idle completed error').addClass('running').html('⚡');
             $('#monitorStatusText').text('采集中...');
