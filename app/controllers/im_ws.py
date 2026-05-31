@@ -1,6 +1,7 @@
 import json
 import time
 import datetime
+import asyncio
 import httpx
 import tornado.websocket
 import tornado.web
@@ -8,6 +9,7 @@ from app.models.im import IMRepository
 from app.models.assistant import AssistantRepository
 from app.models.model import ModelRepository
 from app.models.db import get_connection
+from app.models.im_server import UserAssigner, MessageDelivery, ServerRegistry
 
 
 # 全局连接池：user_id -> set of WebSocket connections
@@ -32,6 +34,7 @@ class IMWebSocketHandler(tornado.websocket.WebSocketHandler):
             username = username.decode("utf-8")
         self.username = username
         self.user_id = IMRepository.get_user_id_by_username(username)
+        self.server_node_id = getattr(IMWebSocketHandler, '_server_node_id', None)
         self._last_pong = time.time()
 
         if not self.user_id:
@@ -164,16 +167,58 @@ class IMWebSocketHandler(tornado.websocket.WebSocketHandler):
             "create_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         }
 
-        # 推送给会话中的其他在线成员
+        # 推送给会话中的其他成员（含跨服务器转发）
         members = IMRepository.get_conversation_members(conv_id)
+        remote_forward_tasks = []
         for member in members:
             mid = member["id"]
-            if mid != self.user_id and mid in connection_pool:
+            if mid == self.user_id:
+                continue
+            # 检查是否连接在本节点
+            if mid in connection_pool:
                 for conn in connection_pool[mid]:
                     try:
                         await conn.write_message(json.dumps(msg_obj))
                     except Exception:
                         pass
+            else:
+                # 可能在其他节点，尝试跨服务器转发
+                target_node = UserAssigner.get_user_node(mid)
+                if target_node:
+                    local_node_id = getattr(self, 'server_node_id', None)
+                    if local_node_id and target_node != local_node_id:
+                        # 在其他节点上，创建投递记录并转发
+                        delivery_id = MessageDelivery.create(
+                            msg_id, conv_id, self.user_id, mid, target_node
+                        )
+                        remote_forward_tasks.append({
+                            "target_node": target_node,
+                            "delivery_id": delivery_id,
+                            "msg_obj": dict(msg_obj, target_user_id=mid)
+                        })
+                    elif not local_node_id:
+                        # 单节点模式：直接查其他节点
+                        node = ServerRegistry.get_node_by_id(target_node)
+                        if node:
+                            delivery_id = MessageDelivery.create(
+                                msg_id, conv_id, self.user_id, mid, target_node
+                            )
+                            remote_forward_tasks.append({
+                                "target_node": target_node,
+                                "delivery_id": delivery_id,
+                                "msg_obj": dict(msg_obj, target_user_id=mid)
+                            })
+
+        # 执行跨服务器转发（异步，不阻塞主流程）
+        if remote_forward_tasks:
+            for task in remote_forward_tasks:
+                asyncio.ensure_future(
+                    MessageDelivery.forward_to_node(
+                        task["target_node"],
+                        [task["msg_obj"]],
+                        task["delivery_id"]
+                    )
+                )
 
         # 发送 ack 确认给发送者
         await self.write_message(json.dumps({

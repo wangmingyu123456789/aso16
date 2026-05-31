@@ -540,6 +540,68 @@ def init_db():
 					"INSERT INTO assistants(assistant_name,assistant_code,icon,prompt_template,model_id,sort_order,is_enabled,api_key,api_url,description,category,api_interface_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
 					a
 				)
+		# ==================== 多IM服务器集群表 ====================
+
+		# 创建 im_server_nodes 表（服务注册表）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_server_nodes'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_server_nodes(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					node_id TEXT NOT NULL UNIQUE,
+					host TEXT NOT NULL,
+					public_port INTEGER NOT NULL,
+					internal_port INTEGER NOT NULL,
+					pid INTEGER NOT NULL DEFAULT 0,
+					status TEXT NOT NULL DEFAULT 'starting',
+					load_score REAL NOT NULL DEFAULT 0,
+					connection_count INTEGER NOT NULL DEFAULT 0,
+					max_connections INTEGER NOT NULL DEFAULT 200,
+					started_at TEXT,
+					last_heartbeat TEXT,
+					create_at TEXT NOT NULL DEFAULT(datetime('now'))
+				)
+				"""
+			)
+
+		# 创建 im_user_node_map 表（用户-节点映射表）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_user_node_map'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_user_node_map(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					user_id INTEGER NOT NULL UNIQUE,
+					node_id TEXT NOT NULL,
+					assigned_at TEXT NOT NULL DEFAULT(datetime('now')),
+					last_active_at TEXT,
+					is_active INTEGER NOT NULL DEFAULT 1
+				)
+				"""
+			)
+
+		# 创建 im_message_delivery 表（消息投递确认表）
+		cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='im_message_delivery'")
+		if not cursor.fetchone():
+			conn.execute(
+				"""
+				CREATE TABLE im_message_delivery(
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					msg_id INTEGER NOT NULL,
+					conv_id INTEGER NOT NULL,
+					sender_id INTEGER NOT NULL,
+					target_user_id INTEGER NOT NULL,
+					target_node_id TEXT NOT NULL,
+					status TEXT NOT NULL DEFAULT 'pending',
+					fail_reason TEXT,
+					retry_count INTEGER NOT NULL DEFAULT 0,
+					create_at TEXT NOT NULL DEFAULT(datetime('now')),
+					delivered_at TEXT
+				)
+				"""
+			)
+
 		conn.commit()
 
 def _init_default_api_interfaces(conn):

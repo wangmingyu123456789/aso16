@@ -27,6 +27,8 @@ from app.controllers.chat import ChatPageHandler,ChatStreamHandler,ChatAssistant
 from app.controllers.im import IMPageHandler,IMConversationsHandler,IMRestoreConversationHandler,IMHistoryHandler,IMSendHandler,IMCreatePrivateHandler,IMAssistantChatHandler,IMCreateGroupHandler,IMMembersHandler,IMUsersHandler,IMAssistantsHandler,IMSearchHandler,IMGlobalSearchHandler,IMMarkReadHandler,IMFriendsHandler,IMFriendRequestHandler,IMGroupInviteHandler,IMRemoveFriendHandler,IMGroupsHandler,IMGroupManageHandler as IMGroupManageOldHandler,IMFileUploadHandler,IMFileDownloadHandler,IMFilesHandler
 from app.controllers.im_ws import IMWebSocketHandler, WeatherCallbackHandler
 from app.controllers.im_group import IMGroupDetailHandler,IMGroupManageHandler,IMGroupAnnounceHandler,IMGroupDismissHandler,IMGroupLeaveHandler,IMGroupTransferHandler,IMGroupMemberSearchHandler,IMAnnounceUnconfirmedHandler,IMAnnounceConfirmHandler
+from app.controllers.im_server_api import AssignNodeHandler, NodeStatusHandler
+from app.controllers.im_internal import InternalSendHandler, InternalHealthHandler, InternalBatchUserCheckHandler
 from app.controllers.admin.im_files import AdminIMFilesHandler,AdminIMFilesApiHandler,AdminIMFilesDeleteHandler,AdminIMFilesStatsHandler
 from app.models.db import init_db,upgrade_db
 
@@ -57,6 +59,13 @@ class ViteWSHandler(tornado.websocket.WebSocketHandler):
 		pass
 	def check_origin(self, origin):
 		return True
+
+# 内部路由配置（用于IM节点间通信，由 run_im_node.py 动态添加）
+INTERNAL_ROUTES = [
+	(r"/internal/send", InternalSendHandler),
+	(r"/internal/health", InternalHealthHandler),
+	(r"/internal/batch-check", InternalBatchUserCheckHandler),
+]
 
 class DefaultHandler(tornado.web.RequestHandler):
 	def get(self, path=""):
@@ -125,6 +134,9 @@ def make_app():
 		(r"/im/api/file/(.+)",IMFileDownloadHandler),
 		(r"/im/api/files",IMFilesHandler),
 		(r"/im/api/weather/callback",WeatherCallbackHandler),
+		# 多IM服务器集群
+		(r"/im/api/assign_node",AssignNodeHandler),
+		(r"/im/api/nodes/status",NodeStatusHandler),
 
 			(r"/admin/login",AdminLoginHandler),
 			(r"/admin/logout",AdminLogoutHandler),
@@ -269,6 +281,11 @@ def make_app():
 			(r"/user/outlook/log/stats",UserCrawlLogStatsHandler),
 			(r"/user/outlook/schedule",UserCrawlScheduleHandler),
 			(r"/user/outlook/schedule/api",UserCrawlScheduleApiHandler),
+
+			# IM集群内部通信（主服务器也支持节点间转发）
+			(r"/internal/send", InternalSendHandler),
+			(r"/internal/health", InternalHealthHandler),
+			(r"/internal/batch-check", InternalBatchUserCheckHandler),
 
 			(r"/@vite/client",ViteClientHandler),
 			(r"/@vite/env",ViteEnvHandler),

@@ -683,11 +683,37 @@ function getCsrfToken() {
 }
 
 // ==================== WebSocket 管理 ====================
+var assignedNodeId = null;
+
 function connectWebSocket() {
     if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
 
-    var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(protocol + '//' + location.host + '/im/ws');
+    setWsStatus('reconnecting', '分配节点中...');
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/im/api/assign_node', true);
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    xhr.onload = function() {
+        var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        var wsUrl = protocol + '//' + location.host + '/im/ws';
+        try {
+            var resp = JSON.parse(xhr.responseText);
+            if (resp.code === 0 && resp.data && resp.data.ws_url && !resp.data.is_main) {
+                wsUrl = resp.data.ws_url;
+                assignedNodeId = resp.data.node_id;
+            }
+        } catch(e) {}
+        doConnect(wsUrl);
+    };
+    xhr.onerror = function() {
+        var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        doConnect(protocol + '//' + location.host + '/im/ws');
+    };
+    xhr.send();
+}
+
+function doConnect(wsUrl) {
+    if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+    ws = new WebSocket(wsUrl);
 
     ws.onopen = function() {
         setWsStatus('online', '已连接');
@@ -699,44 +725,36 @@ function connectWebSocket() {
         var data = JSON.parse(e.data);
         if (data.type === 'pong') return;
         if (data.type === 'connected') return;
+        if (data.type === 'server_switched') return;
         if (data.type === 'message') {
             onReceiveMessage(data);
         }
         if (data.type === 'ack') {
-            // 消息 ack 确认
             handleMsgAck(data);
         }
         if (data.type === 'friend_request') {
-            // 收到新的好友申请
             onNewFriendRequest(data);
         }
         if (data.type === 'friend_request_accepted') {
-            // 好友申请被同意
             onFriendRequestAccepted(data);
         }
         if (data.type === 'friend_request_rejected') {
-            // 好友申请被拒绝
             onFriendRequestRejected(data);
         }
         if (data.type === 'friend_added') {
-            // 新好友已添加（自己同意别人的申请后刷新）
             loadContacts();
             loadFriendRequestBadge();
         }
         if (data.type === 'group_invite') {
-            // 收到新的群邀请
             onNewGroupInvite(data);
         }
         if (data.type === 'group_invite_accepted') {
-            // 群邀请被同意
             onGroupInviteAccepted(data);
         }
         if (data.type === 'group_invite_rejected') {
-            // 群邀请被拒绝
             onGroupInviteRejected(data);
         }
         if (data.type === 'group_joined') {
-            // 加入群聊（邀请被同意后）
             onGroupJoined(data);
         }
         if (data.type === 'group_info_changed') {
