@@ -25,7 +25,7 @@ from app.controllers.dashboard import DashboardPageHandler,UserDashboardPageHand
 from app.controllers.user.sentiment import SentimentHandler,DashboardChartsHandler,SentimentStatsHandler,SentimentAnalyzeHandler,SentimentResultHandler,WordCloudHandler
 from app.controllers.chat import ChatPageHandler,ChatStreamHandler,ChatAssistantsHandler,ChatHistoryHandler,ChatModelsHandler
 from app.controllers.im import IMPageHandler,IMConversationsHandler,IMRestoreConversationHandler,IMHistoryHandler,IMSendHandler,IMCreatePrivateHandler,IMAssistantChatHandler,IMCreateGroupHandler,IMMembersHandler,IMUsersHandler,IMAssistantsHandler,IMSearchHandler,IMGlobalSearchHandler,IMMarkReadHandler,IMFriendsHandler,IMFriendRequestHandler,IMGroupInviteHandler,IMRemoveFriendHandler,IMGroupsHandler,IMGroupManageHandler as IMGroupManageOldHandler,IMFileUploadHandler,IMFileDownloadHandler,IMFilesHandler
-from app.controllers.im_ws import IMWebSocketHandler
+from app.controllers.im_ws import IMWebSocketHandler, WeatherCallbackHandler
 from app.controllers.im_group import IMGroupDetailHandler,IMGroupManageHandler,IMGroupAnnounceHandler,IMGroupDismissHandler,IMGroupLeaveHandler,IMGroupTransferHandler,IMGroupMemberSearchHandler,IMAnnounceUnconfirmedHandler,IMAnnounceConfirmHandler
 from app.controllers.admin.im_files import AdminIMFilesHandler,AdminIMFilesApiHandler,AdminIMFilesDeleteHandler,AdminIMFilesStatsHandler
 from app.models.db import init_db,upgrade_db
@@ -124,6 +124,7 @@ def make_app():
 		(r"/im/api/file/upload",IMFileUploadHandler),
 		(r"/im/api/file/(.+)",IMFileDownloadHandler),
 		(r"/im/api/files",IMFilesHandler),
+		(r"/im/api/weather/callback",WeatherCallbackHandler),
 
 			(r"/admin/login",AdminLoginHandler),
 			(r"/admin/logout",AdminLogoutHandler),

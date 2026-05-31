@@ -188,6 +188,9 @@ class IMWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     async def _maybe_assistant_reply(self, conv_id, content, members):
         """检测消息是否需要数字员工回复"""
+        # 保存当前会话ID，供 _call_assistant_api 中截胡天气助手使用
+        self._current_conv_id = conv_id
+
         # 情况1：私聊中对方是数字员工
         if len(members) == 2:
             for m in members:
@@ -264,6 +267,76 @@ class IMWebSocketHandler(tornado.websocket.WebSocketHandler):
             asst = AssistantRepository.get_assistant_by_id(assistant_id)
             if not asst:
                 return None
+
+            # =============================================
+            # TODO: 截胡天气助手 - 转发到外部 CToS2 服务器
+            # =============================================
+            #
+            # 外部服务器地址: http://{host}:9877
+            # 接口: POST /weather
+            # 请求体:
+            #   {
+            #     "city": "北京",
+            #     "conversation_id": "conv_2",      # 字符串类型！
+            #     "callback_url": "http://本服务器IP:10086/im/api/weather/callback"
+            #   }
+            #
+            # 外部服务器会分 2 次回调 callback_url：
+            #   第1次: {"conversation_id": "conv_2", "type": "image", "image_url": "http://...png", "text": "天气卡片"}
+            #   第2次: {"conversation_id": "conv_2", "type": "text",  "text": "☀️ 北京 今日天气：晴..."}
+            #
+            # 本服务器的 WeatherCallbackHandler 按 type 字段分别处理。
+            # =============================================
+            if asst.get("assistant_code") == "weather_query":
+                try:
+                    # CToS2 外部服务地址（同机本地运行，端口 9877）
+                    EXTERNAL_FASTAPI_URL = "http://127.0.0.1:9877/weather"
+
+                    conv_id = getattr(self, "_current_conv_id", 0)
+
+                    # 获取数字员工的 user_id，回调时需要用正确的 sender_id 保存消息
+                    asst_uid = IMRepository.get_or_create_assistant_user(assistant_id)
+
+                    # 本服务器的回调地址（同机 Tornado 端口 10086）
+                    CALLBACK_URL = "http://127.0.0.1:10086/im/api/weather/callback"
+
+                    # 注意：conversation_id 需要转为字符串，因为外部服务器接收字符串类型
+                    payload = {
+                        "city": user_message,
+                        "conversation_id": str(conv_id),
+                        "callback_url": CALLBACK_URL,
+                        "sender_id": asst_uid
+                    }
+                    import asyncio
+                    asyncio.ensure_future(self._send_weather_request(EXTERNAL_FASTAPI_URL, payload))
+                    return "⏳ 正在查询天气，请稍候..."
+                except Exception as e:
+                    return f"天气服务异常: {str(e)}"
+
+            # =============================================
+            # TODO: 如果外部 FastAPI 支持同步响应，也可以使用下面的同步模式
+            # （取消下方注释，注释掉上面的异步回调代码即可）
+            # =============================================
+            # if asst.get("assistant_code") == "weather_query":
+            #     try:
+            #         EXTERNAL_FASTAPI_URL = "http://your-fastapi-server:9877/weather"
+            #         payload = {
+            #             "city": user_message,
+            #             "user_id": self.user_id if hasattr(self, "user_id") else 0
+            #         }
+            #         async with httpx.AsyncClient(timeout=15.0) as client:
+            #             resp = await client.post(EXTERNAL_FASTAPI_URL, json=payload)
+            #             if resp.status_code == 200:
+            #                 data = resp.json()
+            #                 reply = data.get("reply", "")
+            #                 if reply:
+            #                     return reply
+            #             return f"天气查询失败，服务器返回: HTTP {resp.status_code}"
+            #     except httpx.ConnectError:
+            #         return "天气服务暂时不可用（无法连接到外部服务器），请确认 FastAPI 服务器已启动。"
+            #     except Exception as e:
+            #         return f"天气服务异常: {str(e)}"
+
             prompt_template = asst.get("prompt_template", "")
             if prompt_template:
                 system_msg = prompt_template.replace("{query}", user_message).replace("{{query}}", user_message)
@@ -308,6 +381,134 @@ class IMWebSocketHandler(tornado.websocket.WebSocketHandler):
             connection_pool[self.user_id].discard(self)
             if not connection_pool[self.user_id]:
                 del connection_pool[self.user_id]
+
+    async def _send_weather_request(self, url, payload):
+        """异步发送天气查询请求到外部 FastAPI（fire-and-forget）"""
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                await client.post(url, json=payload)
+        except Exception:
+            pass
+
+
+class WeatherCallbackHandler(tornado.web.RequestHandler):
+    """
+    外部 FastAPI 服务器的回调接口
+
+    外部服务器分两次回调此接口：
+    POST /im/api/weather/callback
+
+    第1次（图片消息）:
+    {
+        "conversation_id": 2,
+        "type": "image",
+        "image_url": "http://host:9877/files/weather_card/weather_Beijing_xxx.png",
+        "text": "🌤 北京 天气卡片"
+    }
+
+    第2次（文本消息）:
+    {
+        "conversation_id": 2,
+        "type": "text",
+        "text": "☀️ 北京 今日天气：晴..."
+    }
+    """
+
+    def check_xsrf_cookie(self):
+        pass
+
+    def prepare(self):
+        self.set_header("Content-Type", "application/json")
+
+    async def post(self):
+        try:
+            data = json.loads(self.request.body)
+        except Exception:
+            self.write({"code": 400, "msg": "无效的JSON"})
+            return
+
+        conv_id_raw = data.get("conversation_id", "")
+        msg_type = data.get("type", "")
+        text = data.get("text", "")
+        image_url = data.get("image_url", "")
+        sender_id = data.get("sender_id", 0)  # 由外部服务传回的数字员工 user_id
+
+        if isinstance(conv_id_raw, str) and conv_id_raw.startswith("conv_"):
+            conv_id = int(conv_id_raw[5:])
+        else:
+            try:
+                conv_id = int(conv_id_raw)
+            except (ValueError, TypeError):
+                conv_id = 0
+
+        if not conv_id or not msg_type:
+            self.write({"code": 400, "msg": "缺少 conversation_id 或 type"})
+            return
+
+        if msg_type not in ("image", "text"):
+            self.write({"code": 400, "msg": "type 必须是 image 或 text"})
+            return
+
+        if msg_type == "image" and not image_url:
+            self.write({"code": 400, "msg": "图片消息缺少 image_url"})
+            return
+
+        if msg_type == "text" and not text:
+            self.write({"code": 400, "msg": "文本消息缺少 text"})
+            return
+
+        members = IMRepository.get_conversation_members(conv_id)
+        if not members:
+            self.write({"code": 404, "msg": "会话不存在"})
+            return
+
+        # 优先使用回调中传回的 sender_id（数字员工 user_id）
+        # 如果没有传回，则在会话成员中查找关联了数字员工的用户
+        if sender_id:
+            assistant_uid = sender_id
+        else:
+            assistant_uid = None
+            for m in members:
+                ast_id = IMRepository.get_assistant_id_by_user_id(m["id"])
+                if ast_id:
+                    assistant_uid = m["id"]
+                    break
+
+        if not assistant_uid:
+            self.set_status(400)
+            self.write({"code": 400, "msg": "未找到数字员工"})
+            return
+
+        now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
+        if msg_type == "image":
+            content = image_url
+            db_msg_type = "image"
+        else:
+            content = text
+            db_msg_type = "text"
+
+        msg_id = IMRepository.save_message(conv_id, assistant_uid, db_msg_type, content, "")
+        msg_obj = {
+            "type": "message",
+            "id": msg_id,
+            "conversation_id": conv_id,
+            "sender_id": assistant_uid,
+            "sender_name": "天气查询",
+            "msg_type": db_msg_type,
+            "content": content,
+            "create_at": now
+        }
+
+        for m in members:
+            if m["id"] in connection_pool:
+                for conn in connection_pool[m["id"]]:
+                    try:
+                        conn.write_message(json.dumps(msg_obj))
+                    except Exception:
+                        pass
+
+        self.write({"code": 0, "msg": "ok"})
 
 
 def is_user_online(user_id: int) -> bool:

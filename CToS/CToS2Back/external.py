@@ -99,6 +99,7 @@ class WeatherReq(BaseModel):
     city: str
     conversation_id: str
     callback_url: str
+    sender_id: int = 0
 
 
 # ── 工具函数 ──
@@ -314,6 +315,8 @@ async def external_weather(req: WeatherReq):
 
     # ── Step 4: 转发到远程回调（先发图片URL，再发文本） ──
     forward_success = True
+    # 将 sender_id 传回回调接口，确保消息能正确保存
+    sender_id = req.sender_id
     async with httpx.AsyncClient(timeout=10) as client:
         # 第一条消息：图片
         if image_download_url:
@@ -324,6 +327,7 @@ async def external_weather(req: WeatherReq):
                     "type": "image",
                     "image_url": full_image_url,
                     "text": f"🌤 {actual_city} 天气卡片",
+                    "sender_id": sender_id,
                 })
                 logger.info(f"[外部天气] 图片消息回调: {callback_url} → {img_resp.status_code}")
                 if img_resp.status_code >= 400:
@@ -338,6 +342,7 @@ async def external_weather(req: WeatherReq):
                 "conversation_id": conversation_id,
                 "type": "text",
                 "text": text,
+                "sender_id": sender_id,
             })
             logger.info(f"[外部天气] 文本消息回调: {callback_url} → {txt_resp.status_code}")
             if txt_resp.status_code >= 400:
@@ -415,6 +420,19 @@ async def external_file_download(file_id: int):
         media_type=mime_type,
         headers={"Content-Disposition": disposition},
     )
+
+
+# ── 启动事件（初始化数据库引擎） ──
+
+@external_app.on_event("startup")
+async def on_startup():
+    """服务启动时初始化数据库引擎"""
+    from database.engine import init_db
+    try:
+        await init_db()
+        logger.info("✅ 外部服务数据库引擎已初始化")
+    except Exception as e:
+        logger.warning(f"⚠️ 数据库初始化异常（使用已有数据库文件可忽略）: {e}")
 
 
 # ── 独立启动 ──

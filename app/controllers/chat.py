@@ -332,6 +332,33 @@ class ChatStreamHandler(BaseHandler):
             await handler.flush()
             return prefix + err
 
+        # =============================================
+        # TODO: 截胡天气助手，转发到外部 FastAPI 服务器
+        # 与 im_ws.py 中的截胡逻辑保持一致。
+        # 当外部 FastAPI 服务器部署好后，取消下方注释，
+        # 并删除后面原有的 _call_api_service 调用。
+        # FastAPI 期望: POST /weather  {"city": "...", "user_id": ...}
+        # 返回: {"reply": "天气信息..."}
+        # =============================================
+        if asst.get("assistant_code") == "weather_query":
+            try:
+                EXTERNAL_FASTAPI_URL = "http://127.0.0.1:9877/weather"
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    resp = await client.post(EXTERNAL_FASTAPI_URL, json={
+                        "city": user_msg,
+                        "user_id": handler._get_user_id() if hasattr(handler, "_get_user_id") else 0
+                    })
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        reply = data.get("reply", "")
+                        if reply:
+                            handler.write(f"data: {json.dumps({'content': prefix + reply, 'done': True})}\n\n")
+                            await handler.flush()
+                            return prefix + reply
+                    return f"天气查询失败"
+            except Exception as e:
+                return f"天气服务异常: {str(e)}"
+
         from app.models.db import get_connection
         with get_connection() as conn:
             api_row = conn.execute("SELECT * FROM api_interfaces WHERE id=? AND status=1", (api_interface_id,)).fetchone()
