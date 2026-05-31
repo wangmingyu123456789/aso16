@@ -660,7 +660,6 @@ class IMRepository:
                     END
                 )
                 WHERE (f.user_id = ? OR f.friend_id = ?)
-                AND f.status = 'accepted'
                 AND u.id NOT IN (
                     SELECT user_id FROM im_conversation_members WHERE conversation_id = ? AND is_deleted = 0
                 )

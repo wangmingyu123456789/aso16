@@ -512,6 +512,20 @@ def init_db():
 				("音乐助手", "music_helper", "fas fa-music",
 					"QQ音乐VIP搜索助手，可搜索歌手、歌曲信息，获取高品质音乐资源。",
 					None, 7, 1, "", "", "QQ音乐VIP歌曲搜索", "API", music_id["id"] if music_id else None),
+				("毒鸡汤助手", "poison_chicken_soup", "fas fa-skull",
+					"你是毒鸡汤助手，专长是用尖锐而幽默的方式讲出扎心的大实话。\n"
+					"请根据用户的输入，随机回复一条毒鸡汤语录。\n"
+					"毒鸡汤应当：\n"
+					"1. 简短有力，一两句话即可\n"
+					"2. 带有黑色幽默或反讽色彩\n"
+					"3. 既要扎心又要让人会心一笑\n"
+					"4. 可以根据用户输入内容进行针对性回复\n"
+					"5. 不要过于恶毒或人身攻击，保持幽默底线\n\n"
+					"示例风格：\n"
+					"- \u201c努力不一定成功，但不努力一定很舒服。\u201d\n"
+					"- \u201c你以为你是主角，其实你连NPC都不如。\u201d\n"
+					"- \u201c加油，你是最胖的！\u201d",
+					None, 8, 1, "", "", "随机回复毒鸡汤语句，让人清醒的扎心语录", "AI", None),
 			]
 			for a in default_assistants:
 				conn.execute(
@@ -1280,4 +1294,28 @@ def upgrade_db():
 			if del_row:
 				conn.execute("DELETE FROM role_functions WHERE function_id=?", (del_row["id"],))
 				conn.execute("DELETE FROM functions WHERE id=?", (del_row["id"],))
+
+		# 迁移：添加毒鸡汤助手（如果不存在）
+		existing = conn.execute("SELECT id FROM assistants WHERE assistant_code=?", ("poison_chicken_soup",)).fetchone()
+		if not existing:
+			max_sort = conn.execute("SELECT COALESCE(MAX(sort_order),0) as ms FROM assistants").fetchone()["ms"]
+			conn.execute(
+				"INSERT INTO assistants(assistant_name,assistant_code,icon,prompt_template,model_id,sort_order,is_enabled,api_key,api_url,description,category,api_interface_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+				(
+					"毒鸡汤助手", "poison_chicken_soup", "fas fa-skull",
+					"你是毒鸡汤助手，专长是用尖锐而幽默的方式讲出扎心的大实话。\n"
+					"请根据用户的输入，随机回复一条毒鸡汤语录。\n"
+					"毒鸡汤应当：\n"
+					"1. 简短有力，一两句话即可\n"
+					"2. 带有黑色幽默或反讽色彩\n"
+					"3. 既要扎心又要让人会心一笑\n"
+					"4. 可以根据用户输入内容进行针对性回复\n"
+					"5. 不要过于恶毒或人身攻击，保持幽默底线\n\n"
+					"示例风格：\n"
+					"- \u201c努力不一定成功，但不努力一定很舒服。\u201d\n"
+					"- \u201c你以为你是主角，其实你连NPC都不如。\u201d\n"
+					"- \u201c加油，你是最胖的！\u201d",
+					None, max_sort + 1, 1, "", "", "随机回复毒鸡汤语句，让人清醒的扎心语录", "AI", None
+				)
+			)
 		conn.commit()
