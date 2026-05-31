@@ -160,7 +160,7 @@
         <div class="chat-messages" id="chatMessages">
             <div class="welcome" id="welcomeScreen">
                 <h2>有什么可以帮你？</h2>
-                <p>我是由DeepSeek驱动的AI助手，可以回答各类问题，也可以查询采集数据库中的数据。</p>
+                <p>我可以回答各类问题，也可以查询采集数据库中的数据。</p>
                 <div class="hints" id="welcomeHints">
                     <span onclick="sendHint('最新一条数据是什么？')">📊 最新数据</span>
                     <span onclick="sendHint('介绍一下大熊猫的保护情况')">🐼 大熊猫知识</span>
@@ -194,7 +194,7 @@ var isStreaming = false;
 var currentAbortController = null;
 var WELCOME_HTML = '<div class="welcome" id="welcomeScreen">'+
      '<h2>有什么可以帮你？</h2>'+
-     '<p>我是AI智能助手，可以回答各类问题，也可以查询采集数据库中的数据。</p>'+
+     '<p>我可以回答各类问题，也可以查询采集数据库中的数据。</p>'+
      '<div class="hints" id="welcomeHints">'+
      '</div></div>';
 
@@ -335,7 +335,7 @@ function sendMessage(){
     var loadingDiv = document.createElement('div');
     loadingDiv.id = indicatorId;
     loadingDiv.className = 'msg-row assistant';
-    loadingDiv.innerHTML = '<div class="avatar">AI</div><div class="msg-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
+    loadingDiv.innerHTML = '<div class="avatar"></div><div class="msg-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
     document.getElementById('chatMessages').appendChild(loadingDiv);
     scrollToBottom();
     
@@ -389,7 +389,7 @@ function sendMessage(){
                     if(!bubbleEl){
                         bubbleEl = document.createElement('div');
                         bubbleEl.className = 'msg-row assistant';
-                        bubbleEl.innerHTML = '<div class="avatar">AI</div><div class="msg-bubble" id="bubble-'+indicatorId+'"></div>';
+                        bubbleEl.innerHTML = '<div class="avatar"></div><div class="msg-bubble" id="bubble-'+indicatorId+'"></div>';
                         loadingEl.replaceWith(bubbleEl);
                         loadingEl = null;
                     }
@@ -429,7 +429,7 @@ function sendMessage(){
 function appendMessage(role, content, time){
     var div = document.createElement('div');
     div.className = 'msg-row ' + role;
-    var avatar = role==='user' ? '我' : 'AI';
+    var avatar = role==='user' ? '我' : '';
     var displayContent = role==='assistant' ? marked.parse(content) : escapeHtml(content);
     div.innerHTML = '<div class="avatar">'+avatar+'</div><div class="msg-bubble">'+displayContent+'</div>';
     document.getElementById('chatMessages').appendChild(div);

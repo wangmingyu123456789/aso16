@@ -4,13 +4,15 @@ import traceback
 import datetime
 import tornado.web
 from app.controllers.base import BaseHandler
+from app.controllers.admin.base import AdminBaseHandler
 from app.models.db import get_connection
 
 print(f"[DASHBOARD-MODULE] dashboard.py 模块已加载", flush=True)
 tornado.log.app_log.info("[DASHBOARD-MODULE] dashboard.py 模块已加载")
 
 
-class DashboardPageHandler(tornado.web.RequestHandler):
+class DashboardPageHandler(AdminBaseHandler):
+	@tornado.web.authenticated
 	def get(self):
 		self.render("admin/dashboard.html", title="数智大屏")
 
@@ -21,7 +23,8 @@ class UserDashboardPageHandler(BaseHandler):
 		self.render("user/dashboard.html", title="数智大屏", current_page="dashboard")
 
 
-class DashboardStatsHandler(tornado.web.RequestHandler):
+class DashboardStatsHandler(AdminBaseHandler):
+	@tornado.web.authenticated
 	def get(self):
 		ts = datetime.datetime.now().strftime('%H:%M:%S')
 		msg = f"\n{'='*50}\n[DASHBOARD-API {ts}] 收到请求\n客户端IP: {self.request.remote_ip}\n请求参数: {dict(self.request.arguments)}\n{'='*50}"

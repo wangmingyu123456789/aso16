@@ -224,10 +224,10 @@
 <div class="asst-page">
     <div class="asst-header">
         <div class="asst-header-left">
-            <div class="asst-header-icon">🤖</div>
+            <div class="asst-header-icon"></div>
             <div>
                 <div class="asst-header-title">数字员工</div>
-                <div class="asst-header-sub">Digital Assistant - AI智能助手管理中心</div>
+                <div class="asst-header-sub">数字员工管理中心</div>
             </div>
         </div>
         <button class="asst-add-btn" onclick="openForm()">
@@ -243,9 +243,9 @@
             <div class="asst-stat-icon">👥</div>
         </div>
         <div class="asst-stat-card ai">
-            <div class="asst-stat-label">AI助手</div>
+            <div class="asst-stat-label">数字员工</div>
             <div class="asst-stat-value" id="statAI">0</div>
-            <div class="asst-stat-icon">🧠</div>
+            <div class="asst-stat-icon">💡</div>
         </div>
         <div class="asst-stat-card api">
             <div class="asst-stat-label">API服务</div>
@@ -267,7 +267,7 @@
                 <div class="asst-form-label">类别</div>
                 <div class="asst-form-input">
                     <select name="category" id="categorySelect">
-                        <option value="AI">AI助手</option>
+                        <option value="AI">数字员工</option>
                         <option value="API">API服务</option>
                     </select>
                 </div>
@@ -286,7 +286,7 @@
             </div>
             <div class="asst-form-row">
                 <div class="asst-form-label">描述</div>
-                <div class="asst-form-input"><input type="text" name="description" placeholder="如：川小农AI助手"></div>
+                <div class="asst-form-input"><input type="text" name="description" placeholder="如：川小农"></div>
             </div>
         </div>
 
@@ -361,12 +361,12 @@ layui.use(['layer'], function(){
             if(res.code===0){
                 updateStats(res.data);
                 if(res.data.length === 0){
-                    $('#assistantGrid').html('<div class="asst-empty"><div class="asst-empty-icon">🤖</div><div class="asst-empty-text">暂无数字员工，请点击右上角新增助手</div></div>');
+                    $('#assistantGrid').html('<div class="asst-empty"><div class="asst-empty-icon"></div><div class="asst-empty-text">暂无数字员工，请点击右上角新增助手</div></div>');
                     return;
                 }
                 var html='';
                 $.each(res.data,function(i,item){
-                    var catLabel = item.category === 'API' ? 'API服务' : 'AI助手';
+                    var catLabel = item.category === 'API' ? 'API服务' : '数字员工';
                     var catCls = item.category === 'API' ? 'api' : 'ai';
                     var isFa = item.icon && item.icon.startsWith('fa');
                     var iconCls = isFa ? item.icon : ('layui-icon ' + (item.icon || 'layui-icon-user'));
