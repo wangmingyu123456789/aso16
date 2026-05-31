@@ -1,9 +1,9 @@
 <div id="gesturePanel" class="gesture-panel">
-	<div class="gp-header">
+	<div class="gp-header" onclick="GestureController.toggleCollapse();event.stopPropagation();">
 		<span class="gp-title"><span id="gpIcon">🖐️</span> 手势识别</span>
 		<div class="gp-header-actions">
 			<button class="gp-btn gp-btn-settings" onclick="GestureController.toggleSettings()" title="设置">⚙️</button>
-			<button class="gp-btn gp-btn-collapse" onclick="GestureController.toggleCollapse()" title="折叠">◀</button>
+			<button class="gp-btn gp-btn-collapse" onclick="GestureController.toggleCollapse();event.stopPropagation();" title="折叠">◀</button>
 		</div>
 	</div>
 	<div class="gp-body">
@@ -24,10 +24,11 @@
 			<div class="gp-section-title">支持的手势</div>
 			<div class="gp-gesture-item"><span>☝️</span> 食指向上</div>
 			<div class="gp-gesture-item"><span>👇</span> 食指向下</div>
-			<div class="gp-gesture-item"><span>✊</span> 握拳</div>
+			<div class="gp-gesture-item"><span>✊</span> 握拳（返回首页）</div>
 			<div class="gp-gesture-item"><span>👈</span> 左滑</div>
 			<div class="gp-gesture-item"><span>👉</span> 右滑</div>
 			<div class="gp-gesture-item"><span>🖐️</span> 上滑/下滑</div>
+			<div class="gp-gesture-item"><span>✌️</span> 二指（瞭望采集）</div>
 		</div>
 		<button class="gp-btn gp-btn-guide" onclick="GestureController.showGuide()">🎓 新手引导</button>
 		<button class="gp-btn gp-btn-speech" onclick="GestureController.toggleSpeech()" id="gpSpeechBtn">🔊 语音播报</button>
@@ -64,9 +65,10 @@
 		</div>
 		<div class="gp-guide-tips">
 			<p>💡 食指向上/向下：翻页选择</p>
-			<p>💡 握拳：暂停/恢复自动轮播</p>
+			<p>💡 握拳：返回首页</p>
 			<p>💡 左滑/右滑：切换功能模块</p>
 			<p>💡 上滑/下滑：滚动页面</p>
+			<p>💡 二指：跳转到瞭望采集</p>
 		</div>
 		<button class="gp-btn gp-btn-guide-close" onclick="GestureController.hideGuide()">我知道了</button>
 	</div>
@@ -92,7 +94,7 @@
 .gp-status-text{font-size:11px;color:rgba(255,255,255,0.4)}
 .gp-video-wrap{position:relative;width:100%;aspect-ratio:4/3;border-radius:8px;overflow:hidden;background:#000;margin-bottom:8px}
 .gp-video-wrap video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
-.gp-video-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%;transform:scaleX(-1)}
+.gp-video-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%}
 .gp-live-status{margin-bottom:8px;padding:6px 8px;background:rgba(0,0,0,0.3);border-radius:6px;text-align:center;border:1px solid rgba(100,120,200,0.1);min-height:36px}
 .gp-live-gesture{font-size:13px;font-weight:600;color:#00e676;min-height:20px;display:flex;align-items:center;justify-content:center;gap:4px}
 .gp-live-gesture.waiting{color:#556;font-size:11px}

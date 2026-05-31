@@ -23,7 +23,9 @@ var GESTURE_LABELS = {
 	swipe_left: '👈 左滑',
 	swipe_right: '👉 右滑',
 	swipe_up: '🖐️ 上滑',
-	swipe_down: '🖐️ 下滑'
+	swipe_down: '🖐️ 下滑',
+	open_palm: '🖐️ 布',
+	two_fingers: '✌️ 二指'
 };
 
 function init(canvas){
@@ -53,10 +55,6 @@ function draw(){
 	}
 
 	var landmarks = lastLandmarks;
-
-	ctx.save();
-	ctx.scale(-1, 1);
-	ctx.translate(-w, 0);
 
 	// 画连接线
 	ctx.strokeStyle = 'rgba(0, 212, 255, 0.5)';
@@ -89,8 +87,6 @@ function draw(){
 		ctx.lineWidth = 1;
 		ctx.stroke();
 	}
-
-	ctx.restore();
 
 	// 手势标签
 	if(lastGesture && lastGesture.type){

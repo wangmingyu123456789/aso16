@@ -17,8 +17,8 @@ class ApiRepository:
                 ).fetchone()
                 rows = conn.execute(
                     """SELECT * FROM api_interfaces
-                       WHERE name LIKE ? OR code LIKE ? OR api_url LIKE ?
-                       ORDER BY id DESC LIMIT ? OFFSET ?""",
+                    WHERE name LIKE ? OR code LIKE ? OR api_url LIKE ?
+                    ORDER BY id DESC LIMIT ? OFFSET ?""",
                     (like, like, like, page_size, offset)
                 ).fetchall()
             else:
@@ -50,17 +50,17 @@ class ApiRepository:
 
     @staticmethod
     def create_api(name, code, api_url, method='GET', response_format='JSON',
-                   request_example='', params_schema='', headers='', description='',
-                   qps_limit='', status=1):
+                request_example='', params_schema='', headers='', description='',
+                qps_limit='', status=1):
         try:
             with get_connection() as conn:
                 conn.execute(
                     """INSERT INTO api_interfaces(
-                       name,code,api_url,method,response_format,request_example,
-                       params_schema,headers,description,qps_limit,status
+                    name,code,api_url,method,response_format,request_example,
+                    params_schema,headers,description,qps_limit,status
                     ) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
                     (name, code, api_url, method, response_format, request_example,
-                     params_schema, headers, description, qps_limit, status)
+                    params_schema, headers, description, qps_limit, status)
                 )
                 return True
         except Exception:
@@ -68,8 +68,8 @@ class ApiRepository:
 
     @staticmethod
     def update_api(api_id, name=None, code=None, api_url=None, method=None,
-                   response_format=None, request_example=None, params_schema=None,
-                   headers=None, description=None, qps_limit=None, status=None):
+                response_format=None, request_example=None, params_schema=None,
+                headers=None, description=None, qps_limit=None, status=None):
         updates = []
         params = []
         fields = {
@@ -130,7 +130,7 @@ class ApiRepository:
         with get_connection() as conn:
             conn.execute(
                 """UPDATE api_interfaces SET total_calls=total_calls+1,
-                   last_called_at=datetime('now','localtime') WHERE id=?""",
+                last_called_at=datetime('now','localtime') WHERE id=?""",
                 (api_id,)
             )
 

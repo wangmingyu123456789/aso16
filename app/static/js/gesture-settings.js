@@ -18,12 +18,16 @@ var defaults = {
 		swipe_left: true,
 		swipe_right: true,
 		swipe_up: true,
-		swipe_down: true
+		swipe_down: true,
+		open_palm: true,
+		two_fingers: true
 	},
 	holdTimes: {
 		index_up: 400,
 		index_down: 400,
-		fist: 600
+		fist: 600,
+		open_palm: 500,
+		two_fingers: 500
 	},
 	cooldownMs: 800
 };

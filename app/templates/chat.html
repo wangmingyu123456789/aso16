@@ -184,6 +184,8 @@
 </div>
 <div class="toast" id="toast"></div>
 
+{% include 'components/gesture_panel.html' %}
+
 <script>
 marked.setOptions({breaks:true,gfm:true});
 var currentConvId = 0;
@@ -489,5 +491,12 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 })();
 </script>
+
+<script src="/static/js/speech-manager.js"></script>
+<script src="/static/js/gesture-settings.js"></script>
+<script src="/static/js/gesture-feedback.js"></script>
+<script src="/static/js/gesture-rule-engine.js"></script>
+<script src="/static/js/gesture-event-bus.js"></script>
+<script src="/static/js/gesture.js"></script>
 </body>
 </html>

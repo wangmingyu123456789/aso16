@@ -2,10 +2,9 @@
 'use strict';
 
 var hands = null;
-var camera = null;
 var isRunning = false;
-var lastGestureType = null;
-var settingsLoaded = false;
+var handDetected = false;
+var frameTimer = null;
 
 var GestureController = {
 	init: function(){
@@ -32,19 +31,9 @@ var GestureController = {
 		if(el('gsSwipeUp')) el('gsSwipeUp').checked = s.get('gestures.swipe_up') !== false;
 		if(el('gsSwipeDown')) el('gsSwipeDown').checked = s.get('gestures.swipe_down') !== false;
 		this.updateUIState();
-		settingsLoaded = true;
 	},
 
 	bindEvents: function(){
-		var panel = document.getElementById('gesturePanel');
-		if(!panel) return;
-		if(panel.classList.contains('collapsed')){
-			panel.addEventListener('click', function(e){
-				if(panel.classList.contains('collapsed') && !e.target.closest('.gp-header-actions')){
-					GestureController.toggleCollapse();
-				}
-			});
-		}
 	},
 
 	toggleCollapse: function(){
@@ -77,12 +66,12 @@ var GestureController = {
 		}
 		var video = document.getElementById('gpVideo');
 		if(!video) return;
-		this.setStatus('active', '正在启动...');
+		this.setStatus(null, '正在启动...');
 
 		var self = this;
 
 		if(typeof Hands === 'undefined'){
-			this.setStatus('error', '加载MediaPipe中...');
+			this.setStatus(null, '加载MediaPipe中...');
 			this.loadMediaPipe(function(success){
 				if(success){
 					self.startCamera();
@@ -102,8 +91,8 @@ var GestureController = {
 			hands.setOptions({
 				maxNumHands: 1,
 				modelComplexity: 1,
-				minDetectionConfidence: window.GestureSettings.get('minDetectionConfidence') || 0.7,
-				minTrackingConfidence: window.GestureSettings.get('minTrackingConfidence') || 0.5
+				minDetectionConfidence: 0.75,
+				minTrackingConfidence: 0.7
 			});
 			hands.onResults(function(results){ self.onResults(results); });
 		}
@@ -127,11 +116,12 @@ var GestureController = {
 							window.GestureFeedback.start();
 						}
 						isRunning = true;
-						self.setStatus('active', '已检测到手部');
+						handDetected = false;
+						self.setStatus(null, '等待手部...');
 						document.getElementById('gpToggleBtn').textContent = '⏹ 停止摄像头';
 						document.getElementById('gpToggleBtn').classList.add('active');
 						localStorage.setItem('gesture_auto_start', 'true');
-						self.processFrame();
+						self.sendFrame();
 					});
 				})
 				.catch(function(err){
@@ -148,6 +138,11 @@ var GestureController = {
 
 	stopCamera: function(){
 		isRunning = false;
+		handDetected = false;
+		if(frameTimer){
+			clearTimeout(frameTimer);
+			frameTimer = null;
+		}
 		var video = document.getElementById('gpVideo');
 		if(video && video.srcObject){
 			var tracks = video.srcObject.getTracks();
@@ -165,48 +160,109 @@ var GestureController = {
 		localStorage.setItem('gesture_auto_start', 'false');
 	},
 
-	processFrame: function(){
+	sendFrame: function(){
 		if(!isRunning) return;
-		var video = document.getElementById('gpVideo');
-		if(video && video.readyState >= 2 && hands){
-			try{
-				hands.send({image: video});
-			}catch(e){
-				console.error('[Gesture] send error:', e);
-			}
+		
+		// 清除任何现有的定时器，确保只有一个活跃
+		if(frameTimer){
+			clearTimeout(frameTimer);
+			frameTimer = null;
 		}
-		var frameRate = window.GestureSettings.get('frameRate') || 15;
-		var delay = Math.max(33, Math.floor(1000 / frameRate));
-		setTimeout(function(){ GestureController.processFrame(); }, delay);
+		
+		var video = document.getElementById('gpVideo');
+		if(!video || video.readyState < 2 || !hands){
+			console.log('[Gesture] Video not ready, readyState:', video ? video.readyState : 'no video');
+			// 视频未准备好，延迟重试
+			frameTimer = setTimeout(function(){ 
+				GestureController.sendFrame(); 
+			}, 100);
+			return;
+		}
+		
+		console.log('[Gesture] Sending frame, video size:', video.videoWidth, 'x', video.videoHeight);
+		try{
+			hands.send({image: video});
+		}catch(e){
+			console.error('[Gesture] send error:', e);
+			// 发送失败，延迟后重试
+			frameTimer = setTimeout(function(){ 
+				GestureController.sendFrame(); 
+			}, 200);
+		}
 	},
 
 	onResults: function(results){
-		if(!results || !results.multiHandLandmarks || results.multiHandLandmarks.length === 0){
-			this.setStatus(null, '未检测到手部');
-			document.getElementById('gpLiveGesture').textContent = '等待手势...';
-			document.getElementById('gpLiveGesture').className = 'gp-live-gesture waiting';
+		console.log('[Gesture] onResults called, results:', results);
+		
+		// 清除可能存在的旧定时器
+		if(frameTimer){
+			clearTimeout(frameTimer);
+			frameTimer = null;
+		}
+		
+		// 如果已停止，不再处理
+		if(!isRunning){
+			console.log('[Gesture] Stopped, ignoring results');
 			return;
 		}
+		
+		var liveEl = document.getElementById('gpLiveGesture');
+		var confEl = document.getElementById('gpLiveConfidence');
 
-		var landmarks = results.multiHandLandmarks[0];
-		this.setStatus('active', '已检测到手部');
-
-		window.GestureFeedback.updateLandmarks(landmarks);
-
-		var gesture = window.GestureRuleEngine.detectAll(landmarks);
-		if(gesture){
-			lastGestureType = gesture.type;
-			window.GestureFeedback.updateGesture(gesture);
-			this.updateLiveStatus(gesture);
-			window.GestureBus.emit(gesture);
-		} else {
+		if(!results || !results.multiHandLandmarks || results.multiHandLandmarks.length === 0){
+			// 没有检测到手
+			console.log('[Gesture] No hand detected');
+			handDetected = false;
+			this.setStatus(null, '等待手部...');
+			if(liveEl){
+				liveEl.textContent = '等待手势...';
+				liveEl.className = 'gp-live-gesture waiting';
+			}
+			if(confEl) confEl.textContent = '';
+			window.GestureFeedback.updateLandmarks(null);
 			window.GestureFeedback.updateGesture(null);
-			if(!lastGestureType || Date.now() - (window.GestureRuleEngine.getLastGesture() ? 0 : Date.now()) > 500){
-				document.getElementById('gpLiveGesture').textContent = '等待手势...';
-				document.getElementById('gpLiveGesture').className = 'gp-live-gesture waiting';
-				document.getElementById('gpLiveConfidence').textContent = '';
+		} else {
+			// 检测到手部
+			console.log('[Gesture] Hand detected! Landmarks count:', results.multiHandLandmarks[0].length);
+			var rawLandmarks = results.multiHandLandmarks[0];
+			var landmarks = [];
+			for(var i = 0; i < rawLandmarks.length; i++){
+				landmarks.push({
+					x: 1 - rawLandmarks[i].x,  // X轴镜像
+					y: rawLandmarks[i].y,
+					z: rawLandmarks[i].z
+				});
+			}
+
+			// 只在首次检测到时更新状态
+			if(!handDetected){
+				handDetected = true;
+				this.setStatus('active', '已检测到手部');
+				console.log('[Gesture] First hand detection!');
+			}
+
+			// 更新21点可视化
+			window.GestureFeedback.updateLandmarks(landmarks);
+
+			// 手势识别
+			var gesture = window.GestureRuleEngine.detectAll(landmarks);
+			if(gesture){
+				console.log('[Gesture] Gesture recognized:', gesture.type);
+				window.GestureFeedback.updateGesture(gesture);
+				this.updateLiveStatus(gesture);
+				window.GestureBus.emit(gesture);
+			} else {
+				window.GestureFeedback.updateGesture(null);
 			}
 		}
+
+		// 在onResults完成后，调度下一帧
+		var frameRate = window.GestureSettings.get('frameRate') || 15;
+		var delay = Math.max(33, Math.floor(1000 / frameRate));
+		console.log('[Gesture] Scheduling next frame in', delay, 'ms');
+		frameTimer = setTimeout(function(){ 
+			GestureController.sendFrame(); 
+		}, delay);
 	},
 
 	updateLiveStatus: function(gesture){
@@ -217,7 +273,9 @@ var GestureController = {
 			swipe_left: '👈 左滑',
 			swipe_right: '👉 右滑',
 			swipe_up: '🖐️ 上滑',
-			swipe_down: '🖐️ 下滑'
+			swipe_down: '🖐️ 下滑',
+			open_palm: '🖐️ 布',
+			two_fingers: '✌️ 二指'
 		};
 		var el = document.getElementById('gpLiveGesture');
 		var confEl = document.getElementById('gpLiveConfidence');
