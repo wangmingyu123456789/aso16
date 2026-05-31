@@ -1,0 +1,1374 @@
+From f0f6c5d7ac56b8e2a39e313c81607c524bfad332 Mon Sep 17 00:00:00 2001
+From: OOOXYZOOO <286682364+OOOXYZOOO@users.noreply.github.com>
+Date: Sat, 30 May 2026 22:33:25 +0900
+Subject: [PATCH 1/3] /
+
+---
+ CToS/CToS2Back/.env                           |   7 +-
+ .../__pycache__/config.cpython-311.pyc        | Bin 3948 -> 4321 bytes
+ .../__pycache__/external_app.cpython-311.pyc  | Bin 0 -> 14093 bytes
+ CToS/CToS2Back/config.py                      |   3 +
+ CToS/CToS2Back/external_app.py                | 275 ++++++++++++++++
+ .../__pycache__/weather_tools.cpython-311.pyc | Bin 35065 -> 34853 bytes
+ CToS/CToS2Back/tools/weather_tools.py         |   3 +-
+ ...45\345\217\243\346\226\207\346\241\243.md" | 305 ++++++++++++++++++
+ CToS/run.py                                   |  74 ++++-
+ app.py                                        |   4 +-
+ app/controllers/chat.py                       |  28 ++
+ app/controllers/im_ws.py                      | 199 ++++++++++++
+ 12 files changed, 882 insertions(+), 16 deletions(-)
+ create mode 100644 CToS/CToS2Back/__pycache__/external_app.cpython-311.pyc
+ create mode 100644 CToS/CToS2Back/external_app.py
+ create mode 100644 "CToS/CToS2Back/\345\244\226\351\203\250API\346\216\245\345\217\243\346\226\207\346\241\243.md"
+
+diff --git a/CToS/CToS2Back/.env b/CToS/CToS2Back/.env
+index 9e14936..934c9f2 100644
+--- a/CToS/CToS2Back/.env
++++ b/CToS/CToS2Back/.env
+@@ -23,4 +23,9 @@ ENV = development
+ CORS_ORIGINS = *
+ APP_PORT = 8000
+ MAX_FILE_SIZE = 10485760
+-SYSTEM_NAME = CToS智能系统
+\ No newline at end of file
++SYSTEM_NAME = CToS智能系统
++
++# ===== 外部服务配置 =====
++EXTERNAL_PORT = 8080
++EXTERNAL_BASE_URL = http://localhost:8080
++SYSTEM_BASE_URL = http://localhost:8000
+diff --git a/CToS/CToS2Back/__pycache__/config.cpython-311.pyc b/CToS/CToS2Back/__pycache__/config.cpython-311.pyc
+index 9d11714b34d11c8fdd509a45de85d56f8b910bc5..ff7396673a967e048a78ca75e259cd561bb39046 100644
+GIT binary patch
+delta 727
+zcmaDO_fU~<IWI340}!x1mCE|ZF_CW<<GGC|uQ5+fXBL>enniH(EGGVX*;KAn_7oKx
+zpfV<gROT!ekOmM)QA<%@#>Bv|8i*kvN-mWRs8$V&T8$J<G_~?zwHjE|YNco+)cS#p
+zj#2<C)&eO`RZP)IWlLj9(QRQ_2IQ{>DFA~gC9s?_P)-j+P9;S@m_gHEGaG9aqmXMv
+zh-;9aqfdN*e^AIR77GK5$+c{@fr4;xC&ysd_|PDqD$$IRk^(Dz{ha*d#GH)$;u0&M
+zVuM@!!I8lsuD<bj)fpIU-pQuPB<!A9l2MxEn4FwnnpYB&Se$QYHu)=u9i!@I6HXyU
+z30<J$H5rT8fK-t=kSJyZ5(-6@ljFD)81*LCb4jvW14aBaRVUBqQe`xre3WatYmo*>
+zxh9Cv0ur}43X1XzQj1C|i>yFgmZbdroFZEwb0tF&NOzGXh+u^g>_A3w@#aa~bxcxh
+z7iI0Q$l70&bhskv(BM14_yUUq5M5+(n9RiI?s!91ZAQ?X$P4OL7i@wr%7$E#4Y|M~
+zI-&Ri3y==E$P#ixT4jdO9Lo!;W*02{FG>eokq&6^pAdY3B>;#nvII=_<O^rCp1hDx
+z1nBl{d<s&YAXmU0^^3zMH$SB`C)KXVck%~5ds|IL{SUwZK_@<f#J(UT!WbENL^>=w
+Nt$M5)I6x3=Bml<twBP^$
+
+delta 393
+zcmaE;_(qOzIWI340}yzxk;*#HK9O%1qs7LP*O(_SW|8%Zl1*hxWlvGD0m`S!rKqK{
+zr7@+bx3DY&@>hd2fkBi!SWW>br-31-n4%fXpsBTa4r>+TWNmh<&D+^En1oAGa|>bu
+zDoZl*^8$+Uvr>~wiYI^Kv}07-Y{(_VD4_{7SCg@b4M-Ik1BqfrAfZrXIystKfl+&M
+z4Ywq_IZ(t;Q)%)XZdFG8$%nY7o896lD9SHLEh?!jG6PE9VoA!+&ndD5GFLJbfs_}S
+zf(TX^!46~;b8Vi-Q^z#fh2L`WKK^hquriPeO}1O?@$o77$?@?;`jfQ<6r@~1`ryX=
+y;;_lhPbtkwwJY+RoGM^%tH!ARfdP~F2on2(kO*L8;1TJt=(OswYTy7tu#o_-KVC=x
+
+diff --git a/CToS/CToS2Back/__pycache__/external_app.cpython-311.pyc b/CToS/CToS2Back/__pycache__/external_app.cpython-311.pyc
+new file mode 100644
+index 0000000000000000000000000000000000000000..f7b0838040a7aea0b790ade8ea188f406500460a
+GIT binary patch
+literal 14093
+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
+ArT_o{
+
+literal 0
+HcmV?d00001
+
+diff --git a/CToS/CToS2Back/config.py b/CToS/CToS2Back/config.py
+index 1f0e2f1..35bbf7b 100644
+--- a/CToS/CToS2Back/config.py
++++ b/CToS/CToS2Back/config.py
+@@ -28,8 +28,11 @@ class Settings:
+     DB_NAME: str = os.getenv("MYSQL_DATABASE", "ctos")
+     CORS_ORIGINS: list = os.getenv("CORS_ORIGINS", "*").split(",")
+     APP_PORT: int = int(os.getenv("APP_PORT", "8000"))
++    EXTERNAL_PORT: int = int(os.getenv("EXTERNAL_PORT", "8080"))  # 外部服务端口
+     MAX_FILE_SIZE: int = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB
+     SYSTEM_NAME: str = os.getenv("SYSTEM_NAME", "CToS智能系统")
++    EXTERNAL_BASE_URL: str = os.getenv("EXTERNAL_BASE_URL", "http://localhost:8080")  # 外部访问的基础URL
++    SYSTEM_BASE_URL: str = os.getenv("SYSTEM_BASE_URL", "http://localhost:8000")  # 系统基础URL
+ 
+     @property
+     def database_url(self) -> str:
+diff --git a/CToS/CToS2Back/external_app.py b/CToS/CToS2Back/external_app.py
+new file mode 100644
+index 0000000..22e48c3
+--- /dev/null
++++ b/CToS/CToS2Back/external_app.py
+@@ -0,0 +1,275 @@
++"""
++外部服务独立入口
++=================
++在独立的端口上运行无鉴权的外部服务，调用内部业务逻辑。
++可直接使用 python external_app.py 启动，或通过 run.py 管理。
++"""
++import sys
++import uuid
++import urllib.parse
++from pathlib import Path
++
++# 将项目根目录加入 sys.path
++sys.path.insert(0, str(Path(__file__).parent))
++
++from fastapi import FastAPI, HTTPException
++from fastapi.middleware.cors import CORSMiddleware
++from fastapi.responses import FileResponse, JSONResponse
++from pydantic import BaseModel
++
++from config import settings
++from utils.helpers import logger
++from tools.weather_tools import get_weather, send_weather_card
++from services.file_service import get_file_record_raw
++
++try:
++    import httpx
++except ImportError:
++    httpx = None
++
++# ── 创建外部 FastAPI 应用 ──
++external_app = FastAPI(
++    title="CToS2 External API",
++    description="外部无鉴权服务 - 天气代理 & 文件下载",
++    version="1.0.0",
++)
++
++# CORS - 允许所有来源
++external_app.add_middleware(
++    CORSMiddleware,
++    allow_origins=["*"],
++    allow_credentials=False,
++    allow_methods=["*"],
++    allow_headers=["*"],
++)
++
++# 天气卡片图片缓存目录
++CARD_CACHE_DIR = Path(__file__).parent / "data" / "weather_cards"
++CARD_CACHE_DIR.mkdir(parents=True, exist_ok=True)
++
++
++# ── 请求模型 ──
++
++class WeatherReq(BaseModel):
++    """外部天气请求"""
++    city: str
++    conversation_id: str
++    callback_url: str
++
++
++# ── 工具函数 ──
++
++def _save_card_to_file(image_bytes: bytes, city: str) -> str:
++    """将天气卡片图片保存到本地文件"""
++    safe_city = "".join(c if c.isalnum() or c in ('-_') else '_' for c in city)
++    filename = f"weather_{safe_city}_{uuid.uuid4().hex[:8]}.png"
++    filepath = CARD_CACHE_DIR / filename
++    with open(filepath, "wb") as f:
++        f.write(image_bytes)
++    logger.info(f"天气卡片已保存: {filepath} ({len(image_bytes)} bytes)")
++    return str(filepath)
++
++
++# ── 端点1：健康检查 ──
++
++@external_app.get("/health")
++async def health():
++    """健康检查"""
++    return {"status": "ok", "service": "external", "version": "1.0.0"}
++
++
++# ── 端点2：天气代理 ──
++
++@external_app.post("/weather")
++async def external_weather(req: WeatherReq):
++    """
++    外部天气服务代理。
++    
++    接收请求 → 调用内部天气工具 → 保存图片到本地 → 
++    将图片URL和文本消息分两次转发到远程回调服务器。
++    """
++    city = req.city
++    conversation_id = req.conversation_id
++    callback_url = req.callback_url
++
++    logger.info(f"[外部天气] 收到请求: city={city}, callback={callback_url}")
++
++    if not httpx:
++        logger.error("httpx 未安装，无法转发到远程服务器")
++        return JSONResponse(
++            status_code=500,
++            content={"code": -1, "message": "缺少 httpx 库", "data": None}
++        )
++
++    # Step 1: 获取天气数据
++    weather_data = await get_weather(city)
++    if not weather_data.get("success"):
++        logger.error(f"[外部天气] 天气查询失败: {weather_data.get('error', '未知错误')}")
++        return JSONResponse(
++            status_code=502,
++            content={
++                "code": -1,
++                "message": f"天气查询失败: {weather_data.get('error', '未知错误')}",
++                "data": None,
++            }
++        )
++
++    # Step 2: 生成天气卡片图片
++    card_bytes = await send_weather_card(weather_data)
++    if not card_bytes or len(card_bytes) < 100:
++        logger.warning("[外部天气] 天气卡片生成失败，使用纯文本模式")
++
++    # Step 3: 保存图片到本地
++    image_download_url = None
++    if card_bytes and len(card_bytes) > 100:
++        image_path = _save_card_to_file(card_bytes, city)
++        file_name = Path(image_path).name
++        image_download_url = f"/files/weather_card/{file_name}"
++        logger.info(f"[外部天气] 卡片图片URL: {image_download_url}")
++
++    # Step 4: 构造文本消息
++    temp = weather_data.get("temp_c", "?")
++    desc = weather_data.get("weather_desc", "未知")
++    humidity = weather_data.get("humidity", "?")
++    wind = weather_data.get("wind_kph", "?")
++    wind_dir = weather_data.get("wind_dir", "?")
++    feels = weather_data.get("feelslike_c", "?")
++
++    text = (
++        f"☀️ {city} 今日天气：{desc}\n"
++        f"🌡️ 当前温度：{temp}°C（体感 {feels}°C）\n"
++        f"💧 湿度：{humidity}%\n"
++        f"💨 风速：{wind} km/h {wind_dir}\n"
++    )
++
++    # 附加未来预报
++    forecast = weather_data.get("forecast", [])
++    if forecast:
++        text += "\n📅 未来天气：\n"
++        for day in forecast:
++            date = day.get("date", "")[-5:]
++            day_desc = day.get("weather_desc", "?")
++            max_t = day.get("max_temp", "?")
++            min_t = day.get("min_temp", "?")
++            text += f"  {date} {day_desc} {min_t}°~{max_t}°\n"
++
++    # Step 5: 转发到远程回调（先发图片URL，再发文本）
++    forward_success = True
++    async with httpx.AsyncClient(timeout=10) as client:
++        # 第一条消息：图片（如果有）
++        if image_download_url:
++            full_image_url = f"{settings.EXTERNAL_BASE_URL}{image_download_url}"
++            try:
++                img_resp = await client.post(callback_url, json={
++                    "conversation_id": conversation_id,
++                    "type": "image",
++                    "image_url": full_image_url,
++                    "text": f"🌤 {city} 天气卡片",
++                })
++                logger.info(f"[外部天气] 图片消息回调: {callback_url} → {img_resp.status_code}")
++                if img_resp.status_code >= 400:
++                    logger.warning(f"图片回调返回非成功状态码: {img_resp.status_code}")
++            except Exception as e:
++                logger.error(f"[外部天气] 图片消息回调失败: {e}")
++                forward_success = False
++
++        # 第二条消息：文本
++        try:
++            txt_resp = await client.post(callback_url, json={
++                "conversation_id": conversation_id,
++                "type": "text",
++                "text": text,
++            })
++            logger.info(f"[外部天气] 文本消息回调: {callback_url} → {txt_resp.status_code}")
++            if txt_resp.status_code >= 400:
++                logger.warning(f"文本回调返回非成功状态码: {txt_resp.status_code}")
++        except Exception as e:
++            logger.error(f"[外部天气] 文本消息回调失败: {e}")
++            forward_success = False
++
++    # Step 6: 返回结果
++    result = {
++        "city": city,
++        "weather": {
++            "temp_c": temp,
++            "description": desc,
++            "humidity": humidity,
++            "wind": f"{wind_dir} {wind_kph} km/h",
++        },
++        "image_url": image_download_url,
++        "text": text,
++        "forward_to": callback_url,
++        "forward_status": "success" if forward_success else "partial_failure",
++    }
++
++    logger.info(f"[外部天气] 处理完成: city={city}, forward={forward_success}")
++    return JSONResponse(
++        status_code=200,
++        content={"code": 0, "message": "ok", "data": result}
++    )
++
++
++# ── 端点3：天气卡片文件下载 ──
++
++@external_app.get("/files/weather_card/{filename}")
++async def download_weather_card(filename: str):
++    """下载天气卡片图片（无鉴权）"""
++    if not filename.endswith(".png"):
++        raise HTTPException(status_code=400, detail="无效的文件类型")
++    safe_name = Path(filename).name
++    filepath = CARD_CACHE_DIR / safe_name
++    if not filepath.exists():
++        raise HTTPException(status_code=404, detail="文件不存在")
++    return FileResponse(
++        path=str(filepath),
++        media_type="image/png",
++        headers={"Content-Disposition": f'inline; filename="{safe_name}"'},
++    )
++
++
++# ── 端点4：通用文件下载 ──
++
++@external_app.get("/files/{file_id}/download")
++async def external_file_download(file_id: int):
++    """通过文件ID下载系统中已上传的文件（无鉴权）"""
++    file_record = await get_file_record_raw(file_id)
++    if not file_record:
++        raise HTTPException(status_code=404, detail="文件不存在")
++    stored_path = Path(file_record.file_path)
++    if not stored_path.exists():
++        raise HTTPException(status_code=404, detail="文件存储已丢失")
++    mime_type = file_record.mime_type or "application/octet-stream"
++    is_preview = mime_type.startswith(("image/", "text/", "application/pdf"))
++    encoded_filename = urllib.parse.quote(file_record.file_name, safe='')
++    ascii_fallback = ''.join(c if ord(c) < 128 else '_' for c in file_record.file_name)
++    disposition_type = 'inline' if is_preview else 'attachment'
++    disposition = (
++        f"{disposition_type}; "
++        f"filename=\"{ascii_fallback}\"; "
++        f"filename*=UTF-8''{encoded_filename}"
++    )
++    return FileResponse(
++        path=str(stored_path),
++        filename=ascii_fallback,
++        media_type=mime_type,
++        headers={"Content-Disposition": disposition},
++    )
++
++
++# ── 独立启动 ──
++
++if __name__ == "__main__":
++    import uvicorn
++    port = settings.EXTERNAL_PORT
++    logger.info("=" * 50)
++    logger.info(f"🚀 外部服务启动 | 端口: {port}")
++    logger.info(f"   Weather: POST http://0.0.0.0:{port}/weather")
++    logger.info(f"   File DL: GET  http://0.0.0.0:{port}/files/{{id}}/download")
++    logger.info(f"   健康检查: GET  http://0.0.0.0:{port}/health")
++    logger.info("=" * 50)
++    uvicorn.run(
++        "external_app:external_app",
++        host="0.0.0.0",
++        port=port,
++        log_level="info",
++    )
+\ No newline at end of file
+diff --git a/CToS/CToS2Back/tools/__pycache__/weather_tools.cpython-311.pyc b/CToS/CToS2Back/tools/__pycache__/weather_tools.cpython-311.pyc
+index 85f35b0341539815c46c7167d9d8489909fc6533..42aaec4326e2d5f374e00e2cde41ae73010cd5c1 100644
+GIT binary patch
+delta 5469
+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
+
+delta 5658
+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
+F_(xEW2j&0(
+
+diff --git a/CToS/CToS2Back/tools/weather_tools.py b/CToS/CToS2Back/tools/weather_tools.py
+index b90a1c6..af70a27 100644
+--- a/CToS/CToS2Back/tools/weather_tools.py
++++ b/CToS/CToS2Back/tools/weather_tools.py
+@@ -3,6 +3,7 @@
+ 1. get_weather : 通过 wttr.in 获取真实天气数据（免费，无需API Key）
+ 2. send_weather_card : 根据天气数据生成天气卡片图片（纯本地合成，无需网络）
+ """
++from __future__ import annotations
+ import os
+ import io
+ import json
+@@ -225,7 +226,7 @@ async def get_weather(city_name: str) -> dict:
+ # ======================================================================
+ 
+ 
+-def _get_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
++def _get_font(size: int, bold: bool = False):
+     """获取中文字体，优先使用系统字体"""
+     font_paths = [
+         "C:/Windows/Fonts/msyh.ttc",
+diff --git "a/CToS/CToS2Back/\345\244\226\351\203\250API\346\216\245\345\217\243\346\226\207\346\241\243.md" "b/CToS/CToS2Back/\345\244\226\351\203\250API\346\216\245\345\217\243\346\226\207\346\241\243.md"
+new file mode 100644
+index 0000000..ec09665
+--- /dev/null
++++ "b/CToS/CToS2Back/\345\244\226\351\203\250API\346\216\245\345\217\243\346\226\207\346\241\243.md"
+@@ -0,0 +1,305 @@
++# CToS2 外部 API 接口文档
++
++> **服务地址**: `http://{host}:8080`
++> **鉴权方式**: 无鉴权（开放接口）
++> **数据格式**: JSON (所有请求/响应均使用 `Content-Type: application/json`)
++> **统一响应格式**:
++> ```json
++> {
++>   "code": 0,          // 0 表示成功，非0表示错误
++>   "message": "ok",    // 提示信息
++>   "data": { ... }     // 业务数据
++> }
++> ```
++
++---
++
++## 目录
++
++1. [健康检查](#1-健康检查)
++2. [天气代理服务](#2-天气代理服务)
++3. [天气卡片图片下载](#3-天气卡片图片下载)
++4. [系统文件下载](#4-系统文件下载)
++
++---
++
++## 1. 健康检查
++
++检查外部服务是否正常运行。
++
++### 请求
++
++```
++GET /health
++```
++
++### 响应示例
++
++```json
++{
++  "status": "ok",
++  "service": "external",
++  "version": "1.0.0"
++}
++```
++
++### 字段说明
++
++| 字段 | 类型 | 说明 |
++|------|------|------|
++| `status` | string | 服务状态，`"ok"` 表示正常 |
++| `service` | string | 服务标识，固定为 `"external"` |
++| `version` | string | 当前 API 版本号 |
++
++---
++
++## 2. 天气代理服务
++
++接收外部请求 → 调用内部天气工具获取实时天气 → 生成天气卡片图片 → 将图片URL和文本消息**分两次**回调到远程服务器。
++
++### 请求
++
++```
++POST /weather
++```
++
++### 请求体
++
++```json
++{
++  "city": "北京",
++  "conversation_id": "conv_xxxxx",
++  "callback_url": "https://remote-server.com/callback"
++}
++```
++
++### 请求参数字段
++
++| 字段 | 类型 | 必填 | 说明 |
++|------|------|------|------|
++| `city` | string | 是 | 城市名称，支持中文（如"北京"、"东京"）和英文（如"Beijing"、"Tokyo"） |
++| `conversation_id` | string | 是 | 会话标识，回调时会原样传回，用于关联消息 |
++| `callback_url` | string | 是 | 远程服务器的回调地址，服务端会向此地址发送两条消息 |
++
++### 回调协议
++
++服务端会按顺序向 `callback_url` 发送 **2 次 POST 请求**：
++
++#### 第 1 次回调：图片消息
++
++```json
++{
++  "conversation_id": "conv_xxxxx",
++  "type": "image",
++  "image_url": "http://host:8080/files/weather_card/weather_Beijing_abc12345.png",
++  "text": "🌤 北京 天气卡片"
++}
++```
++
++| 字段 | 类型 | 说明 |
++|------|------|------|
++| `conversation_id` | string | 原请求的会话标识 |
++| `type` | string | 消息类型，固定为 `"image"` |
++| `image_url` | string | 天气卡片图片的可下载地址（通过外部服务提供） |
++| `text` | string | 图片简短描述 |
++
++> **注意**: 如果 Pillow 未安装或生成图片失败，**不会发送此回调**，仅发送文本消息。
++
++#### 第 2 次回调：文本消息
++
++```json
++{
++  "conversation_id": "conv_xxxxx",
++  "type": "text",
++  "text": "☀️ 北京 今日天气：晴\n🌡️ 当前温度：25°C（体感 26°C）\n💧 湿度：60%\n💨 风速：15 km/h 南风\n\n📅 未来天气：\n  05-31 ☀️ 晴 18°~28°\n  06-01 ☀️ 晴 20°~30°\n  06-02 ⛅ 多云 19°~27°"
++}
++```
++
++| 字段 | 类型 | 说明 |
++|------|------|------|
++| `conversation_id` | string | 原请求的会话标识 |
++| `type` | string | 消息类型，固定为 `"text"` |
++| `text` | string | 格式化天气信息文本，包含当前天气和未来3天预报 |
++
++### 成功响应
++
++**HTTP 200**
++
++```json
++{
++  "code": 0,
++  "message": "ok",
++  "data": {
++    "city": "北京",
++    "weather": {
++      "temp_c": "25",
++      "description": "☀️ 晴",
++      "humidity": "60",
++      "wind": "南风 15 km/h"
++    },
++    "image_url": "/files/weather_card/weather_Beijing_abc12345.png",
++    "text": "☀️ 北京 今日天气：晴\n🌡️ 当前温度：25°C（体感 26°C）\n💧 湿度：60%\n💨 风速：15 km/h 南风\n\n📅 未来天气：\n  05-31 ☀️ 晴 18°~28°\n  06-01 ☀️ 晴 20°~30°\n  06-02 ⛅ 多云 19°~27°",
++    "forward_to": "https://remote-server.com/callback",
++    "forward_status": "success"
++  }
++}
++```
++
++### 错误响应
++
++**天气查询失败 — HTTP 502**
++
++```json
++{
++  "code": -1,
++  "message": "天气查询失败: 未找到该城市的天气数据",
++  "data": null
++}
++```
++
++**缺少 httpx 库 — HTTP 500**
++
++```json
++{
++  "code": -1,
++  "message": "缺少 httpx 库",
++  "data": null
++}
++```
++
++### 响应字段说明
++
++| 字段 | 类型 | 说明 |
++|------|------|------|
++| `data.city` | string | 查询的城市名称 |
++| `data.weather.temp_c` | string | 当前温度（摄氏度） |
++| `data.weather.description` | string | 天气描述（含 emoji） |
++| `data.weather.humidity` | string | 湿度百分比 |
++| `data.weather.wind` | string | 风向和风速 |
++| `data.image_url` | string\|null | 天气卡片图片的相对路径，生成失败时为 `null` |
++| `data.text` | string | 格式化天气文本（同回调中的文本） |
++| `data.forward_to` | string | 回调的目标地址 |
++| `data.forward_status` | string | 回调状态: `"success"`(全部成功) / `"partial_failure"`(部分失败) |
++
++---
++
++## 3. 天气卡片图片下载
++
++下载天气代理服务生成的天气卡片图片（PNG格式）。
++
++### 请求
++
++```
++GET /files/weather_card/{filename}
++```
++
++### 路径参数
++
++| 参数 | 类型 | 说明 |
++|------|------|------|
++| `filename` | string | 文件名，格式为 `weather_{城市}_{随机}.png` |
++
++### 响应
++
++- **HTTP 200**: 返回 PNG 图片，`Content-Type: image/png`
++- **HTTP 400**: 文件类型无效（仅允许 `.png` 文件）
++- **HTTP 404**: 文件不存在
++
++### 示例
++
++```bash
++curl -O http://localhost:8080/files/weather_card/weather_Beijing_abc12345.png
++```
++
++---
++
++## 4. 系统文件下载
++
++通过文件ID下载系统中已上传的任意文件（无鉴权）。
++
++### 请求
++
++```
++GET /files/{file_id}/download
++```
++
++### 路径参数
++
++| 参数 | 类型 | 说明 |
++|------|------|------|
++| `file_id` | integer | 系统中的文件记录ID（来自文件管理模块） |
++
++### 响应
++
++- **HTTP 200**: 文件内容（根据MIME类型决定内联预览或附件下载）
++  - 图片、文本、PDF 类型 → `Content-Disposition: inline`（浏览器直接预览）
++  - 其他类型 → `Content-Disposition: attachment`（触发下载）
++- **HTTP 404**: 文件不存在或文件存储已丢失
++
++### 响应头说明
++
++| 响应头 | 说明 |
++|--------|------|
++| `Content-Type` | 文件的 MIME 类型（如 `image/png`、`application/pdf` 等） |
++| `Content-Disposition` | 控制浏览器的展示方式（`inline` 预览 / `attachment` 下载），支持中文文件名 |
++
++### 示例
++
++```bash
++# 下载文件 ID 为 42 的文件
++curl -O http://localhost:8080/files/42/download
++
++# 直接预览图片（浏览器打开即可显示）
++open http://localhost:8080/files/42/download
++```
++
++---
++
++## 附录
++
++### A. 启动方式
++
++```bash
++# 方式1：通过统一入口启动（同时启动主服务和外部服务）
++python run.py
++
++# 方式2：单独启动外部服务
++cd CToS2Back && python external_app.py
++```
++
++### B. 配置项（.env 文件）
++
++| 配置项 | 默认值 | 说明 |
++|--------|--------|------|
++| `EXTERNAL_PORT` | `8080` | 外部服务监听端口 |
++| `EXTERNAL_BASE_URL` | `http://localhost:8080` | 外部服务的外部可访问地址（回调图片URL以此为前缀） |
++| `APP_PORT` | `8000` | 主服务端口（不影响外部服务） |
++
++### C. 完整调用示例（curl）
++
++```bash
++# 1. 健康检查
++curl http://localhost:8080/health
++
++# 2. 查询北京天气（回调到本地测试服务器）
++curl -X POST http://localhost:8080/weather \
++  -H "Content-Type: application/json" \
++  -d '{
++    "city": "北京",
++    "conversation_id": "conv_001",
++    "callback_url": "https://your-server.com/callback"
++  }'
++
++# 3. 下载天气卡片图片
++curl -O http://localhost:8080/files/weather_card/weather_Beijing_abc12345.png
++
++# 4. 下载系统文件（ID=1）
++curl -O http://localhost:8080/files/1/download
++```
++
++### D. 注意事项
++
++1. **天气代理会发送 2 次回调**：先发图片消息，再发文本消息。远程服务器需按 `type` 字段区分处理。
++2. **图片非必达**：若 Pillow 未安装或生成失败，图片回调会被跳过，仅发送文本回调。
++3. **文件安全**：天气卡片下载做了 `.png` 后缀校验和路径穿越防护；系统文件下载需文件 ID 有效。
++4. **无鉴权**：所有外部接口均无鉴权，建议在生产环境中通过防火墙/反向代理限制访问来源。
+\ No newline at end of file
+diff --git a/CToS/run.py b/CToS/run.py
+index 47635b2..aaa2bc7 100644
+--- a/CToS/run.py
++++ b/CToS/run.py
+@@ -1,15 +1,18 @@
+ """
+ CToS2 Unified Dev Server
+-========================
++=======================
+ Serves both:
+   - Frontend static files (CToS2Front/frontend/)
+-  - Backend FastAPI app (CToS2Back/app.py)
++  - Backend FastAPI app (CToS2Back/app.py) on port 8000
++  - External API service (CToS2Back/external_app.py) on port 8080
+ 
+-URL: http://localhost:8000
++URL: http://localhost:8000 (主服务, 需要鉴权)
++     http://localhost:8080 (外部服务, 无鉴权)
+ """
+ 
+ import sys
+ import os
++import multiprocessing
+ 
+ # ── Ensure backend module is importable ────────────
+ BACKEND_DIR = os.path.join(os.path.dirname(__file__), "CToS2Back")
+@@ -55,19 +58,64 @@ app.mount("/css", StaticFiles(directory=os.path.join(FRONTEND_DIR, "css")), name
+ app.mount("/js", StaticFiles(directory=os.path.join(FRONTEND_DIR, "js")), name="js")
+ 
+ 
++def run_main_server():
++    """运行主服务器（内部API + 前端）"""
++    from config import settings
++    port = settings.APP_PORT
++    print(f"  ▶ 主服务启动在 http://0.0.0.0:{port}")
++    uvicorn.run(
++        "run:app",
++        host="0.0.0.0",
++        port=port,
++        log_level="info",
++        reload=False,  # 多进程时不能用 reload
++    )
++
++
++def run_external_server():
++    """运行外部服务（无鉴权API）"""
++    from config import settings
++    port = settings.EXTERNAL_PORT
++    print(f"  ▶ 外部服务启动在 http://0.0.0.0:{port}")
++    uvicorn.run(
++        "external_app:external_app",
++        host="0.0.0.0",
++        port=port,
++        log_level="info",
++        reload=False,
++    )
++
++
+ if __name__ == "__main__":
+-    port = int(os.getenv("APP_PORT", "8000"))
++    # 需要在启动前确保 BACKEND_DIR 在 sys.path 中（外部服务也要能用）
++    os.environ["PYTHONPATH"] = BACKEND_DIR + os.pathsep + os.environ.get("PYTHONPATH", "")
++
++    port_main = int(os.getenv("APP_PORT", "8000"))
++    port_ext = int(os.getenv("EXTERNAL_PORT", "8080"))
++
+     print("=" * 50)
+     print("  CToS2 development server starting...")
+-    print(f"  - Frontend: http://localhost:{port}")
+-    print(f"  - Backend API: http://localhost:{port}/api/")
++    print(f"  - 主服务 (需鉴权): http://localhost:{port_main}")
++    print(f"  - 外部服务 (无鉴权): http://localhost:{port_ext}")
++    print(f"  - 前端: http://localhost:{port_main}")
++    print(f"  - 天气代理: POST http://localhost:{port_ext}/weather")
++    print(f"  - 文件下载: GET http://localhost:{port_ext}/files/{{id}}/download")
+     print("  - Press Ctrl+C to stop")
+     print("=" * 50)
+ 
+-    uvicorn.run(
+-        "run:app",
+-        host="0.0.0.0",
+-        port=port,
+-        reload=True,
+-        log_level="info",
+-    )
+\ No newline at end of file
++    # 使用多进程同时启动两个服务
++    p1 = multiprocessing.Process(target=run_main_server, name="main-server")
++    p2 = multiprocessing.Process(target=run_external_server, name="external-server")
++
++    try:
++        p1.start()
++        p2.start()
++        p1.join()
++        p2.join()
++    except KeyboardInterrupt:
++        print("\n收到中断信号，正在关闭服务...")
++        p1.terminate()
++        p2.terminate()
++        p1.join()
++        p2.join()
++        print("所有服务已关闭。")
+\ No newline at end of file
+diff --git a/app.py b/app.py
+index ad75f78..8045770 100644
+--- a/app.py
++++ b/app.py
+@@ -24,7 +24,7 @@ from app.controllers.admin.settings import AdminSettingsHandler
+ from app.controllers.dashboard import DashboardPageHandler,DashboardStatsHandler
+ from app.controllers.chat import ChatPageHandler,ChatStreamHandler,ChatAssistantsHandler,ChatHistoryHandler,ChatModelsHandler
+ from app.controllers.im import IMPageHandler,IMConversationsHandler,IMHistoryHandler,IMSendHandler,IMCreatePrivateHandler,IMAssistantChatHandler,IMCreateGroupHandler,IMMembersHandler,IMUsersHandler,IMAssistantsHandler,IMSearchHandler,IMMarkReadHandler,IMFriendsHandler,IMFriendRequestHandler,IMRemoveFriendHandler,IMGroupsHandler,IMGroupManageHandler,IMFileUploadHandler,IMFileDownloadHandler
+-from app.controllers.im_ws import IMWebSocketHandler
++from app.controllers.im_ws import IMWebSocketHandler, WeatherCallbackHandler
+ from app.controllers.sentiment import SentimentHandler,SentimentStatsHandler,SentimentAnalyzeHandler,DashboardChartsHandler
+ from app.models.db import init_db,upgrade_db
+ 
+@@ -117,6 +117,8 @@ def make_app():
+ 			(r"/im/api/group/manage",IMGroupManageHandler),
+ 		(r"/im/api/file/upload",IMFileUploadHandler),
+ 		(r"/im/api/file/(.+)",IMFileDownloadHandler),
++		# 天气助手回调接口（供外部 FastAPI 调用）
++		(r"/im/api/weather/callback",WeatherCallbackHandler),
+ 
+ 			(r"/admin/login",AdminLoginHandler),
+ 			(r"/admin/logout",AdminLogoutHandler),
+diff --git a/app/controllers/chat.py b/app/controllers/chat.py
+index df8ab58..6e5f05b 100644
+--- a/app/controllers/chat.py
++++ b/app/controllers/chat.py
+@@ -332,6 +332,34 @@ class ChatStreamHandler(BaseHandler):
+             await handler.flush()
+             return prefix + err
+ 
++        # =============================================
++        # TODO: 截胡天气助手，转发到外部 FastAPI 服务器
++        # 与 im_ws.py 中的截胡逻辑保持一致。
++        # 当外部 FastAPI 服务器部署好后，取消下方注释，
++        # 并删除后面原有的 _call_api_service 调用。
++        # FastAPI 期望: POST /weather  {"city": "...", "user_id": ...}
++        # 返回: {"reply": "天气信息..."}
++        # =============================================
++        # if asst.get("assistant_code") == "weather_query":
++        #     try:
++        #         import httpx
++        #         EXTERNAL_FASTAPI_URL = "http://your-fastapi-server:8000/weather"
++        #         async with httpx.AsyncClient(timeout=15.0) as client:
++        #             resp = await client.post(EXTERNAL_FASTAPI_URL, json={
++        #                 "city": user_msg,
++        #                 "user_id": handler._get_user_id() if hasattr(handler, "_get_user_id") else 0
++        #             })
++        #             if resp.status_code == 200:
++        #                 data = resp.json()
++        #                 reply = data.get("reply", "")
++        #                 if reply:
++        #                     handler.write(f"data: {json.dumps({'content': prefix + reply, 'done': True})}\n\n")
++        #                     await handler.flush()
++        #                     return prefix + reply
++        #         return f"天气查询失败"
++        #     except Exception as e:
++        #         return f"天气服务异常: {str(e)}"
++
+         from app.models.db import get_connection
+         with get_connection() as conn:
+             api_row = conn.execute("SELECT * FROM api_interfaces WHERE id=? AND status=1", (api_interface_id,)).fetchone()
+diff --git a/app/controllers/im_ws.py b/app/controllers/im_ws.py
+index 75593bc..b0e917e 100644
+--- a/app/controllers/im_ws.py
++++ b/app/controllers/im_ws.py
+@@ -161,6 +161,9 @@ class IMWebSocketHandler(tornado.websocket.WebSocketHandler):
+ 
+     async def _maybe_assistant_reply(self, conv_id, content, members):
+         """检测消息是否需要数字员工回复"""
++        # 保存当前会话ID，供 _call_assistant_api 中截胡天气助手使用
++        self._current_conv_id = conv_id
++
+         # 情况1：私聊中对方是数字员工
+         if len(members) == 2:
+             for m in members:
+@@ -237,6 +240,72 @@ class IMWebSocketHandler(tornado.websocket.WebSocketHandler):
+             asst = AssistantRepository.get_assistant_by_id(assistant_id)
+             if not asst:
+                 return None
++
++            # =============================================
++            # TODO: 截胡天气助手 - 转发到外部 CToS2 服务器
++            # =============================================
++            #
++            # 外部服务器地址: http://{host}:8080
++            # 接口: POST /weather
++            # 请求体:
++            #   {
++            #     "city": "北京",
++            #     "conversation_id": "conv_2",      # 字符串类型！
++            #     "callback_url": "http://本服务器IP:10086/im/api/weather/callback"
++            #   }
++            #
++            # 外部服务器会分 2 次回调 callback_url：
++            #   第1次: {"conversation_id": "conv_2", "type": "image", "image_url": "http://...png", "text": "天气卡片"}
++            #   第2次: {"conversation_id": "conv_2", "type": "text",  "text": "☀️ 北京 今日天气：晴..."}
++            #
++            # 本服务器的 WeatherCallbackHandler 按 type 字段分别处理。
++            # =============================================
++            if asst.get("assistant_code") == "weather_query":
++                try:
++                    # CToS2 外部服务地址（同机本地运行，端口 8080）
++                    EXTERNAL_FASTAPI_URL = "http://127.0.0.1:8080/weather"
++
++                    conv_id = getattr(self, "_current_conv_id", 0)
++
++                    # 本服务器的回调地址（同机 Tornado 端口 10086）
++                    CALLBACK_URL = "http://127.0.0.1:10086/im/api/weather/callback"
++
++                    # 注意：conversation_id 需要转为字符串，因为外部服务器接收字符串类型
++                    payload = {
++                        "city": user_message,
++                        "conversation_id": str(conv_id),
++                        "callback_url": CALLBACK_URL
++                    }
++                    import asyncio
++                    asyncio.ensure_future(self._send_weather_request(EXTERNAL_FASTAPI_URL, payload))
++                    return "⏳ 正在查询天气，请稍候..."
++                except Exception as e:
++                    return f"天气服务异常: {str(e)}"
++
++            # =============================================
++            # TODO: 如果外部 FastAPI 支持同步响应，也可以使用下面的同步模式
++            # （取消下方注释，注释掉上面的异步回调代码即可）
++            # =============================================
++            # if asst.get("assistant_code") == "weather_query":
++            #     try:
++            #         EXTERNAL_FASTAPI_URL = "http://your-fastapi-server:8000/weather"
++            #         payload = {
++            #             "city": user_message,
++            #             "user_id": self.user_id if hasattr(self, "user_id") else 0
++            #         }
++            #         async with httpx.AsyncClient(timeout=15.0) as client:
++            #             resp = await client.post(EXTERNAL_FASTAPI_URL, json=payload)
++            #             if resp.status_code == 200:
++            #                 data = resp.json()
++            #                 reply = data.get("reply", "")
++            #                 if reply:
++            #                     return reply
++            #             return f"天气查询失败，服务器返回: HTTP {resp.status_code}"
++            #     except httpx.ConnectError:
++            #         return "天气服务暂时不可用（无法连接到外部服务器），请确认 FastAPI 服务器已启动。"
++            #     except Exception as e:
++            #         return f"天气服务异常: {str(e)}"
++
+             prompt_template = asst.get("prompt_template", "")
+             if prompt_template:
+                 system_msg = prompt_template.replace("{query}", user_message).replace("{{query}}", user_message)
+@@ -283,6 +352,136 @@ class IMWebSocketHandler(tornado.websocket.WebSocketHandler):
+                 del connection_pool[self.user_id]
+ 
+ 
++    async def _send_weather_request(self, url, payload):
++        """异步发送天气查询请求到外部 FastAPI（fire-and-forget）"""
++        try:
++            async with httpx.AsyncClient(timeout=15.0) as client:
++                await client.post(url, json=payload)
++        except Exception:
++            pass  # 静默处理，因为回复会通过回调送达
++
++
++class WeatherCallbackHandler(tornado.web.RequestHandler):
++    """
++    外部 FastAPI 服务器的回调接口
++
++    外部服务器分两次回调此接口：
++    POST /im/api/weather/callback
++
++    第1次（图片消息）:
++    {
++        "conversation_id": 2,
++        "type": "image",
++        "image_url": "http://host:8080/files/weather_card/weather_Beijing_xxx.png",
++        "text": "🌤 北京 天气卡片"
++    }
++
++    第2次（文本消息）:
++    {
++        "conversation_id": 2,
++        "type": "text",
++        "text": "☀️ 北京 今日天气：晴..."
++    }
++    """
++
++    def check_xsrf_cookie(self):
++        # 外部服务器回调不需要 xsrf 验证
++        pass
++
++    def prepare(self):
++        self.set_header("Content-Type", "application/json")
++
++    async def post(self):
++        try:
++            data = json.loads(self.request.body)
++        except Exception:
++            self.write({"code": 400, "msg": "无效的JSON"})
++            return
++
++        conv_id_raw = data.get("conversation_id", "")
++        msg_type = data.get("type", "")  # "image" 或 "text"
++        text = data.get("text", "")
++        image_url = data.get("image_url", "")
++
++        # 将 conversation_id 从字符串 "conv_2" 转为整数 2
++        if isinstance(conv_id_raw, str) and conv_id_raw.startswith("conv_"):
++            conv_id = int(conv_id_raw[5:])
++        else:
++            try:
++                conv_id = int(conv_id_raw)
++            except (ValueError, TypeError):
++                conv_id = 0
++
++        if not conv_id or not msg_type:
++            self.write({"code": 400, "msg": "缺少 conversation_id 或 type"})
++            return
++
++        if msg_type not in ("image", "text"):
++            self.write({"code": 400, "msg": "type 必须是 image 或 text"})
++            return
++
++        if msg_type == "image" and not image_url:
++            self.write({"code": 400, "msg": "图片消息缺少 image_url"})
++            return
++
++        if msg_type == "text" and not text:
++            self.write({"code": 400, "msg": "文本消息缺少 text"})
++            return
++
++        # 获取会话的成员信息（找到数字员工的 user_id 和 其他成员的 user_id）
++        from app.models.im import IMRepository
++        members = IMRepository.get_conversation_members(conv_id)
++        if not members:
++            self.write({"code": 404, "msg": "会话不存在"})
++            return
++
++        # 找数字员工 user_id（即 assistant 对应的用户）
++        assistant_uid = None
++        for m in members:
++            ast_id = IMRepository.get_assistant_id_by_user_id(m["id"])
++            if ast_id:
++                assistant_uid = m["id"]
++                break
++
++        if not assistant_uid:
++            self.write({"code": 400, "msg": "未找到数字员工"})
++            return
++
++        now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
++
++        if msg_type == "image":
++            # 图片消息
++            content = image_url
++            db_msg_type = "image"
++        else:
++            # 文本消息
++            content = text
++            db_msg_type = "text"
++
++        msg_id = IMRepository.save_message(conv_id, assistant_uid, db_msg_type, content, "")
++        msg_obj = {
++            "type": "message",
++            "id": msg_id,
++            "conversation_id": conv_id,
++            "sender_id": assistant_uid,
++            "sender_name": "天气查询",
++            "msg_type": db_msg_type,
++            "content": content,
++            "create_at": now
++        }
++
++        # 推送给会话中所有在线成员
++        for m in members:
++            if m["id"] in connection_pool:
++                for conn in connection_pool[m["id"]]:
++                    try:
++                        conn.write_message(json.dumps(msg_obj))
++                    except Exception:
++                        pass
++
++        self.write({"code": 0, "msg": "ok"})
++
++
+ def is_user_online(user_id: int) -> bool:
+     """检查用户是否在线"""
+     return user_id in connection_pool and len(connection_pool[user_id]) > 0
+-- 
+2.47.0.windows.1
+
