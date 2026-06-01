@@ -3397,7 +3397,8 @@ function removeFriend(friendId, friendName) {
 }
 
 (function(){
-    if (window.location.search.indexOf('from=home') !== -1) {
+    var params = new URLSearchParams(window.location.search);
+    if (window.location.search.indexOf('from=home') !== -1 || params.get('from_gesture')) {
         var btn = document.getElementById('backHomeBtn');
         if (btn) btn.style.display = 'flex';
     }

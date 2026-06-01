@@ -187,6 +187,15 @@
 {% include 'components/gesture_panel.html' %}
 
 <script>
+// 手势导航进入时显示返回首页按钮
+(function(){
+    var params = new URLSearchParams(window.location.search);
+    if(params.get('from_gesture')){
+        var btn = document.getElementById('backHomeBtn');
+        if(btn) btn.style.display = 'flex';
+    }
+})();
+
 marked.setOptions({breaks:true,gfm:true});
 var currentConvId = 0;
 var currentModelId = 0;

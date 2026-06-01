@@ -72,15 +72,15 @@ function speak(text){
 
 /* ===== 通用导航序列 ===== */
 var UNIVERSAL_NAV = [
-	{url: '/home', label: '首页'},
-	{url: '/qa', label: '智能问数'},
-	{url: '/im', label: '智能聊天'},
-	{url: '/user/dashboard', label: '数智大屏'},
-	{url: '/user/sentiment', label: '智慧舆情'},
-	{url: '/user/outlook/collect', label: '瞭望采集'},
-	{url: '/user/outlook/data', label: '数据仓库'},
-	{url: '/user/outlook/schedule', label: '定时采集'},
-	{url: '/user/outlook/log', label: '采集日志'}
+	{path: '/home', url: '/home', label: '首页'},
+	{path: '/qa', url: '/qa?from_gesture=1', label: '智能问数'},
+	{path: '/im', url: '/im?from_gesture=1', label: '智能聊天'},
+	{path: '/user/dashboard', url: '/user/dashboard', label: '数智大屏'},
+	{path: '/user/sentiment', url: '/user/sentiment', label: '智慧舆情'},
+	{path: '/user/outlook/collect', url: '/user/outlook/collect', label: '瞭望采集'},
+	{path: '/user/outlook/data', url: '/user/outlook/data', label: '数据仓库'},
+	{path: '/user/outlook/schedule', url: '/user/outlook/schedule', label: '定时采集'},
+	{path: '/user/outlook/log', url: '/user/outlook/log', label: '采集日志'}
 ];
 
 function navigateModule(direction){
@@ -89,7 +89,7 @@ function navigateModule(direction){
 	var currentPath = window.location.pathname;
 	var foundIdx = -1;
 	for(var i = 0; i < UNIVERSAL_NAV.length; i++){
-		if(currentPath.indexOf(UNIVERSAL_NAV[i].url) !== -1){
+		if(currentPath.indexOf(UNIVERSAL_NAV[i].path) !== -1){
 			foundIdx = i;
 			break;
 		}
@@ -116,13 +116,22 @@ function navigateModule(direction){
 	for(var i = 0; i < navItems.length; i++){
 		var href = navItems[i].getAttribute('href');
 		if(href && href !== '#' && href !== 'javascript:void(0)'){
-			navArray.push({el: navItems[i], url: href});
+			// 保存原始href用于匹配，修改后的href用于跳转
+			var navHref = href;
+			// 为 qa 和 im 页面添加 from_gesture 参数
+			if(href.indexOf('/qa') !== -1 && href.indexOf('from_gesture') === -1){
+				href = href + (href.indexOf('?') === -1 ? '?from_gesture=1' : '&from_gesture=1');
+			}
+			if(href.indexOf('/im') !== -1 && href.indexOf('from_gesture') === -1){
+				href = href + (href.indexOf('?') === -1 ? '?from_gesture=1' : '&from_gesture=1');
+			}
+			navArray.push({el: navItems[i], path: navHref, url: href});
 		}
 	}
 	
 	var currentIdx = -1;
 	for(var j = 0; j < navArray.length; j++){
-		if(currentPath.indexOf(navArray[j].url) !== -1){
+		if(currentPath.indexOf(navArray[j].path) !== -1){
 			currentIdx = j;
 			break;
 		}

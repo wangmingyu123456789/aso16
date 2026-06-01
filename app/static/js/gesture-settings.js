@@ -7,11 +7,11 @@ var SETTINGS_VERSION = 4;
 var defaults = {
 	version: SETTINGS_VERSION,
 	enabled: true,
-	frameRate: 30,
-	cameraWidth: 320,
-	cameraHeight: 240,
+	frameRate: 40,
+	cameraWidth: 500,
+	cameraHeight: 300,
 	minDetectionConfidence: 0.7,
-	minTrackingConfidence: 0.5,
+	minTrackingConfidence: 0.4,
 	showFeedback: true,
 	gestures: {
 		index_up: true,
@@ -24,12 +24,12 @@ var defaults = {
 	holdTimes: {
 		index_up: 600,
 		index_down: 600,
-		fist: 200,
+		fist: 100,
 		two_fingers: 500,
 		swipe_left: 0,
 		swipe_right: 0
 	},
-	cooldownMs: 1800
+	cooldownMs: 1400
 };
 
 function load(){
