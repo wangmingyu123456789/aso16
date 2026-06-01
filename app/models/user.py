@@ -83,14 +83,14 @@ class UserRepository:
 				).fetchone()
 				total = count_row["total"]
 				rows = conn.execute(
-					"select id,username,role,status,can_login_admin,create_at from users where username like ? order by id desc limit ? offset ?",
+					"select id,username,role,status,can_login_admin,create_at from users where username like ? order by id asc limit ? offset ?",
 					(f'%{keyword}%', page_size, offset)
 				).fetchall()
 			else:
 				count_row = conn.execute("select count(*) as total from users").fetchone()
 				total = count_row["total"]
 				rows = conn.execute(
-					"select id,username,role,status,can_login_admin,create_at from users order by id desc limit ? offset ?",
+					"select id,username,role,status,can_login_admin,create_at from users order by id asc limit ? offset ?",
 					(page_size, offset)
 				).fetchall()
 		return {
@@ -105,7 +105,17 @@ class UserRepository:
 	def delete_user(user_id:int)->bool:
 		try:
 			with get_connection() as conn:
+				conn.execute("PRAGMA foreign_keys=OFF")
 				conn.execute("delete from users where id = ?", (user_id,))
+				# 重新排列ID
+				rows = conn.execute("SELECT id, username, password_hash, salt, role, status, can_login_admin, create_at FROM users ORDER BY id ASC").fetchall()
+				conn.execute("DELETE FROM users")
+				for idx, row in enumerate(rows, 1):
+					conn.execute(
+						"INSERT INTO users (id, username, password_hash, salt, role, status, can_login_admin, create_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+						(idx, row["username"], row["password_hash"], row["salt"], row["role"], row["status"], row["can_login_admin"], row["create_at"])
+					)
+				conn.execute("PRAGMA foreign_keys=ON")
 				return True
 		except Exception:
 			return False
@@ -114,7 +124,17 @@ class UserRepository:
 	def delete_users(user_ids:list)->bool:
 		try:
 			with get_connection() as conn:
+				conn.execute("PRAGMA foreign_keys=OFF")
 				conn.execute("delete from users where id in ({})".format(','.join(['?']*len(user_ids))), user_ids)
+				# 重新排列ID
+				rows = conn.execute("SELECT id, username, password_hash, salt, role, status, can_login_admin, create_at FROM users ORDER BY id ASC").fetchall()
+				conn.execute("DELETE FROM users")
+				for idx, row in enumerate(rows, 1):
+					conn.execute(
+						"INSERT INTO users (id, username, password_hash, salt, role, status, can_login_admin, create_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+						(idx, row["username"], row["password_hash"], row["salt"], row["role"], row["status"], row["can_login_admin"], row["create_at"])
+					)
+				conn.execute("PRAGMA foreign_keys=ON")
 				return True
 		except Exception:
 			return False

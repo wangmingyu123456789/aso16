@@ -525,7 +525,7 @@ class OutlookCollector:
                 model_config.get('code', 'default'),
                 messages,
                 temperature=0.3,
-                max_tokens=4000
+                max_tokens=16000
             )
             elapsed = round(time.time() - t0, 2)
 
@@ -603,8 +603,8 @@ class OutlookCollector:
             if not item.get('content'):
                 node_text = node.text_content().strip()
                 node_text = re.sub(r'\s+', ' ', node_text)
-                item['content'] = node_text[:2000]
-            raw_node_html = lxml_html.tostring(node, encoding='unicode', pretty_print=True)[:5000]
+                item['content'] = node_text[:15000]
+            raw_node_html = lxml_html.tostring(node, encoding='unicode', pretty_print=True)[:30000]
             item['raw_html_snippet'] = raw_node_html
 
             node_full_text = node.text_content()
@@ -1000,7 +1000,7 @@ class OutlookDeepCollectRepository:
                 key_points = ai_result.get('key_points', '').strip()
 
                 has_valid_content = bool(summary) or (
-                    len(deep_content) > 30 and not OutlookDeepCollectRepository._is_binary_content(deep_content)
+                    len(deep_content) > 10 and not OutlookDeepCollectRepository._is_binary_content(deep_content)
                 )
                 status = 'success' if has_valid_content else 'success_with_limited'
 
@@ -1008,7 +1008,7 @@ class OutlookDeepCollectRepository:
                     data_id=data_id, task_id=task_id,
                     source_id=source_id, source_name=source_name,
                     title=title, url=resolved_url,
-                    raw_content=(raw_html_content or raw_html_snippet or '')[:20000],
+                    raw_content=(raw_html_content or raw_html_snippet or '')[:100000],
                     deep_content=deep_content,
                     summary=summary, key_points=key_points,
                     model_used=model_config.get('name', ''),
@@ -1082,19 +1082,43 @@ class OutlookDeepCollectRepository:
         search_urls = []
         if '搜狗' in source_name or 'sogou' in source_name:
             search_urls.append(f"https://news.sogou.com/news?query={quote(title)}&page=1")
+            search_urls.append(f"https://www.sogou.com/web?query={quote(title)}&page=1")
         if '360' in source_name or 'so_news' in source_name:
             search_urls.append(f"https://www.so.com/s?q={quote(title)}&pn=1")
+        search_urls.append(f"https://cn.bing.com/search?q={quote(title)}&first=1")
 
         ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0"
-        headers = {
+        base_headers = {
             "User-Agent": ua,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br, zstd",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+            "Sec-Ch-Ua": '"Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "cross-site",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1",
         }
 
         for search_url in search_urls:
+            headers = dict(base_headers)
+            if 'sogou.com' in search_url:
+                headers["Referer"] = "https://cn.bing.com/"
+            elif 'so.com' in search_url:
+                headers["Referer"] = "https://www.so.com/"
+            elif 'bing.com' in search_url:
+                headers["Referer"] = "https://cn.bing.com/"
+                headers["Origin"] = "https://cn.bing.com/"
+
             try:
+                from urllib.parse import urlparse
+                parsed = urlparse(search_url)
+                target_domain = f"{parsed.scheme}://{parsed.netloc}"
                 with httpx.Client(timeout=15.0, follow_redirects=True, verify=False) as client:
+                    client.get(target_domain, headers={"User-Agent": ua})
                     resp = client.get(search_url, headers=headers)
                     if resp.status_code != 200:
                         continue
@@ -1111,6 +1135,8 @@ class OutlookDeepCollectRepository:
                     doc = lxml_html.fromstring(html)
                     if 'sogou' in search_url:
                         items = doc.xpath("//div[contains(@class,'vrwrap')]")
+                    elif 'bing.com' in search_url:
+                        items = doc.xpath("//li[contains(@class,'b_algo')]")
                     else:
                         items = doc.xpath("//li[contains(@class,'res-list')]")
                     for item in items:
@@ -1120,7 +1146,55 @@ class OutlookDeepCollectRepository:
                             links = item.xpath(".//a")
                             for a in links:
                                 href = a.get('href', '')
-                                if href and not OutlookDeepCollectRepository._is_redirect_url(href):
+                                if not href:
+                                    continue
+                                
+                                if OutlookDeepCollectRepository._is_redirect_url(href):
+                                    try:
+                                        from urllib.parse import urlparse
+                                        parsed = urlparse(href)
+                                        if not href.startswith('http'):
+                                            if 'sogou' in href:
+                                                href = 'https://news.sogou.com' + href
+                                            elif 'so.com' in href:
+                                                href = 'https://www.so.com' + href
+                                        
+                                        sogou_headers = dict(headers)
+                                        sogou_headers["Referer"] = "https://cn.bing.com/"
+                                        
+                                        with httpx.Client(timeout=15.0, follow_redirects=True, verify=False) as c2:
+                                            c2.get('https://www.sogou.com/', headers={"User-Agent": ua, "Referer": "https://cn.bing.com/"})
+                                            r2 = c2.get(href, headers=sogou_headers)
+                                            
+                                            if r2.status_code == 200:
+                                                final_url = str(r2.url)
+                                                is_real_article = True
+                                                if '/link?url=' in final_url or final_url.startswith('/link?'):
+                                                    is_real_article = False
+                                                elif 'sogou.com' in final_url and ('/news?' in final_url or '/web?' in final_url or '/s?' in final_url):
+                                                    is_real_article = False
+                                                
+                                                if is_real_article:
+                                                    try:
+                                                        detected = chardet.detect(r2.content)
+                                                        if detected and detected.get('encoding'):
+                                                            r2.encoding = detected['encoding']
+                                                    except ImportError:
+                                                        r2.encoding = 'utf-8'
+                                                    html2 = r2.text
+                                                    if not OutlookDeepCollectRepository._is_binary_content(html2) and len(html2) > 1000:
+                                                        text2 = OutlookDeepCollectRepository._extract_text_from_html(html2)
+                                                        if len(text2.strip()) > 200:
+                                                            print(f"[Deep Collect] Resolved redirect: {href[:60]}... -> {final_url[:80]}...")
+                                                            return text2, html2
+                                                    else:
+                                                        print(f"[Deep Collect] Redirect returned 404 or invalid content: {href[:60]}...")
+                                            else:
+                                                print(f"[Deep Collect] Redirect failed with status {r2.status_code}: {href[:60]}...")
+                                    except Exception as e:
+                                        print(f"[Deep Collect] Failed to resolve redirect: {href[:60]}... - {e}")
+                                        pass
+                                else:
                                     try:
                                         with httpx.Client(timeout=15.0, follow_redirects=True, verify=False) as c2:
                                             r2 = c2.get(href, headers=headers)
@@ -1151,15 +1225,27 @@ class OutlookDeepCollectRepository:
             ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0"
             headers = {
                 "User-Agent": ua,
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-                "Accept-Encoding": "gzip, deflate",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+                "Sec-Ch-Ua": '"Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": '"Windows"',
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "cross-site",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
                 "Connection": "keep-alive",
             }
             if extra_headers:
                 headers.update(extra_headers)
             try:
+                from urllib.parse import urlparse
+                parsed = urlparse(fetch_url)
+                target_domain = f"{parsed.scheme}://{parsed.netloc}"
                 with httpx.Client(timeout=15.0, follow_redirects=True, verify=False) as client:
+                    client.get(target_domain, headers={"User-Agent": ua})
                     resp = client.get(fetch_url, headers=headers)
                     if resp.status_code == 200:
                         try:
@@ -1220,7 +1306,7 @@ class OutlookDeepCollectRepository:
             return ''
         try:
             doc = lxml_html.fromstring(html_content)
-            for tag in ['script', 'style', 'nav', 'footer', 'header', 'aside', 'noscript', 'iframe', 'form', 'svg']:
+            for tag in ['script', 'style', 'noscript', 'iframe', 'form', 'svg']:
                 for el in doc.xpath(f'//{tag}'):
                     el.getparent().remove(el)
             for el in doc.xpath('//comment()'):
@@ -1231,11 +1317,14 @@ class OutlookDeepCollectRepository:
                         '//div[contains(@class,"entry-content")]', '//div[contains(@class,"news-content")]',
                         '//div[contains(@class,"main-content")]', '//div[contains(@class,"text-content")]',
                         '//div[@id="content"]', '//div[@id="article"]', '//div[@id="main"]',
-                        '//div[contains(@class,"detail")]', '//div[contains(@class,"news-detail")]']:
+                        '//div[contains(@class,"detail")]', '//div[contains(@class,"news-detail")]',
+                        '//div[contains(@class,"article-body")]', '//div[contains(@class,"article_detail")]',
+                        '//div[contains(@class,"article_con")]', '//div[contains(@class,"content_detail")]',
+                        '//body']:
                 nodes = doc.xpath(sel)
                 for n in nodes:
                     text = n.text_content().strip()
-                    if len(text) > 200:
+                    if len(text) > 100:
                         content_candidates.append((len(text), n))
             if content_candidates:
                 content_candidates.sort(key=lambda x: x[0], reverse=True)
@@ -1291,8 +1380,8 @@ class OutlookDeepCollectRepository:
         if not model_config:
             return {'summary': '', 'key_points': '', 'content': clean_text}
 
-        if len(clean_text) > 18000:
-            clean_text = clean_text[:18000]
+        if len(clean_text) > 100000:
+            clean_text = clean_text[:100000]
 
         context_parts = [f"## 文章标题\n{title}"]
         if snippet:
@@ -1304,12 +1393,12 @@ class OutlookDeepCollectRepository:
             "你是一个信息整理助手。请根据以下内容，完成提取和整理工作。\n\n"
             f"{context_str}\n\n"
             "请执行：\n"
-            "1. 提取正文内容，去除明显的导航、广告、版权声明等无关信息。如果没有明显无关内容，请完整保留原文。\n"
+            "1. 提取正文内容，仅去除明显的导航、广告、Cookie提示、版权声明等无关信息。保留所有正文段落、标题、列表、表格、作者信息、发布时间、来源信息等关键内容。不要删减任何正文内容。\n"
             "2. 用200字以内概括核心内容\n"
             "3. 提取3-5个关键要点\n\n"
-            "注意：请尽可能多地保留原文内容，不要过度删减。\n\n"
+            "重要：content字段必须保留完整的原文内容，包括所有段落、细节、数据、引用等。不要进行概括、缩写或删减。只删除明显的广告和导航链接。\n\n"
             '请按以下JSON格式输出：\n'
-            '{"summary": "文章核心内容概括（200字以内）", "key_points": "要点1；要点2；要点3", "content": "完整的正文内容"}'
+            '{"summary": "文章核心内容概括（200字以内）", "key_points": "要点1；要点2；要点3", "content": "完整的正文内容，保留所有原文段落"}'
         )
 
         messages = [{"role": "user", "content": prompt}]
@@ -1319,7 +1408,7 @@ class OutlookDeepCollectRepository:
             model_config.get('code', 'default'),
             messages,
             temperature=0.3,
-            max_tokens=8000
+            max_tokens=32000
         )
 
         result = OutlookDeepCollectRepository._parse_ai_json_response(response_text)
@@ -1337,7 +1426,7 @@ class OutlookDeepCollectRepository:
             model_config.get('code', 'default'),
             messages,
             temperature=0.2,
-            max_tokens=8000
+            max_tokens=32000
         )
         result = OutlookDeepCollectRepository._parse_ai_json_response(response_text)
         if result:

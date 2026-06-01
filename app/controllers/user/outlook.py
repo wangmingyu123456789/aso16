@@ -179,8 +179,19 @@ class UserOutlookLatestDataApiHandler(BaseHandler):
                     "SELECT * FROM outlook_data ORDER BY id DESC LIMIT ? OFFSET ?",
                     (page_size, offset)
                 ).fetchall()
-        self.set_header("Content-Type", "application/json")
-        self.write({"code": 0, "msg": "", "count": total, "task_keyword": task_keyword, "data": [dict(r) for r in rows]})
+            
+            data_list = []
+            for r in rows:
+                d = dict(r)
+                deep_row = conn.execute(
+                    "SELECT status, url FROM outlook_data_detail WHERE data_id=? ORDER BY id DESC LIMIT 1",
+                    (d['id'],)
+                ).fetchone()
+                d['deep_status'] = deep_row['status'] if deep_row else None
+                if deep_row and deep_row['url']:
+                    d['url'] = deep_row['url']
+                data_list.append(d)
+        self.write({"code": 0, "msg": "", "count": total, "task_keyword": task_keyword, "data": data_list})
 
 class UserOutlookDataListHandler(BaseHandler):
     @tornado.web.authenticated
@@ -257,17 +268,19 @@ class UserOutlookTaskDataApiHandler(BaseHandler):
                     "SELECT * FROM outlook_data WHERE task_id=? ORDER BY create_at ASC LIMIT ? OFFSET ?",
                     (task_id, page_size, offset)
                 ).fetchall()
-        self.set_header("Content-Type", "application/json")
-        data_list = []
-        for i, r in enumerate(rows):
-            d = dict(r)
-            d["_seq"] = offset + i + 1
-            deep_row = conn.execute(
-                "SELECT status FROM outlook_data_detail WHERE data_id=? ORDER BY id DESC LIMIT 1",
-                (d['id'],)
-            ).fetchone()
-            d['deep_status'] = deep_row['status'] if deep_row else None
-            data_list.append(d)
+            
+            data_list = []
+            for i, r in enumerate(rows):
+                d = dict(r)
+                d["_seq"] = offset + i + 1
+                deep_row = conn.execute(
+                    "SELECT status, url FROM outlook_data_detail WHERE data_id=? ORDER BY id DESC LIMIT 1",
+                    (d['id'],)
+                ).fetchone()
+                d['deep_status'] = deep_row['status'] if deep_row else None
+                if deep_row and deep_row['url']:
+                    d['url'] = deep_row['url']
+                data_list.append(d)
         self.write({"code": 0, "msg": "", "count": total, "data": data_list})
 
 class UserOutlookDeepCollectHandler(BaseHandler):
