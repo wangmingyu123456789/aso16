@@ -1,0 +1,224 @@
+diff --git a/PythonProjects/CToS/CToS2Back/tools/weather_tools.py b/PythonProjects/CToS/CToS2Back/tools/weather_tools.py
+index b90a1c6..231eda8 100644
+--- a/PythonProjects/CToS/CToS2Back/tools/weather_tools.py
++++ b/PythonProjects/CToS/CToS2Back/tools/weather_tools.py
+@@ -8,6 +8,7 @@ import io
+ import json
+ import math
+ import random
++import re
+ import hashlib
+ import uuid
+ from pathlib import Path
+@@ -34,21 +35,21 @@ except ImportError:
+ CACHE_DIR = Path(__file__).parent.parent / "data" / "weather_cache"
+ CACHE_DIR.mkdir(parents=True, exist_ok=True)
+ 
+-# 天气码 → 中文天气描述
++# 天气码 → 中文天气描述（纯文字，不含 emoji）
+ WEATHER_CODE_MAP = {
+-    113: "☀️ 晴", 116: "⛅ 多云", 119: "☁️ 阴",
+-    122: "☁️ 阴", 143: "🌫️ 雾/霾",
+-    176: "🌦️ 小雨", 179: "🌧️ 雨", 182: "🌧️ 雨夹雪", 185: "🌧️ 毛毛雨",
+-    200: "⛈️ 雷阵雨", 227: "🌨️ 小雪", 230: "🌨️ 大雪", 248: "🌫️ 雾",
+-    260: "🌫️ 大雾", 263: "🌦️ 小雨", 266: "🌦️ 小雨", 281: "🌧️ 毛毛雨",
+-    284: "🌧️ 冻雨", 293: "🌦️ 小雨", 296: "🌦️ 小雨", 299: "🌧️ 中雨",
+-    302: "🌧️ 中雨", 305: "🌧️ 大雨", 308: "🌧️ 暴雨", 311: "🌧️ 冻雨",
+-    314: "🌧️ 冻雨", 317: "🌧️ 雨夹雪", 320: "🌨️ 雨夹雪", 323: "🌨️ 小雪",
+-    326: "🌨️ 小雪", 329: "❄️ 大雪", 332: "❄️ 大雪", 335: "❄️ 大雪",
+-    338: "❄️ 暴雪", 350: "🧊 冰雹", 353: "🌦️ 小雨", 356: "🌧️ 中雨",
+-    359: "🌧️ 暴雨", 362: "🌧️ 雨夹雪", 365: "🌧️ 雨夹雪", 368: "🌨️ 小雪",
+-    371: "❄️ 大雪", 374: "🧊 冰雹", 377: "🧊 冰雹", 386: "⛈️ 雷阵雨",
+-    389: "⛈️ 雷阵雨", 392: "⛈️ 雷阵雪", 395: "❄️ 暴雪",
++    113: "晴", 116: "多云", 119: "阴",
++    122: "阴", 143: "雾/霾",
++    176: "小雨", 179: "雨", 182: "雨夹雪", 185: "毛毛雨",
++    200: "雷阵雨", 227: "小雪", 230: "大雪", 248: "雾",
++    260: "大雾", 263: "小雨", 266: "小雨", 281: "毛毛雨",
++    284: "冻雨", 293: "小雨", 296: "小雨", 299: "中雨",
++    302: "中雨", 305: "大雨", 308: "暴雨", 311: "冻雨",
++    314: "冻雨", 317: "雨夹雪", 320: "雨夹雪", 323: "小雪",
++    326: "小雪", 329: "大雪", 332: "大雪", 335: "大雪",
++    338: "暴雪", 350: "冰雹", 353: "小雨", 356: "中雨",
++    359: "暴雨", 362: "雨夹雪", 365: "雨夹雪", 368: "小雪",
++    371: "大雪", 374: "冰雹", 377: "冰雹", 386: "雷阵雨",
++    389: "雷阵雨", 392: "雷阵雪", 395: "暴雪",
+ }
+ 
+ # 天气码 → 背景特效类型
+@@ -104,11 +105,6 @@ WEATHER_CARD_COLORS = {
+     "foggy":  {"bg1": "#607D8B", "bg2": "#455A64", "text": "#FFFFFF", "accent": "#CFD8DC"},
+ }
+ 
+-WEATHER_CARD_EMOJIS = {
+-    "sunny": "☀️", "cloudy": "☁️", "rainy": "🌧️",
+-    "snowy": "❄️", "stormy": "⛈️", "foggy": "🌫️",
+-}
+-
+ # ======================================================================
+ # 工具 1: get_weather — 获取实时天气数据
+ # ======================================================================
+@@ -134,7 +130,7 @@ async def get_weather(city_name: str) -> dict:
+             "success": True/False,
+             "city": "北京", "city_en": "Beijing",
+             "temp_c": 25, "feelslike_c": 26,
+-            "weather_code": 113, "weather_desc": "☀️ 晴", "weather_effect": "sunny",
++            "weather_code": 113, "weather_desc": "晴", "weather_effect": "sunny",
+             "humidity": 60, "wind_kph": 15, "wind_dir": "南风",
+             "visibility_km": 10, "uv_index": 5,
+             "last_updated": "2024-01-01 12:00",
+@@ -167,7 +163,7 @@ async def get_weather(city_name: str) -> dict:
+             return {"success": False, "error": "未找到该城市的天气数据"}
+ 
+         weather_code = current.get("weatherCode", 113)
+-        weather_desc = WEATHER_CODE_MAP.get(int(weather_code), "🌤️ 未知")
++        weather_desc = WEATHER_CODE_MAP.get(int(weather_code), "未知")
+         weather_effect = WEATHER_EFFECT_MAP.get(int(weather_code), "cloudy")
+ 
+         nearest = data.get("nearest_area", [{}])[0]
+@@ -203,7 +199,7 @@ async def get_weather(city_name: str) -> dict:
+                 min_temp = day.get("mintempC", "?")
+                 hourly = day.get("hourly", [{}])
+                 day_code = hourly[0].get("weatherCode", 113) if hourly else 113
+-                day_desc = WEATHER_CODE_MAP.get(int(day_code), "🌤️ 未知")
++                day_desc = WEATHER_CODE_MAP.get(int(day_code), "未知")
+                 result["forecast"].append({
+                     "date": date_str,
+                     "max_temp": max_temp,
+@@ -360,12 +356,37 @@ def _draw_lightning(draw: ImageDraw, cx: int, cy: int, color: str):
+     draw.polygon(points, fill=color)
+ 
+ 
++def _strip_emoji(text: str) -> str:
++    """移除字符串中的所有 emoji 字符，避免 Pillow 渲染方块字符"""
++    emoji_pattern = re.compile(
++        "[\U0001F300-\U0001F9FF"   # 杂项符号和 pictograph
++        "\U0001FA00-\U0001FA6F"    # 象棋符号等
++        "\U0001FA70-\U0001FAFF"    # 符号和 pictograph 扩展-A
++        "\U00002702-\U000027B0"    # 丁贝符号
++        "\U000024C2-\U0001F251"    # 带括号的字母等
++        "\U0001F004-\U0001F0CF"    # 游戏符号等
++        "\U0001F18E-\U0001F1FF"    # 注册商标等
++        "\U00002100-\U000027BF"    # 字母符号等
++        "\U0001F200-\U0001F2FF"    # 补充符号
++        "\U00002600-\U000026FF"    # 杂项符号
++        "\U00002900-\U0000297F"    # 补充箭头-B
++        "\U00002B00-\U00002BFF"    # 杂项符号和箭头
++        "\U0001F600-\U0001F64F"    # 表情符号
++        "\U0001F680-\U0001F6FF"    # 交通和地图符号
++        "\U0001F780-\U0001F7FF"    # 几何形状扩展
++        "\U0000FE00-\U0000FE0F"    # 变体选择器
++        "\U0000200D"               # 零宽连字符
++        "\U0000FE0F]"              # VS16 变体选择器
++    )
++    return emoji_pattern.sub('', text).strip()
++
++
+ def _generate_card_image(
+     city_name: str,
+     city_en: str = "",
+     temp_c: str = "?",
+     feelslike_c: str = "?",
+-    weather_desc: str = "☀️ 晴",
++    weather_desc: str = "晴",
+     weather_effect: str = "sunny",
+     humidity: str = "?",
+     wind_kph: str = "?",
+@@ -434,39 +455,41 @@ def _generate_card_image(
+     draw.text((width // 2, y_offset), display_city, fill=text_color, font=font_large, anchor="mt")
+     y_offset += 50
+ 
+-    # 更新时间
++    # 更新时间（纯文字）
+     if last_updated:
+         try:
+             dt = datetime.fromisoformat(last_updated.replace("Z", "+00:00"))
+             time_str = dt.strftime("%Y-%m-%d %H:%M")
+         except Exception:
+             time_str = last_updated
+-        draw.text((width // 2, y_offset), f"🕐 {time_str}", fill=colors["accent"], font=font_tiny, anchor="mt")
++        draw.text((width // 2, y_offset), time_str, fill=colors["accent"], font=font_tiny, anchor="mt")
+     y_offset += 30
+ 
+     # 温度
+     draw.text((width // 2, y_offset + 20), f"{temp_c}°C", fill=text_color, font=temp_font, anchor="mt")
+     y_offset += 100
+ 
+-    # 天气描述
+-    emoji = WEATHER_CARD_EMOJIS.get(weather_effect, "🌤️")
+-    draw.text((width // 2, y_offset), f"{emoji} {weather_desc}", fill=text_color, font=font_medium, anchor="mt")
++    # 天气描述（去除 emoji）
++    weather_text = _strip_emoji(weather_desc)
++    draw.text((width // 2, y_offset), weather_text, fill=text_color, font=font_medium, anchor="mt")
+     y_offset += 50
+ 
+-    # 体感
+-    draw.text((width // 2, y_offset), f"体感 {feelslike_c}°C", fill=colors["accent"], font=font_small, anchor="mt")
++    # 体感（若数据为问号则留空）
++    feels_display = f"体感 {feelslike_c}°C" if feelslike_c not in ("?", "") else ""
++    if feels_display:
++        draw.text((width // 2, y_offset), feels_display, fill=colors["accent"], font=font_small, anchor="mt")
+     y_offset += 40
+ 
+     # 分隔线
+     draw.line([(60, y_offset), (width - 60, y_offset)], fill=colors["accent"], width=1)
+     y_offset += 20
+ 
+-    # 详细信息
++    # 详细信息（纯文字标签）
+     info_items = [
+-        ("💧 湿度", f"{humidity}%" if humidity != "?" else "?"),
+-        ("💨 风速", f"{wind_kph} km/h" if wind_kph != "?" else "?"),
+-        ("🧭 风向", wind_dir if wind_dir != "?" else "?"),
+-        ("👁️ 能见度", f"{visibility_km} km" if visibility_km != "?" else "?"),
++        ("湿度", f"{humidity}%" if humidity not in ("?", "") else ""),
++        ("风速", f"{wind_kph} km/h" if wind_kph not in ("?", "") else ""),
++        ("风向", wind_dir if wind_dir not in ("?", "") else ""),
++        ("能见度", f"{visibility_km} km" if visibility_km not in ("?", "") else ""),
+     ]
+     col1_x, col2_x = 80, width // 2 + 20
+     for i, (label, value) in enumerate(info_items):
+@@ -479,25 +502,30 @@ def _generate_card_image(
+     # 未来预报
+     if forecast:
+         y_offset += 5
+-        draw.text((width // 2, y_offset), "📅 未来天气", fill=colors["accent"], font=font_tiny, anchor="mt")
++        draw.text((width // 2, y_offset), "未来天气", fill=colors["accent"], font=font_tiny, anchor="mt")
+         y_offset += 25
+         fc_width = (width - 60) // len(forecast)
+         for i, day in enumerate(forecast[:3]):
+             x = 30 + i * fc_width + fc_width // 2
+             date_str = day.get("date", "")[-5:]
+-            day_desc = day.get("weather_desc", "?")[:2]
++            day_desc = _strip_emoji(day.get("weather_desc", ""))[:2]
+             max_t = day.get("max_temp", "?")
+             min_t = day.get("min_temp", "?")
+             draw.text((x, y_offset), date_str, fill=colors["accent"], font=font_tiny, anchor="mt")
+             y_offset += 22
+             draw.text((x, y_offset), day_desc[:1], fill=text_color, font=font_small, anchor="mt")
+             y_offset += 22
+-            draw.text((x, y_offset), f"{min_t}°/{max_t}°", fill=colors["accent"], font=font_tiny, anchor="mt")
++            temp_range = f"{min_t}°/{max_t}°" if "?" not in (min_t, max_t) else ""
++            if temp_range:
++                draw.text((x, y_offset), temp_range, fill=colors["accent"], font=font_tiny, anchor="mt")
++            else:
++                y_offset += 22
++                continue
+             y_offset -= 44
+         y_offset += 30
+ 
+     # 署名
+-    draw.text((width // 2, height - 30), "🌤 CToS 天气助手 · 数据来源 wttr.in",
++    draw.text((width // 2, height - 30), "CToS 天气助手 · 数据来源 wttr.in",
+               fill=colors["accent"], font=font_tiny, anchor="mb")
+ 
+     output = io.BytesIO()
+@@ -537,7 +565,7 @@ async def send_weather_card(weather_data: dict) -> bytes:
+                 city_en=weather_data.get("city_en", ""),
+                 temp_c=str(weather_data.get("temp_c", "?")),
+                 feelslike_c=str(weather_data.get("feelslike_c", "?")),
+-                weather_desc=weather_data.get("weather_desc", "🌤️ 未知"),
++                weather_desc=weather_data.get("weather_desc", "未知"),
+                 weather_effect=weather_data.get("weather_effect", "cloudy"),
+                 humidity=str(weather_data.get("humidity", "?")),
+                 wind_kph=str(weather_data.get("wind_kph", "?")),

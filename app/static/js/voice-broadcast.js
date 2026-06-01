@@ -3,6 +3,8 @@
 
 var enabled = localStorage.getItem('voice_broadcast_enabled') !== 'false';
 var volume = parseFloat(localStorage.getItem('voice_broadcast_volume') || '0.7');
+var rate = parseFloat(localStorage.getItem('voice_broadcast_rate') || '1.0');
+var pitch = parseFloat(localStorage.getItem('voice_broadcast_pitch') || '1.0');
 var toastTimer = null;
 var currentUtterance = null;
 
@@ -46,7 +48,8 @@ var SpeechManager = {
 		window.speechSynthesis.cancel();
 		var utterance = new SpeechSynthesisUtterance(text);
 		utterance.lang = 'zh-CN';
-		utterance.rate = 0.9;
+		utterance.rate = rate;
+		utterance.pitch = pitch;
 		utterance.volume = volume;
 		currentUtterance = utterance;
 		utterance.onend = function(){
@@ -87,6 +90,20 @@ var SpeechManager = {
 	},
 
 	getVolume: function(){ return volume; },
+
+	setRate: function(val){
+		rate = Math.max(0.1, Math.min(2.0, val));
+		localStorage.setItem('voice_broadcast_rate', rate);
+	},
+
+	getRate: function(){ return rate; },
+
+	setPitch: function(val){
+		pitch = Math.max(0.1, Math.min(2.0, val));
+		localStorage.setItem('voice_broadcast_pitch', pitch);
+	},
+
+	getPitch: function(){ return pitch; },
 
 	getVoices: function(){
 		return window.speechSynthesis ? window.speechSynthesis.getVoices() : [];

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>手势识别测试</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			max-width: 1200px;
+			margin: 0 auto;
+			padding: 20px;
+			background: #f5f5f5;
+		}
+		.container {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 20px;
+		}
+		.test-panel {
+			background: white;
+			padding: 20px;
+			border-radius: 8px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		}
+		.test-panel h2 {
+			margin-top: 0;
+			color: #333;
+		}
+		.test-button {
+			display: block;
+			width: 100%;
+			padding: 12px;
+			margin: 8px 0;
+			background: #4CAF50;
+			color: white;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 14px;
+			transition: background 0.3s;
+		}
+		.test-button:hover {
+			background: #45a049;
+		}
+		.test-button.fist { background: #f44336; }
+		.test-button.fist:hover { background: #da190b; }
+		.test-button.index-up { background: #2196F3; }
+		.test-button.index-up:hover { background: #0b7dda; }
+		.test-button.index-down { background: #ff9800; }
+		.test-button.index-down:hover { background: #e68900; }
+		.test-button.two-fingers { background: #9c27b0; }
+		.test-button.two-fingers:hover { background: #7b1fa2; }
+		.result-box {
+			background: #f9f9f9;
+			padding: 15px;
+			border-radius: 4px;
+			margin-top: 15px;
+			min-height: 100px;
+			font-family: monospace;
+			white-space: pre-wrap;
+		}
+		.visualization {
+			background: white;
+			padding: 20px;
+			border-radius: 8px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+			margin-top: 20px;
+		}
+		canvas {
+			border: 1px solid #ddd;
+			background: #000;
+			display: block;
+			margin: 0 auto;
+		}
+		.info {
+			background: #e3f2fd;
+			padding: 15px;
+			border-radius: 4px;
+			margin-bottom: 20px;
+		}
+	</style>
+</head>
+<body>
+	<h1>手势识别逻辑测试</h1>
+	
+	<div class="info">
+		<strong>说明：</strong>点击下方按钮测试不同的手势识别逻辑。每个按钮会生成对应的模拟21点坐标数据，并调用手势识别引擎进行检测。
+	</div>
+
+	<div class="container">
+		<div class="test-panel">
+			<h2>测试手势</h2>
+			<button class="test-button fist" onclick="testGesture('fist')">🤜 握拳</button>
+			<button class="test-button index-up" onclick="testGesture('index_up')">☝️ 食指向上</button>
+			<button class="test-button index-down" onclick="testGesture('index_down')">👇 食指向下</button>
+			<button class="test-button two-fingers" onclick="testGesture('two_fingers')">✌️ 二指</button>
+			<button class="test-button" onclick="testGesture('open_palm')">🖐️ 张开手掌</button>
+		</div>
+
+		<div class="test-panel">
+			<h2>识别结果</h2>
+			<div id="result" class="result-box">点击左侧按钮开始测试...</div>
+		</div>
+	</div>
+
+	<div class="visualization">
+		<h2>手部关键点可视化</h2>
+		<canvas id="handCanvas" width="600" height="400"></canvas>
+	</div>
+
+	<script src="gesture-rule-engine.js"></script>
+	<script>
+		// 模拟GestureSettings
+		window.GestureSettings = {
+			isGestureEnabled: function(type) {
+				return true;
+			},
+			getCooldown: function() {
+				return 500;
+			},
+			getHoldTime: function(type) {
+				return 300;
+			}
+		};
+
+		// 生成模拟21点坐标数据
+		function generateMockLandmarks(gestureType) {
+			var baseX = 0.5;
+			var baseY = 0.5;
+			var scale = 0.15;
+
+			switch(gestureType) {
+				case 'fist':
+					// 握拳：所有手指弯曲，指尖靠近掌心
+					// 手指弯曲时，MCP-PIP-TIP角度应该小于100度
+					return [
+						{x: baseX, y: baseY + 0.25},                    // 0: WRIST
+						{x: baseX - 0.1, y: baseY + 0.18},              // 1: THUMB_CMC
+						{x: baseX - 0.12, y: baseY + 0.12},             // 2: THUMB_MCP
+						{x: baseX - 0.1, y: baseY + 0.06},              // 3: THUMB_IP
+						{x: baseX - 0.08, y: baseY + 0.02},             // 4: THUMB_TIP
+						{x: baseX - 0.06, y: baseY + 0.15},             // 5: INDEX_MCP
+						{x: baseX - 0.05, y: baseY + 0.1},              // 6: INDEX_PIP
+						{x: baseX - 0.04, y: baseY + 0.06},             // 7: INDEX_DIP
+						{x: baseX - 0.03, y: baseY + 0.02},             // 8: INDEX_TIP
+						{x: baseX, y: baseY + 0.15},                    // 9: MIDDLE_MCP
+						{x: baseX + 0.01, y: baseY + 0.1},              // 10: MIDDLE_PIP
+						{x: baseX + 0.02, y: baseY + 0.06},             // 11: MIDDLE_DIP
+						{x: baseX + 0.03, y: baseY + 0.02},             // 12: MIDDLE_TIP
+						{x: baseX + 0.06, y: baseY + 0.15},             // 13: RING_MCP
+						{x: baseX + 0.07, y: baseY + 0.1},              // 14: RING_PIP
+						{x: baseX + 0.08, y: baseY + 0.06},             // 15: RING_DIP
+						{x: baseX + 0.09, y: baseY + 0.02},             // 16: RING_TIP
+						{x: baseX + 0.12, y: baseY + 0.15},             // 17: PINKY_MCP
+						{x: baseX + 0.13, y: baseY + 0.1},              // 18: PINKY_PIP
+						{x: baseX + 0.14, y: baseY + 0.06},             // 19: PINKY_DIP
+						{x: baseX + 0.15, y: baseY + 0.02}              // 20: PINKY_TIP
+					];
+
+				case 'index_up':
+					// 食指向上：食指伸直向上，其他手指弯曲
+					// MediaPipe坐标系：y值越小越靠上
+					// 食指伸直时，MCP-PIP-TIP角度应该大于140度
+					// 食指指尖y值应该小于MCP的y值
+					return [
+						{x: baseX, y: baseY + 0.25},                    // 0: WRIST
+						{x: baseX - 0.1, y: baseY + 0.18},              // 1: THUMB_CMC
+						{x: baseX - 0.12, y: baseY + 0.12},             // 2: THUMB_MCP
+						{x: baseX - 0.1, y: baseY + 0.06},              // 3: THUMB_IP
+						{x: baseX - 0.08, y: baseY + 0.02},             // 4: THUMB_TIP
+						{x: baseX - 0.06, y: baseY + 0.15},             // 5: INDEX_MCP
+						{x: baseX - 0.06, y: baseY + 0.08},             // 6: INDEX_PIP
+						{x: baseX - 0.06, y: baseY - 0.02},             // 7: INDEX_DIP
+						{x: baseX - 0.06, y: baseY - 0.12},             // 8: INDEX_TIP (向上，y值更小)
+						{x: baseX, y: baseY + 0.15},                    // 9: MIDDLE_MCP
+						{x: baseX + 0.01, y: baseY + 0.1},              // 10: MIDDLE_PIP
+						{x: baseX + 0.02, y: baseY + 0.06},             // 11: MIDDLE_DIP
+						{x: baseX + 0.03, y: baseY + 0.02},             // 12: MIDDLE_TIP (弯曲)
+						{x: baseX + 0.06, y: baseY + 0.15},             // 13: RING_MCP
+						{x: baseX + 0.07, y: baseY + 0.1},              // 14: RING_PIP
+						{x: baseX + 0.08, y: baseY + 0.06},             // 15: RING_DIP
+						{x: baseX + 0.09, y: baseY + 0.02},             // 16: RING_TIP (弯曲)
+						{x: baseX + 0.12, y: baseY + 0.15},             // 17: PINKY_MCP
+						{x: baseX + 0.13, y: baseY + 0.1},              // 18: PINKY_PIP
+						{x: baseX + 0.14, y: baseY + 0.06},             // 19: PINKY_DIP
+						{x: baseX + 0.15, y: baseY + 0.02}              // 20: PINKY_TIP (弯曲)
+					];
+
+				case 'index_down':
+					// 食指向下：食指伸直向下，其他手指弯曲
+					// 食指指尖y值应该大于MCP的y值
+					return [
+						{x: baseX, y: baseY - 0.25},                    // 0: WRIST
+						{x: baseX - 0.1, y: baseY - 0.18},              // 1: THUMB_CMC
+						{x: baseX - 0.12, y: baseY - 0.12},             // 2: THUMB_MCP
+						{x: baseX - 0.1, y: baseY - 0.06},              // 3: THUMB_IP
+						{x: baseX - 0.08, y: baseY - 0.02},             // 4: THUMB_TIP
+						{x: baseX - 0.06, y: baseY - 0.15},             // 5: INDEX_MCP
+						{x: baseX - 0.06, y: baseY - 0.08},             // 6: INDEX_PIP
+						{x: baseX - 0.06, y: baseY + 0.02},             // 7: INDEX_DIP
+						{x: baseX - 0.06, y: baseY + 0.12},             // 8: INDEX_TIP (向下，y值更大)
+						{x: baseX, y: baseY - 0.15},                    // 9: MIDDLE_MCP
+						{x: baseX + 0.01, y: baseY - 0.1},              // 10: MIDDLE_PIP
+						{x: baseX + 0.02, y: baseY - 0.06},             // 11: MIDDLE_DIP
+						{x: baseX + 0.03, y: baseY - 0.02},             // 12: MIDDLE_TIP (弯曲)
+						{x: baseX + 0.06, y: baseY - 0.15},             // 13: RING_MCP
+						{x: baseX + 0.07, y: baseY - 0.1},              // 14: RING_PIP
+						{x: baseX + 0.08, y: baseY - 0.06},             // 15: RING_DIP
+						{x: baseX + 0.09, y: baseY - 0.02},             // 16: RING_TIP (弯曲)
+						{x: baseX + 0.12, y: baseY - 0.15},             // 17: PINKY_MCP
+						{x: baseX + 0.13, y: baseY - 0.1},              // 18: PINKY_PIP
+						{x: baseX + 0.14, y: baseY - 0.06},             // 19: PINKY_DIP
+						{x: baseX + 0.15, y: baseY - 0.02}              // 20: PINKY_TIP (弯曲)
+					];
+
+				case 'two_fingers':
+					// 二指：食指和中指伸直，其他弯曲
+					// 食指和中指都要伸直（角度>140度）
+					// 无名指和小指都要弯曲（角度<120度）
+					return [
+						{x: baseX, y: baseY + 0.25},                    // 0: WRIST
+						{x: baseX - 0.1, y: baseY + 0.18},              // 1: THUMB_CMC
+						{x: baseX - 0.12, y: baseY + 0.12},             // 2: THUMB_MCP
+						{x: baseX - 0.1, y: baseY + 0.06},              // 3: THUMB_IP
+						{x: baseX - 0.08, y: baseY + 0.02},             // 4: THUMB_TIP
+						{x: baseX - 0.06, y: baseY + 0.15},             // 5: INDEX_MCP
+						{x: baseX - 0.06, y: baseY + 0.05},             // 6: INDEX_PIP
+						{x: baseX - 0.06, y: baseY - 0.05},             // 7: INDEX_DIP
+						{x: baseX - 0.06, y: baseY - 0.15},             // 8: INDEX_TIP (伸直)
+						{x: baseX, y: baseY + 0.15},                    // 9: MIDDLE_MCP
+						{x: baseX, y: baseY + 0.05},                    // 10: MIDDLE_PIP
+						{x: baseX, y: baseY - 0.05},                    // 11: MIDDLE_DIP
+						{x: baseX, y: baseY - 0.15},                    // 12: MIDDLE_TIP (伸直)
+						{x: baseX + 0.06, y: baseY + 0.15},             // 13: RING_MCP
+						{x: baseX + 0.07, y: baseY + 0.1},              // 14: RING_PIP
+						{x: baseX + 0.08, y: baseY + 0.06},             // 15: RING_DIP
+						{x: baseX + 0.09, y: baseY + 0.02},             // 16: RING_TIP (弯曲)
+						{x: baseX + 0.12, y: baseY + 0.15},             // 17: PINKY_MCP
+						{x: baseX + 0.13, y: baseY + 0.1},              // 18: PINKY_PIP
+						{x: baseX + 0.14, y: baseY + 0.06},             // 19: PINKY_DIP
+						{x: baseX + 0.15, y: baseY + 0.02}              // 20: PINKY_TIP (弯曲)
+					];
+
+				case 'open_palm':
+					// 张开手掌：所有手指伸直
+					return [
+						{x: baseX, y: baseY + 0.25},                    // 0: WRIST
+						{x: baseX - 0.1, y: baseY + 0.18},              // 1: THUMB_CMC
+						{x: baseX - 0.15, y: baseY + 0.1},              // 2: THUMB_MCP
+						{x: baseX - 0.2, y: baseY},                     // 3: THUMB_IP
+						{x: baseX - 0.25, y: baseY - 0.1},              // 4: THUMB_TIP
+						{x: baseX - 0.06, y: baseY + 0.15},             // 5: INDEX_MCP
+						{x: baseX - 0.06, y: baseY + 0.05},             // 6: INDEX_PIP
+						{x: baseX - 0.06, y: baseY - 0.05},             // 7: INDEX_DIP
+						{x: baseX - 0.06, y: baseY - 0.15},             // 8: INDEX_TIP
+						{x: baseX, y: baseY + 0.15},                    // 9: MIDDLE_MCP
+						{x: baseX, y: baseY + 0.03},                    // 10: MIDDLE_PIP
+						{x: baseX, y: baseY - 0.08},                    // 11: MIDDLE_DIP
+						{x: baseX, y: baseY - 0.18},                    // 12: MIDDLE_TIP
+						{x: baseX + 0.06, y: baseY + 0.15},             // 13: RING_MCP
+						{x: baseX + 0.06, y: baseY + 0.03},             // 14: RING_PIP
+						{x: baseX + 0.06, y: baseY - 0.08},             // 15: RING_DIP
+						{x: baseX + 0.06, y: baseY - 0.15},             // 16: RING_TIP
+						{x: baseX + 0.12, y: baseY + 0.15},             // 17: PINKY_MCP
+						{x: baseX + 0.12, y: baseY + 0.03},             // 18: PINKY_PIP
+						{x: baseX + 0.12, y: baseY - 0.08},             // 19: PINKY_DIP
+						{x: baseX + 0.12, y: baseY - 0.12}              // 20: PINKY_TIP
+					];
+
+				default:
+					return null;
+			}
+		}
+
+		// 测试手势识别
+		function testGesture(gestureType) {
+			var landmarks = generateMockLandmarks(gestureType);
+			if (!landmarks) {
+				document.getElementById('result').textContent = '未知手势类型: ' + gestureType;
+				return;
+			}
+
+			// 重置识别状态
+			GestureRuleEngine.reset();
+
+			// 调试信息：计算手指角度
+			var debugInfo = '=== 调试信息 ===\n';
+			debugInfo += '食指角度: ' + getFingerAngle(landmarks, 5, 6, 8) + '°\n';
+			debugInfo += '中指角度: ' + getFingerAngle(landmarks, 9, 10, 12) + '°\n';
+			debugInfo += '无名指角度: ' + getFingerAngle(landmarks, 13, 14, 16) + '°\n';
+			debugInfo += '小指角度: ' + getFingerAngle(landmarks, 17, 18, 20) + '°\n';
+			debugInfo += '食指MCP.y: ' + landmarks[5].y + '\n';
+			debugInfo += '食指TIP.y: ' + landmarks[8].y + '\n';
+			debugInfo += 'Y轴差值: ' + (landmarks[8].y - landmarks[5].y) + '\n';
+			debugInfo += '================\n\n';
+
+			// 模拟多次调用以触发hold time
+			var result = null;
+			var callCount = 0;
+			var startTime = Date.now();
+			
+			// 模拟持续调用，累积hold time
+			while (Date.now() - startTime < 500) {
+				result = GestureRuleEngine.detectAll(landmarks);
+				callCount++;
+				if (result) break;
+			}
+
+			// 显示结果
+			var resultText = debugInfo;
+			resultText += '测试手势: ' + gestureType + '\n';
+			resultText += '调用次数: ' + callCount + '\n';
+			resultText += '识别结果: ' + (result ? result.type : '未识别') + '\n';
+			resultText += '置信度: ' + (result ? result.confidence : 'N/A') + '\n';
+			
+			if (result) {
+				resultText += '\n✓ 识别成功！';
+			} else {
+				resultText += '\n✗ 未识别到手势';
+			}
+
+			document.getElementById('result').textContent = resultText;
+
+			// 可视化手部关键点
+			visualizeHand(landmarks, result);
+		}
+
+		// 辅助函数：计算手指角度（用于调试）
+		function getFingerAngle(landmarks, mcp, pip, tip) {
+			var p1 = landmarks[mcp];
+			var p2 = landmarks[pip];
+			var p3 = landmarks[tip];
+			
+			var a = (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y);
+			var b = (p3.x - p2.x) * (p3.x - p2.x) + (p3.y - p2.y) * (p3.y - p2.y);
+			var c = (p1.x - p3.x) * (p1.x - p3.x) + (p1.y - p3.y) * (p1.y - p3.y);
+			
+			var cosAngle = (a + b - c) / (2 * Math.sqrt(a) * Math.sqrt(b));
+			cosAngle = Math.max(-1, Math.min(1, cosAngle));
+			
+			return Math.acos(cosAngle) * 180 / Math.PI;
+		}
+
+		// 可视化手部关键点
+		function visualizeHand(landmarks, result) {
+			var canvas = document.getElementById('handCanvas');
+			var ctx = canvas.getContext('2d');
+			var width = canvas.width;
+			var height = canvas.height;
+
+			// 清空画布
+			ctx.fillStyle = '#000';
+			ctx.fillRect(0, 0, width, height);
+
+			// 绘制连接线
+			var connections = [
+				[0, 1], [1, 2], [2, 3], [3, 4],           // 拇指
+				[0, 5], [5, 6], [6, 7], [7, 8],           // 食指
+				[0, 9], [9, 10], [10, 11], [11, 12],      // 中指
+				[0, 13], [13, 14], [14, 15], [15, 16],    // 无名指
+				[0, 17], [17, 18], [18, 19], [19, 20]     // 小指
+			];
+
+			// 绘制骨骼线
+			ctx.lineWidth = 3;
+			for (var i = 0; i < connections.length; i++) {
+				var start = landmarks[connections[i][0]];
+				var end = landmarks[connections[i][1]];
+				
+				ctx.beginPath();
+				ctx.moveTo(start.x * width, start.y * height);
+				ctx.lineTo(end.x * width, end.y * height);
+				
+				// 根据手指设置不同颜色
+				if (i < 4) ctx.strokeStyle = '#FFD700';      // 拇指 - 金色
+				else if (i < 8) ctx.strokeStyle = '#9370DB'; // 食指 - 紫色
+				else if (i < 12) ctx.strokeStyle = '#00CED1';// 中指 - 青色
+				else if (i < 16) ctx.strokeStyle = '#32CD32';// 无名指 - 绿色
+				else ctx.strokeStyle = '#FF6347';            // 小指 - 红色
+				
+				ctx.stroke();
+			}
+
+			// 绘制关键点
+			for (var j = 0; j < landmarks.length; j++) {
+				var point = landmarks[j];
+				ctx.beginPath();
+				ctx.arc(point.x * width, point.y * height, 5, 0, 2 * Math.PI);
+				ctx.fillStyle = '#FFFFFF';
+				ctx.fill();
+				
+				// 绘制索引号
+				ctx.fillStyle = '#FFFF00';
+				ctx.font = '10px Arial';
+				ctx.fillText(j.toString(), point.x * width + 8, point.y * height - 8);
+			}
+
+			// 显示识别结果
+			if (result) {
+				ctx.fillStyle = '#00FF00';
+				ctx.font = 'bold 20px Arial';
+				ctx.fillText('识别: ' + result.type, 20, 30);
+			}
+		}
+
+		// 页面加载时显示提示
+		window.onload = function() {
+			document.getElementById('result').textContent = '点击左侧按钮开始测试手势识别...\n\n测试说明：\n- 握拳：所有手指弯曲，指尖靠近掌心\n- 食指向上：食指伸直向上，其他手指弯曲\n- 食指向下：食指伸直向下，其他手指弯曲\n- 二指：食指和中指伸直，其他手指弯曲\n- 张开手掌：所有手指伸直';
+		};
+	</script>
+</body>
+</html>

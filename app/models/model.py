@@ -14,22 +14,22 @@ class ModelRepository:
                 ).fetchone()
                 total = count_row["total"]
                 rows = conn.execute(
-                    """SELECT id, name, code, api_url, status, is_system_default, 
-                              total_requests, total_tokens, prompt_tokens, completion_tokens,
-                              last_used_at, create_at 
-                       FROM models WHERE name LIKE ? OR code LIKE ? 
-                       ORDER BY is_system_default DESC, id DESC LIMIT ? OFFSET ?""",
-                    (f'%{keyword}%', f'%{keyword}%', page_size, offset)
+                    """SELECT id, name, code, api_url, status, is_system_default,
+                            total_requests, total_tokens, prompt_tokens, completion_tokens,
+                            last_used_at, create_at
+                    FROM models WHERE name LIKE ? OR code LIKE ?
+                    ORDER BY is_system_default DESC, id DESC LIMIT ? OFFSET ?""",
+                (f'%{keyword}%', f'%{keyword}%', page_size, offset)
                 ).fetchall()
             else:
                 count_row = conn.execute("SELECT COUNT(*) AS total FROM models").fetchone()
                 total = count_row["total"]
                 rows = conn.execute(
-                    """SELECT id, name, code, api_url, status, is_system_default, 
-                              total_requests, total_tokens, prompt_tokens, completion_tokens,
-                              last_used_at, create_at 
-                       FROM models 
-                       ORDER BY is_system_default DESC, id DESC LIMIT ? OFFSET ?""",
+                    """SELECT id, name, code, api_url, status, is_system_default,
+                            total_requests, total_tokens, prompt_tokens, completion_tokens,
+                            last_used_at, create_at
+                    FROM models
+                    ORDER BY is_system_default DESC, id DESC LIMIT ? OFFSET ?""",
                     (page_size, offset)
                 ).fetchall()
         return {
@@ -70,7 +70,7 @@ class ModelRepository:
             with get_connection() as conn:
                 conn.execute(
                     """INSERT INTO models(name, code, api_url, api_key, status) 
-                       VALUES(?,?,?,?,?)""",
+                    VALUES(?,?,?,?,?)""",
                     (name, code, api_url, api_key, status)
                 )
                 return True
@@ -133,13 +133,13 @@ class ModelRepository:
         try:
             with get_connection() as conn:
                 conn.execute(
-                    """UPDATE models SET 
-                          total_requests = total_requests + 1,
-                          total_tokens = total_tokens + ?,
-                          prompt_tokens = prompt_tokens + ?,
-                          completion_tokens = completion_tokens + ?,
-                          last_used_at = datetime('now')
-                       WHERE id=?""",
+                    """UPDATE models SET
+                        total_requests = total_requests + 1,
+                        total_tokens = total_tokens + ?,
+                        prompt_tokens = prompt_tokens + ?,
+                        completion_tokens = completion_tokens + ?,
+                        last_used_at = datetime('now')
+                    WHERE id=?""",
                     (prompt_tokens + completion_tokens, prompt_tokens, completion_tokens, model_id)
                 )
                 return True

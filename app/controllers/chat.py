@@ -485,7 +485,7 @@ class ChatHistoryHandler(BaseHandler):
         user_id = self._get_user_id()
         with get_connection() as conn:
             conn.execute("DELETE FROM chat_messages WHERE conversation_id=? AND conversation_id IN (SELECT id FROM chat_conversations WHERE id=? AND user_id=?)",
-                         (conv_id, conv_id, user_id))
+                        (conv_id, conv_id, user_id))
             conn.execute("DELETE FROM chat_conversations WHERE id=? AND user_id=?", (conv_id, user_id))
         self.write({"code": 0, "msg": "已删除"})
 

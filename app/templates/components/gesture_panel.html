@@ -30,7 +30,6 @@
 			<div class="gp-gesture-item"><span>✌️</span> 二指（瞭望采集）</div>
 		</div>
 		<button class="gp-btn gp-btn-guide" onclick="GestureController.showGuide()">🎓 新手引导</button>
-		<button class="gp-btn gp-btn-speech" onclick="GestureController.toggleSpeech()" id="gpSpeechBtn">🔊 语音播报</button>
 	</div>
 	<div class="gp-settings-overlay" id="gpSettingsOverlay">
 		<div class="gp-settings-panel">
@@ -103,10 +102,8 @@
 .gp-gesture-list{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:8px}
 .gp-gesture-item{padding:4px 6px;border-radius:4px;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:4px}
 .gp-gesture-item:hover{background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.7)}
-.gp-btn-guide,.gp-btn-speech{width:100%;padding:6px;border-radius:6px;font-size:11px;margin-bottom:4px}
+.gp-btn-guide{width:100%;padding:6px;border-radius:6px;font-size:11px;margin-bottom:4px}
 .gp-btn-guide{background:rgba(123,47,247,0.06);color:#a78bfa;border:1px solid rgba(123,47,247,0.15)}
-.gp-btn-speech{background:rgba(0,212,255,0.06);color:#00d4ff;border:1px solid rgba(0,212,255,0.15)}
-.gp-btn-speech.muted{background:rgba(255,77,79,0.06);color:#ff4d4f;border-color:rgba(255,77,79,0.15)}
 .gp-btn-reset{width:100%;padding:6px;border-radius:6px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.4);font-size:11px}
 .gp-settings-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(10,14,26,0.95);z-index:10;display:none;border-radius:12px}
 .gp-settings-overlay.show{display:block}

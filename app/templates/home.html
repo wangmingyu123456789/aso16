@@ -31,8 +31,8 @@
         .nav-item .nav-label{flex:1}
         .nav-item .nav-badge{font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(255,77,79,0.2);color:#ff4d4f}
 
-        .sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:center}
-        .settings-box{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s;font-size:18px;color:rgba(255,255,255,0.35)}
+        .sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-start}
+        .settings-box{width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s;font-size:16px;color:rgba(255,255,255,0.35)}
         .settings-box:hover{background:rgba(123,47,247,0.12);border-color:rgba(123,47,247,0.3);color:#a78bfa}
 
         /* === 设置模态框 === */
@@ -55,6 +55,35 @@
         .modal-box .option-hint{font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px}
         .modal-box .btn-save{width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#7b2ff7,#00d4ff);color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
         .modal-box .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+        .modal-box .btn-save.small{padding:8px 16px;width:auto;font-size:12px;display:inline-block}
+
+        /* === 语音设置 === */
+        .settings-divider{height:1px;background:rgba(255,255,255,0.06);margin:20px 0 18px}
+        .settings-section-title{font-size:13px;color:rgba(255,255,255,0.5);font-weight:500;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+        .settings-section-title .badge{font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(0,212,255,0.12);color:#00d4ff}
+
+        .voice-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;margin-bottom:6px}
+        .voice-toggle-row .toggle-label{font-size:13px;color:#e0e0e0}
+        .toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0;cursor:pointer}
+        .toggle-switch input{opacity:0;width:0;height:0}
+        .toggle-slider{position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:12px;transition:all .3s}
+        .toggle-slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:all .3s}
+        .toggle-switch input:checked+.toggle-slider{background:linear-gradient(135deg,#7b2ff7,#00d4ff)}
+        .toggle-switch input:checked+.toggle-slider::before{transform:translateX(20px)}
+
+        .voice-slider-row{margin-bottom:14px}
+        .voice-slider-row:last-child{margin-bottom:4px}
+        .voice-slider-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+        .voice-slider-header .slider-label{font-size:12px;color:rgba(255,255,255,0.5)}
+        .voice-slider-header .slider-value{font-size:12px;color:#00d4ff;font-weight:500;min-width:32px;text-align:right}
+        .voice-slider{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,0.08);border-radius:2px;outline:none;transition:background .2s}
+        .voice-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#7b2ff7,#00d4ff);cursor:pointer;border:2px solid #1a1f35;box-shadow:0 0 0 2px rgba(123,47,247,0.3);transition:all .15s}
+        .voice-slider::-webkit-slider-thumb:hover{transform:scale(1.15);box-shadow:0 0 0 4px rgba(123,47,247,0.25)}
+        .voice-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#7b2ff7,#00d4ff);cursor:pointer;border:2px solid #1a1f35}
+        .voice-preview-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid rgba(0,212,255,0.2);background:rgba(0,212,255,0.06);color:rgba(0,212,255,0.7);cursor:pointer;transition:all .2s;text-decoration:none}
+        .voice-preview-btn:hover{background:rgba(0,212,255,0.12);border-color:rgba(0,212,255,0.4);color:#00d4ff}
+
+        .modal-box.scrollable{max-height:85vh;overflow-y:auto}
 
         /* === 右侧内容区 === */
         .main{flex:1;display:flex;flex-direction:column;min-width:0}
@@ -149,7 +178,7 @@
 
     <!-- 设置模态框 -->
     <div class="modal-overlay" id="settingsModal">
-        <div class="modal-box">
+        <div class="modal-box scrollable">
             <div class="modal-title"><span class="icon">⚙</span>页面跳转设置</div>
             <div class="modal-desc">选择"智能问数"和"智能聊天"的打开方式</div>
             <div class="option-group">
@@ -168,6 +197,45 @@
                     </div>
                 </div>
             </div>
+
+            <div class="settings-divider"></div>
+            <div class="settings-section-title"><span>🔊</span>语音播报设置 <span class="badge">NEW</span></div>
+
+            <div class="voice-toggle-row">
+                <span class="toggle-label">启用语音播报</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="voiceEnabled">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div id="voiceSettingsBody">
+                <div class="voice-slider-row">
+                    <div class="voice-slider-header">
+                        <span class="slider-label">语速</span>
+                        <span class="slider-value" id="rateValue">1.0</span>
+                    </div>
+                    <input type="range" class="voice-slider" id="voiceRate" min="0.1" max="2.0" step="0.1" value="1.0">
+                </div>
+                <div class="voice-slider-row">
+                    <div class="voice-slider-header">
+                        <span class="slider-label">音调</span>
+                        <span class="slider-value" id="pitchValue">1.0</span>
+                    </div>
+                    <input type="range" class="voice-slider" id="voicePitch" min="0.1" max="2.0" step="0.1" value="1.0">
+                </div>
+                <div class="voice-slider-row">
+                    <div class="voice-slider-header">
+                        <span class="slider-label">音量</span>
+                        <span class="slider-value" id="volumeValue">0.7</span>
+                    </div>
+                    <input type="range" class="voice-slider" id="voiceVolume" min="0" max="1" step="0.05" value="0.7">
+                </div>
+                <div style="text-align:right;margin-top:8px">
+                    <span class="voice-preview-btn" id="voicePreviewBtn">🔊 试听</span>
+                </div>
+            </div>
+
             <button class="btn-save" id="btnSaveSettings">保存设置</button>
         </div>
     </div>
@@ -239,18 +307,6 @@ function logout() {
     applyNavMode(navMode);
 
     var selectedMode = navMode;
-    document.getElementById('settingsBtn').addEventListener('click', function(){
-        var modal = document.getElementById('settingsModal');
-        modal.classList.add('show');
-        var items = modal.querySelectorAll('.option-item');
-        items.forEach(function(item){
-            item.classList.remove('selected');
-            if (item.getAttribute('data-mode') === selectedMode) {
-                item.classList.add('selected');
-            }
-        });
-    });
-
     document.getElementById('settingsModal').addEventListener('click', function(e){
         if (e.target === this) { this.classList.remove('show'); }
     });
@@ -267,15 +323,111 @@ function logout() {
     document.getElementById('btnSaveSettings').addEventListener('click', function(){
         localStorage.setItem('user_nav_mode', selectedMode);
         applyNavMode(selectedMode);
+
+        var enabled = document.getElementById('voiceEnabled').checked;
+        var rate = parseFloat(document.getElementById('voiceRate').value);
+        var pitch = parseFloat(document.getElementById('voicePitch').value);
+        var vol = parseFloat(document.getElementById('voiceVolume').value);
+
+        localStorage.setItem('voice_broadcast_enabled', enabled);
+        localStorage.setItem('voice_broadcast_rate', rate);
+        localStorage.setItem('voice_broadcast_pitch', pitch);
+        localStorage.setItem('voice_broadcast_volume', vol);
+
+        if(window.SpeechManager){
+            SpeechManager.setEnabled(enabled);
+            SpeechManager.setRate(rate);
+            SpeechManager.setPitch(pitch);
+            SpeechManager.setVolume(vol);
+        }
+
         document.getElementById('settingsModal').classList.remove('show');
+    });
+
+    function initVoiceSettings(){
+        var enabled, rate, pitch, vol;
+        if(window.SpeechManager){
+            enabled = SpeechManager.isEnabled();
+            rate = SpeechManager.getRate();
+            pitch = SpeechManager.getPitch();
+            vol = SpeechManager.getVolume();
+        } else {
+            enabled = localStorage.getItem('voice_broadcast_enabled') !== 'false';
+            rate = parseFloat(localStorage.getItem('voice_broadcast_rate') || '1.0');
+            pitch = parseFloat(localStorage.getItem('voice_broadcast_pitch') || '1.0');
+            vol = parseFloat(localStorage.getItem('voice_broadcast_volume') || '0.7');
+        }
+        document.getElementById('voiceEnabled').checked = enabled;
+        var bodyEl = document.getElementById('voiceSettingsBody');
+        if(!enabled){
+            bodyEl.style.opacity = '0.35';
+            bodyEl.style.pointerEvents = 'none';
+        } else {
+            bodyEl.style.opacity = '1';
+            bodyEl.style.pointerEvents = 'auto';
+        }
+
+        document.getElementById('voiceRate').value = rate;
+        document.getElementById('rateValue').textContent = rate.toFixed(1);
+        document.getElementById('voicePitch').value = pitch;
+        document.getElementById('pitchValue').textContent = pitch.toFixed(1);
+        document.getElementById('voiceVolume').value = vol;
+        document.getElementById('volumeValue').textContent = vol.toFixed(2);
+    }
+
+    document.getElementById('voiceEnabled').addEventListener('change', function(){
+        var bodyEl = document.getElementById('voiceSettingsBody');
+        if(this.checked){
+            bodyEl.style.opacity = '1';
+            bodyEl.style.pointerEvents = 'auto';
+        } else {
+            bodyEl.style.opacity = '0.35';
+            bodyEl.style.pointerEvents = 'none';
+        }
+        if(window.SpeechManager) SpeechManager.setEnabled(this.checked);
+    });
+
+    document.getElementById('voiceRate').addEventListener('input', function(){
+        document.getElementById('rateValue').textContent = parseFloat(this.value).toFixed(1);
+    });
+    document.getElementById('voicePitch').addEventListener('input', function(){
+        document.getElementById('pitchValue').textContent = parseFloat(this.value).toFixed(1);
+    });
+    document.getElementById('voiceVolume').addEventListener('input', function(){
+        document.getElementById('volumeValue').textContent = parseFloat(this.value).toFixed(2);
+    });
+
+    document.getElementById('voicePreviewBtn').addEventListener('click', function(){
+        var rate = parseFloat(document.getElementById('voiceRate').value);
+        var pitch = parseFloat(document.getElementById('voicePitch').value);
+        var vol = parseFloat(document.getElementById('voiceVolume').value);
+        if(window.SpeechManager){
+            SpeechManager.setRate(rate);
+            SpeechManager.setPitch(pitch);
+            SpeechManager.setVolume(vol);
+            SpeechManager.speak('你好，这是语音播报试听效果。语速' + rate.toFixed(1) + '，音调' + pitch.toFixed(1) + '，音量' + vol.toFixed(2));
+        }
+    });
+
+    document.getElementById('settingsBtn').addEventListener('click', function(){
+        var modal = document.getElementById('settingsModal');
+        modal.classList.add('show');
+        var items = modal.querySelectorAll('.option-item');
+        items.forEach(function(item){
+            item.classList.remove('selected');
+            if (item.getAttribute('data-mode') === selectedMode) {
+                item.classList.add('selected');
+            }
+        });
+        initVoiceSettings();
     });
 })();
 </script>
+<script src="/static/js/voice-broadcast.js"></script>
 <script src="/static/js/gesture-settings.js"></script>
 <script src="/static/js/gesture-rule-engine.js"></script>
 <script src="/static/js/gesture-feedback.js"></script>
 <script src="/static/js/gesture-event-bus.js"></script>
 <script src="/static/js/gesture.js"></script>
-<script src="/static/js/voice-broadcast.js"></script>
 </body>
 </html>

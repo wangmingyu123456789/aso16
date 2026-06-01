@@ -10,15 +10,13 @@ var mediaPipeLoading = false;
 var GestureController = {
 	init: function(){
 		this.loadSettings();
-		this.bindEvents();
-		this.restoreSpeechState();
 		this.restorePanelState();
-		// 提前预加载MediaPipe，不阻塞摄像头启动
 		this.preloadMediaPipe();
+		var self = this;
 		setTimeout(function(){
 			var panelCollapsed = localStorage.getItem('gesture_panel_collapsed') === 'true';
 			if(localStorage.getItem('gesture_auto_start') === 'true' && !panelCollapsed){
-				GestureController.toggleCamera();
+				self.toggleCamera();
 			}
 		}, 300);
 	},
@@ -34,10 +32,8 @@ var GestureController = {
 		if(el('gsFist')) el('gsFist').checked = s.get('gestures.fist') !== false;
 		if(el('gsSwipeLeft')) el('gsSwipeLeft').checked = s.get('gestures.swipe_left') !== false;
 		if(el('gsSwipeRight')) el('gsSwipeRight').checked = s.get('gestures.swipe_right') !== false;
+		if(el('gsTwoFingers')) el('gsTwoFingers').checked = s.get('gestures.two_fingers') !== false;
 		this.updateUIState();
-	},
-
-	bindEvents: function(){
 	},
 
 	toggleCollapse: function(){
@@ -82,7 +78,6 @@ var GestureController = {
 		if(typeof Hands === 'undefined'){
 			if(mediaPipeLoading){
 				this.setStatus(null, 'MediaPipe加载中...');
-				// 等待加载完成后再启动
 				var waitInterval = setInterval(function(){
 					if(typeof Hands !== 'undefined' || !mediaPipeLoading){
 						clearInterval(waitInterval);
@@ -145,7 +140,6 @@ var GestureController = {
 					document.getElementById('gpToggleBtn').classList.add('active');
 					self.expand();
 					localStorage.setItem('gesture_auto_start', 'true');
-					// 等视频播放完成后才开始发送帧
 					video.play().then(function(){
 						self.sendFrame();
 					}).catch(function(){
@@ -186,7 +180,6 @@ var GestureController = {
 		document.getElementById('gpLiveGesture').className = 'gp-live-gesture waiting';
 		document.getElementById('gpLiveConfidence').textContent = '';
 		localStorage.setItem('gesture_auto_start', 'false');
-		// 手动关闭后自动折叠面板
 		this.collapse();
 	},
 
@@ -358,25 +351,6 @@ var GestureController = {
 				console.log('[Gesture] MediaPipe preloaded');
 			}
 		});
-	},
-
-	toggleSpeech: function(){
-		if(!window.SpeechManager) return;
-		var enabled = !window.SpeechManager.isEnabled();
-		window.SpeechManager.setEnabled(enabled);
-		var btn = document.getElementById('gpSpeechBtn');
-		if(btn){
-			btn.textContent = enabled ? '🔊 语音播报' : '🔇 已静音';
-			btn.classList.toggle('muted', !enabled);
-		}
-	},
-
-	restoreSpeechState: function(){
-		var btn = document.getElementById('gpSpeechBtn');
-		if(!btn) return;
-		var enabled = window.SpeechManager && window.SpeechManager.isEnabled();
-		btn.textContent = enabled ? '🔊 语音播报' : '🔇 已静音';
-		btn.classList.toggle('muted', !enabled);
 	},
 
 	restorePanelState: function(){

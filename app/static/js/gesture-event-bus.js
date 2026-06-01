@@ -41,7 +41,7 @@ var gestureBus = new GestureEventBus();
 
 /* ===== 页面加载导航冷却 ===== */
 var __pageLoadTime = Date.now();
-var __navCooldown = 3000; // 3秒内阻止手势触发的页面跳转，防止刷新时误检测跳回首页
+var __navCooldown = 3000;
 
 function canNavigate(){
 	if(Date.now() - __pageLoadTime < __navCooldown){
@@ -70,7 +70,7 @@ function speak(text){
 	}
 }
 
-/* ===== 通用导航序列（覆盖所有页面，包括独立页面） ===== */
+/* ===== 通用导航序列 ===== */
 var UNIVERSAL_NAV = [
 	{url: '/home', label: '首页'},
 	{url: '/qa', label: '智能问数'},
@@ -86,7 +86,6 @@ var UNIVERSAL_NAV = [
 function navigateModule(direction){
 	if(!canNavigate()) return;
 
-	// 先尝试用通用导航序列（适用于所有页面，包括独立页面/q/a、/im等）
 	var currentPath = window.location.pathname;
 	var foundIdx = -1;
 	for(var i = 0; i < UNIVERSAL_NAV.length; i++){
@@ -96,22 +95,20 @@ function navigateModule(direction){
 		}
 	}
 
-	// 如果在通用序列中找到了，直接使用通用序列导航
- 	if(foundIdx !== -1){
- 		var targetIdx = foundIdx + direction;
- 		if(targetIdx < 0){
- 			speak('已经是第一个模块');
- 			return;
- 		}
- 		if(targetIdx >= UNIVERSAL_NAV.length){
- 			speak('已经是最后一个模块');
- 			return;
- 		}
- 		window.location.href = UNIVERSAL_NAV[targetIdx].url;
- 		return;
- 	}
+	if(foundIdx !== -1){
+		var targetIdx = foundIdx + direction;
+		if(targetIdx < 0){
+			speak('已经是第一个模块');
+			return;
+		}
+		if(targetIdx >= UNIVERSAL_NAV.length){
+			speak('已经是最后一个模块');
+			return;
+		}
+		window.location.href = UNIVERSAL_NAV[targetIdx].url;
+		return;
+	}
 
-	// 回退方案：使用侧边栏导航（带layout的页面）
 	var navItems = document.querySelectorAll('.sidebar .nav-item');
 	if(navItems.length === 0) return;
 	
@@ -136,17 +133,14 @@ function navigateModule(direction){
 	var targetIdx = currentIdx + direction;
 	
 	if(targetIdx < 0){
-		console.log('[GestureBus] At first module, cannot go left');
 		speak('已经是第一个模块');
 		return;
 	}
 	if(targetIdx >= navArray.length){
-		console.log('[GestureBus] At last module, cannot go right');
 		speak('已经是最后一个模块');
 		return;
 	}
 	
-	console.log('[GestureBus] Navigating module from', currentIdx, 'to', targetIdx);
 	window.location.href = navArray[targetIdx].url;
 }
 
@@ -167,17 +161,14 @@ function navigateDashboardPage(direction){
 	var targetIdx = currentIdx + direction;
 	
 	if(targetIdx < 0){
-		console.log('[GestureBus] At first dashboard page');
 		speak('已经是第一页');
 		return;
 	}
 	if(targetIdx >= dots.length){
-		console.log('[GestureBus] At last dashboard page');
 		speak('已经是最后一页');
 		return;
 	}
 	
-	console.log('[GestureBus] Navigating dashboard page from', currentIdx, 'to', targetIdx);
 	dots[targetIdx].click();
 }
 
@@ -199,17 +190,13 @@ function switchSentimentTab(direction){
 	var targetIdx = currentIdx + direction;
 	
 	if(targetIdx < 0){
-		console.log('[GestureBus] At first sentiment tab');
 		speak('已经是左Tab');
 		return;
 	}
 	if(targetIdx >= tabs.length){
-		console.log('[GestureBus] At last sentiment tab');
 		speak('已经是右Tab');
 		return;
 	}
-	
-	console.log('[GestureBus] Switching sentiment tab from', currentIdx, 'to', targetIdx);
 	
 	for(var j = 0; j < tabs.length; j++){
 		tabs[j].classList.remove('active');
@@ -267,12 +254,6 @@ function registerGestureMappings(){
 		navigateModule(1);
 	}, 10);
 
-	gestureBus.on('open_palm', function(e){
-		if(!canNavigate()) return;
-		navigateModule(1);
-		speak('下一个模块');
-	}, 10);
-
 	gestureBus.on('two_fingers', function(e){
 		if(!canNavigate()) return;
 		window.location.href = '/user/outlook/collect';
@@ -294,23 +275,18 @@ window.startAutoSlide = function(){
 	
 	var currentPage = getCurrentPage();
 	if(currentPage !== 'dashboard'){
-		console.log('[GestureBus] Auto-slide only works on dashboard page');
 		return;
 	}
 	
 	var dots = document.querySelectorAll('.page-nav .dot');
 	if(dots.length === 0) return;
 	
-	// 检查用户是否关闭了自动轮播
 	var autoSlideEnabled = localStorage.getItem('dashboard_auto_slide') !== 'false';
 	if(!autoSlideEnabled){
-		console.log('[GestureBus] Auto-slide disabled by user setting');
 		window.__autoSlidePaused = true;
 	} else {
 		window.__autoSlidePaused = false;
 	}
-	
-	console.log('[GestureBus] Starting auto-slide on dashboard');
 
 	window.__autoSlideInterval = setInterval(function(){
 		if(window.__autoSlidePaused) return;
@@ -326,7 +302,6 @@ window.startAutoSlide = function(){
 		if(currentIdx === -1) return;
 		
 		var nextIdx = (currentIdx + 1) % dots.length;
-		console.log('[GestureBus] Auto-slide from page', currentIdx, 'to', nextIdx);
 		dots[nextIdx].click();
 	}, 5000);
 };

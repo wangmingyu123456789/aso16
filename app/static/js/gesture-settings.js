@@ -2,10 +2,12 @@
 'use strict';
 
 var STORAGE_KEY = 'gesture_settings';
+var SETTINGS_VERSION = 4;
 
 var defaults = {
+	version: SETTINGS_VERSION,
 	enabled: true,
-	frameRate: 15,
+	frameRate: 30,
 	cameraWidth: 320,
 	cameraHeight: 240,
 	minDetectionConfidence: 0.7,
@@ -17,23 +19,27 @@ var defaults = {
 		fist: true,
 		swipe_left: true,
 		swipe_right: true,
-		open_palm: true,
 		two_fingers: true
 	},
 	holdTimes: {
-		index_up: 200,
-		index_down: 200,
-		fist: 300,
-		open_palm: 250,
-		two_fingers: 250
+		index_up: 600,
+		index_down: 600,
+		fist: 200,
+		two_fingers: 500,
+		swipe_left: 0,
+		swipe_right: 0
 	},
-	cooldownMs: 350
+	cooldownMs: 1800
 };
 
 function load(){
 	try{
 		var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-		if(saved) return merge(defaults, saved);
+		if(saved && saved.version === SETTINGS_VERSION){
+			return merge(defaults, saved);
+		}
+		console.log('[GestureSettings] Resetting to defaults (version changed)');
+		localStorage.removeItem(STORAGE_KEY);
 	}catch(e){}
 	return JSON.parse(JSON.stringify(defaults));
 }
