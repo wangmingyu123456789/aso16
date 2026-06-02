@@ -124,6 +124,26 @@
     </div>
     <script src="{{static_url('dist/layui-v2.13.6/layui-v2.13.6/layui/layui.js')}}"></script>
     <script src="{{static_url('dist/fontawesome-free-5.15.4-web/fontawesome-free-5.15.4-web/js/all.min.js')}}"></script>
+    <script>
+        (function(){
+            var sidebar = document.querySelector('.admin-sidebar');
+            if(!sidebar) return;
+            var STORAGE_KEY = 'admin_sidebar_scroll_top';
+            var savedTop = sessionStorage.getItem(STORAGE_KEY);
+            if(savedTop !== null){
+                sidebar.scrollTop = parseInt(savedTop, 10);
+            }
+            sidebar.addEventListener('scroll', function(){
+                sessionStorage.setItem(STORAGE_KEY, String(sidebar.scrollTop));
+            });
+            var menuItems = sidebar.querySelectorAll('.menu-item');
+            for(var i = 0; i < menuItems.length; i++){
+                menuItems[i].addEventListener('click', function(){
+                    sessionStorage.setItem(STORAGE_KEY, String(sidebar.scrollTop));
+                });
+            }
+        })();
+    </script>
     {% block extra_script %}{% end %}
 </body>
 </html>

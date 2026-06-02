@@ -355,6 +355,26 @@ function logout(){if(!confirm('确定要退出登录吗？'))return;var xhr=new 
         });
         initVoiceSettings();
     });
+
+    // 侧边栏滚动位置保存与恢复
+    (function(){
+        var navList = document.querySelector('.nav-list');
+        if(!navList) return;
+        var STORAGE_KEY = 'user_sidebar_scroll_top';
+        var savedTop = sessionStorage.getItem(STORAGE_KEY);
+        if(savedTop !== null){
+            navList.scrollTop = parseInt(savedTop, 10);
+        }
+        navList.addEventListener('scroll', function(){
+            sessionStorage.setItem(STORAGE_KEY, String(navList.scrollTop));
+        });
+        var navItems = navList.querySelectorAll('.nav-item');
+        for(var i = 0; i < navItems.length; i++){
+            navItems[i].addEventListener('click', function(){
+                sessionStorage.setItem(STORAGE_KEY, String(navList.scrollTop));
+            });
+        }
+    })();
 })();
 </script>
 {% block extra_script %}{% end %}
