@@ -295,23 +295,27 @@ layui.use(['layer'], function(){
     }
 
     function loadStats(){
+        // 获取任务列表
         $.get('/user/outlook/tasks/api', {page: 1, limit: 1000}, function(res){
             if(res.code === 0){
                 totalTasks = res.count;
-                var dataCount = 0;
                 var sources = {};
                 for(var i = 0; i < res.data.length; i++){
-                    dataCount += (res.data[i].total_count || 0);
                     var sns = res.data[i].source_names || '';
                     sns.split(',').forEach(function(s){
                         if(s.trim()) sources[s.trim()] = true;
                     });
                 }
-                totalDataCount = dataCount;
                 totalSources = Object.keys(sources).length;
-                animateNumber('statTasks', totalTasks);
-                animateNumber('statData', totalDataCount);
-                animateNumber('statSources', totalSources);
+                // 从 outlook_data 表获取实际数据总量，与数智大屏保持一致
+                $.get('/user/outlook/data/api', {page: 1, limit: 1}, function(res2){
+                    if(res2.code === 0){
+                        totalDataCount = res2.count;
+                        animateNumber('statTasks', totalTasks);
+                        animateNumber('statData', totalDataCount);
+                        animateNumber('statSources', totalSources);
+                    }
+                });
             }
         });
     }
