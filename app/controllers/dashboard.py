@@ -73,6 +73,17 @@ class DashboardStatsHandler(AdminBaseHandler):
 				row = conn.execute("SELECT COUNT(*) as cnt FROM crawl_logs WHERE status='running'").fetchone()
 				process_count = row["cnt"] if row else 0
 
+				# 查询近7天每日采集数量
+				trend_data = []
+				for i in range(6, -1, -1):
+					day = datetime.datetime.now() - datetime.timedelta(days=i)
+					day_str = day.strftime('%Y-%m-%d')
+					row = conn.execute(
+						"SELECT COUNT(*) as cnt FROM outlook_data WHERE date(create_at,'+8 hours')=?",
+						(day_str,)
+					).fetchone()
+					trend_data.append(row["cnt"] if row else 0)
+
 				recent_rows = conn.execute(
 					"SELECT title, source_name, create_at FROM outlook_data WHERE create_at >= datetime('now','+8 hours','-3 days') ORDER BY id DESC LIMIT 20"
 				).fetchall()
@@ -83,6 +94,7 @@ class DashboardStatsHandler(AdminBaseHandler):
 					"today_collect": today,"total_collect": total,"data_source": sources,
 					"total_tasks": tasks,"deep_processed": deep_processed,"fail_count": fail_count,
 					"process_count": process_count,"recent": [dict(r) for r in recent_rows],
+					"trend_data": trend_data,
 				}
 
 			resp = json.dumps({"code": 0, "data": result}, ensure_ascii=False)

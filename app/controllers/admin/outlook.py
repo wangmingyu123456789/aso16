@@ -402,7 +402,7 @@ class AdminOutlookLatestDataApiHandler(AdminBaseHandler):
                 (d['id'],)
             ).fetchone()
             d['deep_status'] = deep_row['status'] if deep_row else None
-            if deep_row and deep_row.get('url'):
+            if deep_row and deep_row['url']:
                 d['url'] = deep_row['url']
             data_list.append(d)
         self.write({
